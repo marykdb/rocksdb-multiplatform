@@ -1,0 +1,3 @@
+package maryk.rocksdb
+
+actual typealias AbstractImmutableNativeReference = org.rocksdb.AbstractImmutableNativeReference

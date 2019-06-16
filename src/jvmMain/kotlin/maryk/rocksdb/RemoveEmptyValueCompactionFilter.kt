@@ -1,0 +1,3 @@
+package maryk.rocksdb
+
+actual typealias RemoveEmptyValueCompactionFilter = org.rocksdb.RemoveEmptyValueCompactionFilter
