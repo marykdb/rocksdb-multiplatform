@@ -18,6 +18,13 @@ version = "0.1.3"
 val rocksDBVersion = "6.2.2"
 
 kotlin {
+    macosX64("macos") {
+        compilations["main"].cinterops {
+            val rocksdb by creating {
+                includeDirs("/usr/local/Cellar/rocksdb/6.1.2/include/rocksdb")
+            }
+        }
+    }
     jvm {
         compilations.all {
             kotlinOptions {

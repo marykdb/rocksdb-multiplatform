@@ -1,0 +1,11 @@
+package maryk.rocksdb
+
+import kotlinx.cinterop.CPointer
+
+actual class StringAppendOperator actual constructor(delim: Char) : MergeOperator(newSharedStringAppendOperator(delim)) {
+    actual constructor() : this(',')
+}
+
+fun newSharedStringAppendOperator(delim: Char): CPointer<*> {
+    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+}
