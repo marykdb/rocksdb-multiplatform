@@ -1,5 +1,5 @@
 package maryk
 
-actual fun String.encodeToByteArray(): ByteArray {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-}
+import kotlin.text.encodeToByteArray as encodeToByteArrayKt
+
+actual fun String.encodeToByteArray() = this.encodeToByteArrayKt()

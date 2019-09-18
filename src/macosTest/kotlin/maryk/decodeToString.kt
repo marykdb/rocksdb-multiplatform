@@ -1,5 +1,5 @@
 package maryk
 
-actual fun ByteArray.decodeToString(): String {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-}
+import kotlin.text.decodeToString as decodeToStringKt
+
+actual fun ByteArray.decodeToString() = this.decodeToStringKt()

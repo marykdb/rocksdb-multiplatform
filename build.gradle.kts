@@ -1,6 +1,7 @@
 import com.jfrog.bintray.gradle.BintrayExtension
 import com.jfrog.bintray.gradle.tasks.BintrayUploadTask
 import org.gradle.api.publish.maven.internal.artifact.FileBasedMavenArtifact
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     `maven-publish`
@@ -17,11 +18,28 @@ version = "0.1.3"
 
 val rocksDBVersion = "6.2.2"
 
+val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
+    ?: File(System.getProperty("user.home")).resolve(".konan")
+
+val snappyHome = kotlinNativeDataPath.resolve("third-party/snappy/snappy-1.1.7")
+val bzip2Home = kotlinNativeDataPath.resolve("third-party/bzip2/bzip2-1.0.8")
+val lz4Home = kotlinNativeDataPath.resolve("third-party/lz4/lz4-1.9.2")
+val zlibHome = kotlinNativeDataPath.resolve("third-party/zlib/zlib-1.2.11")
+val rocksdbHome = kotlinNativeDataPath.resolve("third-party/rocksdb/rocksdb-6.2.2")
+
 kotlin {
     macosX64("macos") {
+        binaries.getTest("DEBUG").linkerOpts = mutableListOf(
+            "-L${snappyHome}/build", "-lsnappy",
+            "-L${bzip2Home}", "-lbz2",
+            "-L${lz4Home}/lib", "-llz4",
+            "-L${zlibHome}", "-lz",
+            "-L${rocksdbHome}", "-lrocksdb"
+        )
+
         compilations["main"].cinterops {
             val rocksdb by creating {
-                includeDirs("/usr/local/Cellar/rocksdb/6.1.2/include/rocksdb")
+                includeDirs("${rocksdbHome}/include/rocksdb")
             }
         }
     }
@@ -61,6 +79,38 @@ kotlin {
     }
 }
 
+val downloadSnappy by tasks.creating(Exec::class) {
+    workingDir = projectDir
+    commandLine("./downloadSnappy.sh")
+}
+
+val downloadBzip2 by tasks.creating(Exec::class) {
+    workingDir = projectDir
+    commandLine("./downloadBzip2.sh")
+}
+
+val downloadLz4 by tasks.creating(Exec::class) {
+    workingDir = projectDir
+    commandLine("./downloadLz4.sh")
+}
+
+val downloadZlib by tasks.creating(Exec::class) {
+    workingDir = projectDir
+    commandLine("./downloadZlib.sh")
+}
+
+val downloadRocksdb by tasks.creating(Exec::class) {
+    workingDir = projectDir
+    commandLine("./downloadRocksdb.sh")
+}
+
+val macos: KotlinNativeTarget by kotlin.targets
+tasks[macos.compilations["main"].cinterops["rocksdb"].interopProcessingTaskName]
+    .dependsOn(downloadSnappy)
+    .dependsOn(downloadBzip2)
+    .dependsOn(downloadLz4)
+    .dependsOn(downloadZlib)
+    .dependsOn(downloadRocksdb)
 
 // Creates the folders for the database
 val createOrEraseDBFolders = task("createOrEraseDBFolders") {

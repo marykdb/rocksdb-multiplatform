@@ -14,7 +14,7 @@ actual class BloomFilter
     actual constructor(bitsPerKey: Int) : this(bitsPerKey, DEFAULT_MODE)
 }
 
-private external fun createNewBloomFilter(
+private fun createNewBloomFilter(
     bitsKeyKey: Int,
     useBlockBasedMode: Boolean
 ) = if (useBlockBasedMode) {

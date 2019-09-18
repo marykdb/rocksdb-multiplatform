@@ -1,6 +1,7 @@
 package maryk.rocksdb
 
 import kotlinx.cinterop.CPointer
+import rocksdb.rocksdb_envoptions_create
 
 actual class EnvOptions private constructor(nativeHandle: CPointer<*>) : RocksObject(nativeHandle) {
     actual constructor() : this(newEnvOptions())
@@ -107,9 +108,7 @@ actual class EnvOptions private constructor(nativeHandle: CPointer<*>) : RocksOb
 
 }
 
-private fun newEnvOptions(): CPointer<*> {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-}
+private fun newEnvOptions() = rocksdb_envoptions_create()!!
 
 private fun newEnvOptions(nativeHandle: CPointer<*>): CPointer<*> {
     TODO("not implemented") //To change body of created functions use File | Settings | File Templates.

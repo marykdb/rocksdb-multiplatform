@@ -1,6 +1,6 @@
 package maryk.rocksdb
 
-expect class OptimisticTransactionOptions : RocksObject {
+expect class OptimisticTransactionOptions() : RocksObject {
     /**
      * True indicates snapshots will be set, just like if
      * {@link Transaction#setSnapshot()} had been called
