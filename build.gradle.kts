@@ -14,7 +14,7 @@ repositories {
 }
 
 group = "io.maryk.rocksdb"
-version = "0.1.3"
+version = "0.1.4"
 
 val rocksDBVersion = "6.2.2"
 
