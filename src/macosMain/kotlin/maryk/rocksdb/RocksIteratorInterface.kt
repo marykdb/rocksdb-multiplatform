@@ -16,5 +16,4 @@ actual interface RocksIteratorInterface {
     actual fun prev()
 
     actual fun status()
-
 }

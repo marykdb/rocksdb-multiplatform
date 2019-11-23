@@ -24,14 +24,3 @@ expect enum class StatsLevel {
      */
     ALL;
 }
-
-/**
- * Get StatsLevel by byte value.
- *
- * @param value byte representation of StatsLevel.
- *
- * @return [org.rocksdb.StatsLevel] instance.
- * @throws java.lang.IllegalArgumentException if an invalid
- * value is provided.
- */
-expect fun getStatsLevel(value: Byte): StatsLevel

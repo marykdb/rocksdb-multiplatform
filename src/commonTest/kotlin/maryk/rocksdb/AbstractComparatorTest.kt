@@ -33,46 +33,46 @@ abstract class AbstractComparatorTest {
      */
     fun testRoundtrip(db_path: String) {
         ascendingIntKeyComparator.use { comparator ->
-            Options()
-                .setCreateIfMissing(true)
-                .setComparator(comparator).use { opt ->
-
-                    // store 10,000 random integer keys
-                    val iterations = 10000
-                    openRocksDB(opt, db_path).use { db ->
-                        var i = 0
-                        while (i < iterations) {
-                            val key = intToByte(Random.nextInt())
-                            // does key already exist (avoid duplicates)
-                            if (i > 0 && db[key] != null) {
-                                i-- // generate a different key
-                            } else {
-                                db.put(key, "value".encodeToByteArray())
-                            }
-                            i++
+            Options().apply {
+                setCreateIfMissing(true)
+                setComparator(comparator)
+            }.use { opt ->
+                // store 10,000 random integer keys
+                val iterations = 10000
+                openRocksDB(opt, db_path).use { db ->
+                    val value = "value".encodeToByteArray()
+                    var i = 0
+                    while (i < iterations) {
+                        val key = Random.nextBytes(4)
+                        // does key already exist (avoid duplicates)
+                        if (i > 0 && db[key] != null) {
+                            i-- // generate a different key
+                        } else {
+                            db.put(key, value)
                         }
-                    }
-
-                    // re-open db and read from start to end
-                    // integer keys should be in ascending
-                    // order as defined by SimpleIntComparator
-                    openRocksDB(opt, db_path).use { db ->
-                        db.newIterator().use {
-                            it.seekToFirst()
-                            var lastKey = Int.MIN_VALUE
-                            var count = 0
-                            it.seekToFirst()
-                            while (it.isValid()) {
-                                val thisKey = byteToInt(it.key())
-                                assertTrue(thisKey > lastKey)
-                                lastKey = thisKey
-                                count++
-                                it.next()
-                            }
-                            assertEquals(iterations, count)
-                        }
+                        i++
                     }
                 }
+
+                // re-open db and read from start to end
+                // integer keys should be in ascending
+                // order as defined by SimpleIntComparator
+                openRocksDB(opt, db_path).use { db ->
+                    db.newIterator().use {
+                        var lastKey = Int.MIN_VALUE
+                        var count = 0
+                        it.seekToFirst()
+                        while (it.isValid()) {
+                            val thisKey = byteToInt(it.key())
+                            assertTrue(thisKey > lastKey)
+                            lastKey = thisKey
+                            count++
+                            it.next()
+                        }
+                        assertEquals(iterations, count)
+                    }
+                }
+            }
         }
     }
 
@@ -98,7 +98,10 @@ abstract class AbstractComparatorTest {
 
             val cfHandles = mutableListOf<ColumnFamilyHandle>()
 
-            DBOptions().setCreateIfMissing(true).setCreateMissingColumnFamilies(true).use { opt ->
+            DBOptions().apply {
+                setCreateIfMissing(true)
+                setCreateMissingColumnFamilies(true)
+            }.use { opt ->
                 // store 10,000 random integer keys
                 val iterations = 10000
 
@@ -111,14 +114,15 @@ abstract class AbstractComparatorTest {
                         assertEquals(2, cfDescriptors.size)
                         assertEquals(2, cfHandles.size)
 
+                        val value = "value".encodeToByteArray()
                         var i = 0
                         while (i < iterations) {
-                            val key = intToByte(Random.nextInt())
+                            val key = Random.nextBytes(4)
                             if (i > 0 && db.get(cfHandles[1], key) != null) {
                                 // does key already exist (avoid duplicates)
                                 i-- // generate a different key
                             } else {
-                                db.put(cfHandles[1], key, "value".encodeToByteArray())
+                                db.put(cfHandles[1], key, value)
                             }
                             i++
                         }
@@ -155,7 +159,6 @@ abstract class AbstractComparatorTest {
                             }
 
                             assertEquals(iterations, count)
-
                         } finally {
                             for (handle in cfHandles) {
                                 handle.close()

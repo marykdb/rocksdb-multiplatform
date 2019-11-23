@@ -17,12 +17,4 @@ package maryk.rocksdb
  * suggested that you manually dispose of objects when you are finished with
  * them.
  */
-expect abstract class AbstractNativeReference : AutoCloseable {
-    /**
-     * Returns true if we are responsible for freeing the underlying C++ object
-     *
-     * @return true if we are responsible to free the C++ object
-     * @see #dispose()
-     */
-    protected abstract fun isOwningHandle(): Boolean
-}
+expect abstract class AbstractNativeReference : AutoCloseable

@@ -10,5 +10,5 @@ expect enum class BottommostLevelCompaction {
     /** Only compact bottommost level if there is a compaction filter. This is the default option */
     kIfHaveCompactionFilter,
     /** Always compact bottommost level */
-    kForce
+    kForce,
 }

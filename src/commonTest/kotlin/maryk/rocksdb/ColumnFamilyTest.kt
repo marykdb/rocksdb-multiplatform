@@ -4,6 +4,7 @@ import maryk.assertContains
 import maryk.assertContentEquals
 import maryk.decodeToString
 import maryk.encodeToByteArray
+import maryk.rocksdb.CompressionType.BZLIB2_COMPRESSION
 import maryk.rocksdb.util.createTestDBFolder
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -11,7 +12,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class ColumnFamilyTest {
     private fun createTestFolder() = createTestDBFolder("ColumnFamilyTest")
@@ -31,10 +31,10 @@ class ColumnFamilyTest {
         val cfName = "some_name".encodeToByteArray()
 
         ColumnFamilyOptions()
-            .setCompressionType(CompressionType.BZLIB2_COMPRESSION).use { cfOptions ->
+            .setCompressionType(BZLIB2_COMPRESSION).use { cfOptions ->
                 val cfDescriptor = ColumnFamilyDescriptor(cfName, cfOptions)
 
-                assertEquals(CompressionType.BZLIB2_COMPRESSION, cfDescriptor.getOptions().compressionType())
+                assertEquals(BZLIB2_COMPRESSION, cfDescriptor.getOptions().compressionType())
             }
     }
 
@@ -109,9 +109,6 @@ class ColumnFamilyTest {
                 try {
                     assertContentEquals(cfName, columnFamilyHandle.getName())
                     assertEquals(1, columnFamilyHandle.getID())
-
-                    val latestDescriptor = columnFamilyHandle.getDescriptor()
-                    assertContentEquals(cfName, latestDescriptor.getName())
 
                     val columnFamilyNames = listColumnFamilies(
                         options, testFolder
@@ -270,7 +267,6 @@ class ColumnFamilyTest {
                     )
                     db.put(tmpColumnFamilyHandle, "key".encodeToByteArray(), "value".encodeToByteArray())
                     db.dropColumnFamily(tmpColumnFamilyHandle)
-                    assertTrue(tmpColumnFamilyHandle.isOwningHandle())
                 } finally {
                     tmpColumnFamilyHandle?.close()
                     for (columnFamilyHandle in columnFamilyHandleList) {
@@ -315,8 +311,6 @@ class ColumnFamilyTest {
                     db.put(tmpColumnFamilyHandle, "key".encodeToByteArray(), "value".encodeToByteArray())
                     db.put(tmpColumnFamilyHandle2, "key".encodeToByteArray(), "value".encodeToByteArray())
                     db.dropColumnFamilies(listOf(tmpColumnFamilyHandle, tmpColumnFamilyHandle2))
-                    assertTrue(tmpColumnFamilyHandle.isOwningHandle())
-                    assertTrue(tmpColumnFamilyHandle2.isOwningHandle())
                 } finally {
                     tmpColumnFamilyHandle?.close()
                     tmpColumnFamilyHandle2?.close()
@@ -325,97 +319,6 @@ class ColumnFamilyTest {
                     }
                 }
             }
-        }
-    }
-
-    @Test
-    fun writeBatch() {
-        StringAppendOperator().use { stringAppendOperator ->
-            ColumnFamilyOptions()
-                .setMergeOperator(stringAppendOperator).use { defaultCfOptions ->
-                    val cfDescriptors = listOf(
-                        ColumnFamilyDescriptor(
-                            defaultColumnFamily,
-                            defaultCfOptions
-                        ),
-                        ColumnFamilyDescriptor("new_cf".encodeToByteArray())
-                    )
-                    val columnFamilyHandleList = mutableListOf<ColumnFamilyHandle>()
-                    DBOptions().apply {
-                        setCreateIfMissing(true)
-                        setCreateMissingColumnFamilies(true)
-                    }.use { options ->
-                        openRocksDB(
-                            options,
-                            createTestFolder(),
-                            cfDescriptors, columnFamilyHandleList
-                        ).use { db ->
-                            WriteBatch().use { writeBatch ->
-                                WriteOptions().use { writeOpt ->
-                                    try {
-                                        writeBatch.put("key".encodeToByteArray(), "value".encodeToByteArray())
-                                        writeBatch.put(
-                                            db.getDefaultColumnFamily(),
-                                            "mergeKey".encodeToByteArray(), "merge".encodeToByteArray()
-                                        )
-                                        writeBatch.merge(
-                                            db.getDefaultColumnFamily(), "mergeKey".encodeToByteArray(),
-                                            "merge".encodeToByteArray()
-                                        )
-                                        writeBatch.put(
-                                            columnFamilyHandleList[1], "newcfkey".encodeToByteArray(),
-                                            "value".encodeToByteArray()
-                                        )
-                                        writeBatch.put(
-                                            columnFamilyHandleList[1], "newcfkey2".encodeToByteArray(),
-                                            "value2".encodeToByteArray()
-                                        )
-                                        writeBatch.delete("xyz".encodeToByteArray())
-                                        writeBatch.delete(columnFamilyHandleList[1], "xyz".encodeToByteArray())
-                                        db.write(writeOpt, writeBatch)
-
-                                        assertNull(
-                                            db.get(
-                                                columnFamilyHandleList[1],
-                                                "xyz".encodeToByteArray()
-                                            )
-                                        )
-                                        assertContentEquals(
-                                            "value".encodeToByteArray(),
-                                            db.get(
-                                                columnFamilyHandleList[1],
-                                                "newcfkey".encodeToByteArray()
-                                            )
-                                        )
-                                        assertContentEquals(
-                                            "value2".encodeToByteArray(),
-                                            db.get(
-                                                columnFamilyHandleList[1],
-                                                "newcfkey2".encodeToByteArray()
-                                            )
-                                        )
-                                        assertContentEquals(
-                                            "value".encodeToByteArray(),
-                                            db["key".encodeToByteArray()]
-                                        )
-                                        // check if key is merged
-                                        assertContentEquals(
-                                            "merge,merge".encodeToByteArray(),
-                                            db.get(
-                                                db.getDefaultColumnFamily(),
-                                                "mergeKey".encodeToByteArray()
-                                            )
-                                        )
-                                    } finally {
-                                        for (columnFamilyHandle in columnFamilyHandleList) {
-                                            columnFamilyHandle.close()
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
         }
     }
 
@@ -510,66 +413,6 @@ class ColumnFamilyTest {
                     assertEquals(2, retValues.size)
                     assertContentEquals("value".encodeToByteArray(), retValues[0])
                     assertContentEquals("value".encodeToByteArray(), retValues[1])
-                } finally {
-                    for (columnFamilyHandle in columnFamilyHandleList) {
-                        columnFamilyHandle.close()
-                    }
-                }
-            }
-        }
-    }
-
-    @Test
-    fun properties() {
-        val cfDescriptors = listOf(
-            ColumnFamilyDescriptor(defaultColumnFamily),
-            ColumnFamilyDescriptor("new_cf".encodeToByteArray())
-        )
-        val columnFamilyHandleList = mutableListOf<ColumnFamilyHandle>()
-        DBOptions().apply {
-            setCreateIfMissing(true)
-            setCreateMissingColumnFamilies(true)
-        }.use { options ->
-            openRocksDB(
-                options,
-                createTestFolder(),
-                cfDescriptors, columnFamilyHandleList
-            ).use { db ->
-                try {
-                    assertNotNull(db.getProperty("rocksdb.estimate-num-keys"))
-                    assertTrue(
-                        db.getLongProperty(
-                            columnFamilyHandleList[0],
-                            "rocksdb.estimate-num-keys"
-                        ) >= 0
-                    )
-                    assertNotNull(db.getProperty("rocksdb.stats"))
-                    assertNotNull(
-                        db.getProperty(
-                            columnFamilyHandleList[0],
-                            "rocksdb.sstables"
-                        )
-                    )
-                    assertNotNull(
-                        db.getProperty(
-                            columnFamilyHandleList[1],
-                            "rocksdb.estimate-num-keys"
-                        )
-                    )
-                    assertNotNull(
-                        db.getProperty(
-                            columnFamilyHandleList[1],
-                            "rocksdb.stats"
-                        )
-                    )
-                    assertNotNull(
-                        db.getProperty(
-                            columnFamilyHandleList[1],
-                            "rocksdb.sstables"
-                        )
-                    )
-                    assertNotNull(db.getAggregatedLongProperty("rocksdb.estimate-num-keys"))
-                    assertNotNull(db.getAggregatedLongProperty("rocksdb.estimate-num-keys") >= 0)
                 } finally {
                     for (columnFamilyHandle in columnFamilyHandleList) {
                         columnFamilyHandle.close()

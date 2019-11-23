@@ -1,23 +1,19 @@
 package maryk.rocksdb
 
+import rocksdb.RocksDBComparator
+
 actual abstract class AbstractComparator<T : AbstractSlice<*>> : RocksCallbackObject() {
+    internal abstract val native: RocksDBComparator
+
     actual abstract fun name(): String
 
     actual abstract fun compare(a: T, b: T): Int
 
     actual open fun findShortestSeparator(start: String, limit: T): String? {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return null
     }
 
     actual open fun findShortSuccessor(key: String): String? {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return null
     }
-
-    /**
-     * Get the type of this comparator.
-     * Used for determining the correct C++ cast in native code.
-     *
-     * @return The type of the comparator.
-     */
-    internal abstract fun getComparatorType(): ComparatorType
 }

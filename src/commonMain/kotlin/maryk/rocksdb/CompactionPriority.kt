@@ -24,18 +24,4 @@ expect enum class CompactionPriority {
      * amplification.
      */
     MinOverlappingRatio;
-
-    /** Returns the byte value of the enumerations value */
-    fun getValue(): Byte
 }
-
-/**
- * Get CompactionPriority by byte value.
- *
- * @param value byte representation of CompactionPriority.
- *
- * @return [maryk.rocksdb.CompactionPriority] instance or null.
- * @throws IllegalArgumentException if an invalid
- * value is provided.
- */
-expect fun getCompactionPriority(value: Byte): CompactionPriority

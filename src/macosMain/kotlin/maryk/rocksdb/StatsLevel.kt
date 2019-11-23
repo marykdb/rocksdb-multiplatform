@@ -1,22 +1,18 @@
 package maryk.rocksdb
 
+import rocksdb.RocksDBStatsLevel
+import rocksdb.RocksDBStatsLevel.RocksDBStatsLevelAll
+import rocksdb.RocksDBStatsLevel.RocksDBStatsLevelExceptDetailedTimers
+import rocksdb.RocksDBStatsLevel.RocksDBStatsLevelExceptHistogramOrTimers
+import rocksdb.RocksDBStatsLevel.RocksDBStatsLevelExceptTimeForMutex
+import rocksdb.RocksDBStatsLevel.RocksDBStatsLevelExceptTimers
+
 actual enum class StatsLevel(
-    private val value: Byte
+    internal val value: RocksDBStatsLevel
 ) {
-    EXCEPT_DETAILED_TIMERS(0),
-    EXCEPT_TIME_FOR_MUTEX(1),
-    ALL(2);
-
-    fun getValue(): Byte = value
-}
-
-actual fun getStatsLevel(value: Byte): StatsLevel {
-    for (statsLevel in StatsLevel.values()) {
-        if (statsLevel.getValue() == value) {
-            return statsLevel
-        }
-    }
-    throw IllegalArgumentException(
-        "Illegal value provided for StatsLevel."
-    )
+    EXCEPT_HISTOGRAM_OR_TIMERS(RocksDBStatsLevelExceptHistogramOrTimers),
+    EXCEPT_TIMERS(RocksDBStatsLevelExceptTimers),
+    EXCEPT_DETAILED_TIMERS(RocksDBStatsLevelExceptDetailedTimers),
+    EXCEPT_TIME_FOR_MUTEX(RocksDBStatsLevelExceptTimeForMutex),
+    ALL(RocksDBStatsLevelAll);
 }

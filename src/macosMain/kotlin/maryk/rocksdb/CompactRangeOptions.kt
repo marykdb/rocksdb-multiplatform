@@ -1,60 +1,72 @@
 package maryk.rocksdb
 
-actual class CompactRangeOptions actual constructor() {
+import rocksdb.RocksDBCompactRangeOptions
+
+actual class CompactRangeOptions internal constructor(
+    internal val native: RocksDBCompactRangeOptions
+) {
+    actual constructor() : this(RocksDBCompactRangeOptions())
+
     actual fun exclusiveManualCompaction(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.exclusiveManualCompaction
     }
 
     actual fun setExclusiveManualCompaction(exclusiveCompaction: Boolean): CompactRangeOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.exclusiveManualCompaction = exclusiveCompaction
+        return this
     }
 
     actual fun changeLevel(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.changeLevel
     }
 
     actual fun setChangeLevel(changeLevel: Boolean): CompactRangeOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.changeLevel = changeLevel
+        return this
     }
 
     actual fun targetLevel(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.targetLevel
     }
 
     actual fun setTargetLevel(targetLevel: Int): CompactRangeOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.targetLevel = targetLevel
+        return this
     }
 
     actual fun targetPathId(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.targetPathId.toInt()
     }
 
     actual fun setTargetPathId(targetPathId: Int): CompactRangeOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.targetPathId = targetPathId.toUInt()
+        return this
     }
 
     actual fun bottommostLevelCompaction(): BottommostLevelCompaction? {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return bottommostLevelCompactionFromByte(native.bottommostLevelCompaction)
     }
 
     actual fun setBottommostLevelCompaction(bottommostLevelCompaction: BottommostLevelCompaction): CompactRangeOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.bottommostLevelCompaction = bottommostLevelCompaction.value
+        return this
     }
 
     actual fun allowWriteStall(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.allowWriteStall
     }
 
     actual fun setAllowWriteStall(allowWriteStall: Boolean): CompactRangeOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.allowWriteStall = allowWriteStall
+        return this
     }
 
     actual fun maxSubcompactions(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.maxSubcompactions.toInt()
     }
 
     actual fun setMaxSubcompactions(maxSubcompactions: Int): CompactRangeOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.maxSubcompactions = maxSubcompactions.toUInt()
+        return this
     }
-
 }

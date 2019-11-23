@@ -1,22 +1,15 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.CPointer
+import rocksdb.RocksDBColumnFamilyHandle
 
 actual class ColumnFamilyHandle
     internal constructor(
-        private val rocksDB: RocksDB,
-        nativeHandle: CPointer<*>
+        val native: RocksDBColumnFamilyHandle
     )
-: RocksObject(nativeHandle) {
-    actual fun getName(): ByteArray {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+: RocksObject() {
+    actual fun getName() =
+        native.name?.encodeToByteArray()
+            ?: throw RocksDBException("Missing Column Family Name")
 
-    actual fun getID(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun getDescriptor(): ColumnFamilyDescriptor {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun getID() = native.id.toInt()
 }

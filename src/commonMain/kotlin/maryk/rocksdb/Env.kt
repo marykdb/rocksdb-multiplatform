@@ -25,12 +25,10 @@ expect abstract class Env : RocksObject {
     fun setBackgroundThreads(number: Int, priority: Priority = Priority.LOW): Env
 
     /**
-     *
      * Returns the length of the queue associated with the specified
      * thread pool.
      *
      * @param priority the priority id of a specified thread pool.
-     *
      * @return the thread pool queue length.
      */
     fun getThreadPoolQueueLen(priority: Priority): Int
@@ -41,7 +39,6 @@ expect abstract class Env : RocksObject {
      * pool.
      *
      * @param number the number of threads.
-     *
      * @return current [RocksEnv] instance.
      */
     fun incBackgroundThreadsIfNeeded(
@@ -62,13 +59,6 @@ expect abstract class Env : RocksObject {
      * @param priority the priority id of a specified thread pool.
      */
     fun lowerThreadPoolCPUPriority(priority: Priority): Env
-
-    /**
-     * Returns the status of all threads that belong to the current Env.
-     *
-     * @return the status of all threads belong to this env.
-     */
-    fun getThreadList(): List<ThreadStatus>
 }
 
 /**

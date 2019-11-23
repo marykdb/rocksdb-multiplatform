@@ -1,54 +1,48 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.CPointer
+import maryk.toByteArray
+import maryk.toNSData
+import maryk.wrapWithNullErrorThrower
+import rocksdb.RocksDBIndexedWriteBatch
+import rocksdb.getFromBatchAndDB
+import rocksdb.getFromBatchAndDBAndColumnFamily
 
-actual class WriteBatchWithIndex : AbstractWriteBatch {
-    actual constructor() : super(newWriteBatchWithIndex())
+actual class WriteBatchWithIndex(
+    internal val native: RocksDBIndexedWriteBatch
+) : AbstractWriteBatch(native) {
+    actual constructor() : this(RocksDBIndexedWriteBatch())
 
-    actual constructor(overwriteKey: Boolean) : super(newWriteBatchWithIndex(overwriteKey))
-
-    actual constructor(
-        fallbackIndexComparator: AbstractComparator<out AbstractSlice<*>>,
-        reservedBytes: Int,
-        overwriteKey: Boolean
-    ) : super(
-        newWriteBatchWithIndex(
-            fallbackIndexComparator.nativeHandle,
-            fallbackIndexComparator.getComparatorType().getValue(),
-            reservedBytes,
-            overwriteKey
-        )
-    )
+    actual constructor(overwriteKey: Boolean) : this(RocksDBIndexedWriteBatch(overwriteKey))
 
     actual fun newIterator(columnFamilyHandle: ColumnFamilyHandle): WBWIRocksIterator {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return WBWIRocksIterator(native.iteratorInColumnFamily(columnFamilyHandle.native))
     }
 
     actual fun newIterator(): WBWIRocksIterator {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return WBWIRocksIterator(native.iterator())
     }
 
     actual fun newIteratorWithBase(
         columnFamilyHandle: ColumnFamilyHandle,
         baseIterator: RocksIterator
-    ): RocksIterator {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    ) = RocksIterator(
+        native.iteratorWithBase(baseIterator.native, columnFamilyHandle.native)
+    )
 
-    actual fun newIteratorWithBase(baseIterator: RocksIterator): RocksIterator {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun newIteratorWithBase(baseIterator: RocksIterator) = RocksIterator(
+        native.iteratorWithBase(baseIterator.native)
+    )
 
     actual fun getFromBatch(
         columnFamilyHandle: ColumnFamilyHandle,
         options: DBOptions,
         key: ByteArray
-    ): ByteArray {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    ) = wrapWithNullErrorThrower { error ->
+        native.getFromBatchAndColumnFamily(options.native, columnFamilyHandle.native, key.toNSData(), error)?.toByteArray()
     }
 
-    actual fun getFromBatch(options: DBOptions, key: ByteArray): ByteArray {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    actual fun getFromBatch(options: DBOptions, key: ByteArray)= wrapWithNullErrorThrower { error ->
+        native.getFromBatch(options.native, key.toNSData(), error)?.toByteArray()
     }
 
     actual fun getFromBatchAndDB(
@@ -56,40 +50,15 @@ actual class WriteBatchWithIndex : AbstractWriteBatch {
         columnFamilyHandle: ColumnFamilyHandle,
         options: ReadOptions,
         key: ByteArray
-    ): ByteArray {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    ) = wrapWithNullErrorThrower { error ->
+        native.getFromBatchAndDBAndColumnFamily(db.native, options.native, columnFamilyHandle.native, key.toNSData(), error)?.toByteArray()
     }
 
     actual fun getFromBatchAndDB(
         db: RocksDB,
         options: ReadOptions,
         key: ByteArray
-    ): ByteArray {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    ) = wrapWithNullErrorThrower { error ->
+        native.getFromBatchAndDB(db.native, options.native, key.toNSData(), error)?.toByteArray()
     }
-
-    override fun singleDelete(key: ByteArray) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun singleDelete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
-
-private fun newWriteBatchWithIndex(): CPointer<*> {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-}
-
-private fun newWriteBatchWithIndex(overwriteKey: Boolean): CPointer<*> {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-}
-
-private fun newWriteBatchWithIndex(
-    nativeHandle: CPointer<*>,
-    value: Byte,
-    reservedBytes: Int,
-    overwriteKey: Boolean
-): CPointer<*> {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
 }

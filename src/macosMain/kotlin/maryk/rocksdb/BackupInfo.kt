@@ -6,7 +6,7 @@ actual class BackupInfo
         private val timestamp: Long,
         private val size: Long,
         private val numberFiles: Int,
-        private val appMetadata: String
+        private val appMetadata: String?
     )
 {
     actual fun backupId() = backupId

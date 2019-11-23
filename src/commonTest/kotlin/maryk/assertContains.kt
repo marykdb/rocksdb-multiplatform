@@ -11,7 +11,7 @@ fun assertContains(results: Collection<ByteArray?>, toMatch: ByteArray?) {
             if (toMatch != null && result.contentEquals(toMatch)) return
         }
     }
-    fail("Results do not contain $toMatch")
+    fail("Results do not contain ${toMatch?.decodeToString()}.")
 }
 
 fun assertContains(results: Collection<ByteArray?>, vararg toMatch: ByteArray?) {

@@ -10,18 +10,4 @@ expect enum class CompactionStopStyle {
 
     /** Total size of picked files &gt; next file */
     CompactionStopStyleTotalSize;
-
-    /** Returns the byte value of the enumerations value */
-    fun getValue(): Byte
 }
-
-/**
- * Get CompactionStopStyle by byte value.
- *
- * @param value byte representation of CompactionStopStyle.
- *
- * @return [maryk.rocksdb.CompactionStopStyle] instance or null.
- * @throws IllegalArgumentException if an invalid
- * value is provided.
- */
-expect fun getCompactionStopStyle(value: Byte): CompactionStopStyle

@@ -28,7 +28,9 @@ class SliceTest {
         Slice(
             "otherSlice".encodeToByteArray(),
             5
-        ).use { thirdSlice -> assertContentEquals("Slice".encodeToByteArray(), thirdSlice.data()) }
+        ).use { thirdSlice ->
+            assertContentEquals("Slice".encodeToByteArray(), thirdSlice.data())
+        }
     }
 
     @Test

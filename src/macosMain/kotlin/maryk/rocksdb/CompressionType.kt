@@ -1,9 +1,10 @@
 package maryk.rocksdb
 
 import maryk.rocksdb.CompressionType.NO_COMPRESSION
+import rocksdb.RocksDBCompressionType
 
 actual enum class CompressionType(
-    private val value: Byte,
+    internal val value: RocksDBCompressionType,
     private val libraryName: String?
 ) {
     NO_COMPRESSION(0x0, null),
@@ -15,8 +16,6 @@ actual enum class CompressionType(
     XPRESS_COMPRESSION(0x6, "xpress"),
     ZSTD_COMPRESSION(0x7, "zstd"),
     DISABLE_COMPRESSION_OPTION(0x7f, null);
-
-    actual fun getValue() = value
 
     actual fun getLibraryName() = libraryName
 }
@@ -32,9 +31,9 @@ actual fun getCompressionType(libraryName: String?): CompressionType {
     return NO_COMPRESSION
 }
 
-actual fun getCompressionType(byteIdentifier: Byte): CompressionType {
+actual fun getCompressionType(byteIdentifier: RocksDBCompressionType): CompressionType {
     for (compressionType in CompressionType.values()) {
-        if (compressionType.getValue() == byteIdentifier) {
+        if (compressionType.value == byteIdentifier) {
             return compressionType
         }
     }

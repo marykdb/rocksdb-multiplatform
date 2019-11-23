@@ -1,44 +1,95 @@
 package maryk.rocksdb
 
+import maryk.wrapWithNullErrorThrower
+import rocksdb.RocksDBColumnFamilyDescriptor
+import rocksdb.RocksDBColumnFamilyHandle
+import rocksdb.RocksDBColumnFamilyOptions
+import rocksdb.RocksDBOptions
+import rocksdb.columnFamilies
+import rocksdb.createIfMissing
+
 actual fun openRocksDB(path: String): RocksDB {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    return Unit.wrapWithNullErrorThrower { error ->
+        rocksdb.RocksDB.databaseAtPath(
+            path,
+            RocksDBOptions().apply {
+                createIfMissing = true
+            },
+            error
+        )?.let { RocksDB(it) }
+    } ?: throw RocksDBException("No Database could be opened at $path")
 }
 
 actual fun openRocksDB(options: Options, path: String): RocksDB {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    return Unit.wrapWithNullErrorThrower { error ->
+        rocksdb.RocksDB.databaseAtPath(path, options.native, error)?.let { RocksDB(it) }
+    } ?: throw RocksDBException("No Database could be opened at $path")
 }
 
 actual fun openRocksDB(
     path: String,
     columnFamilyDescriptors: List<ColumnFamilyDescriptor>,
-    columnFamilyHandles: List<ColumnFamilyHandle>
+    columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ): RocksDB {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    val descriptors = createRocksDBColumnFamilyDescriptor(columnFamilyDescriptors)
+
+    return Unit.wrapWithNullErrorThrower { error ->
+        rocksdb.RocksDB.databaseAtPath(path, descriptors, RocksDBOptions(), error)?.let {
+            RocksDB(it)
+        }?.also { db ->
+            convertAndAddColumnFamilyHandles(db, columnFamilyHandles)
+        }
+    } ?: throw RocksDBException("No Database could be opened at $path with given descriptors and handles for column families")
 }
 
 actual fun openRocksDB(
     options: DBOptions,
     path: String,
     columnFamilyDescriptors: List<ColumnFamilyDescriptor>,
-    columnFamilyHandles: List<ColumnFamilyHandle>
+    columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ): RocksDB {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    val descriptors = createRocksDBColumnFamilyDescriptor(columnFamilyDescriptors)
+
+    return Unit.wrapWithNullErrorThrower { error ->
+        rocksdb.RocksDB.databaseAtPath(
+            path,
+            descriptors,
+            RocksDBOptions(options.native, RocksDBColumnFamilyOptions()),
+            error
+        )?.let {
+            RocksDB(it)
+        }?.also { db ->
+            convertAndAddColumnFamilyHandles(db, columnFamilyHandles)
+        }
+    } ?: throw RocksDBException("No Database could be opened at $path with given descriptors and handles for column families")
 }
 
-actual fun openReadOnlyRocksDB(path: String): RocksDB {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-}
+actual fun openReadOnlyRocksDB(path: String) = Unit.wrapWithNullErrorThrower { error ->
+    rocksdb.RocksDB.databaseForReadOnlyAtPath(path, RocksDBOptions(), error)?.let {
+        RocksDB(it)
+    }
+} ?: throw RocksDBException("No Database could be opened at $path")
+
+actual fun openReadOnlyRocksDB(options: Options, path: String) = Unit.wrapWithNullErrorThrower { error ->
+    rocksdb.RocksDB.databaseForReadOnlyAtPath(path, options.native, error)?.let {
+        RocksDB(it)
+    }
+} ?: throw RocksDBException("No Database could be opened at $path")
 
 actual fun openReadOnlyRocksDB(
     path: String,
     columnFamilyDescriptors: List<ColumnFamilyDescriptor>,
     columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ): RocksDB {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-}
+    val descriptors = createRocksDBColumnFamilyDescriptor(columnFamilyDescriptors)
 
-actual fun openReadOnlyRocksDB(options: Options, path: String): RocksDB {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    return Unit.wrapWithNullErrorThrower { error ->
+        rocksdb.RocksDB.databaseForReadOnlyAtPath(path, descriptors, RocksDBOptions(), error)?.let {
+            RocksDB(it)
+        }?.also { db ->
+            convertAndAddColumnFamilyHandles(db, columnFamilyHandles)
+        }
+    } ?: throw RocksDBException("No Database could be opened at $path")
 }
 
 actual fun openReadOnlyRocksDB(
@@ -47,5 +98,37 @@ actual fun openReadOnlyRocksDB(
     columnFamilyDescriptors: List<ColumnFamilyDescriptor>,
     columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ): RocksDB {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    val descriptors = createRocksDBColumnFamilyDescriptor(columnFamilyDescriptors)
+
+    return Unit.wrapWithNullErrorThrower { error ->
+        rocksdb.RocksDB.databaseAtPath(
+            path,
+            descriptors,
+            RocksDBOptions(options.native, RocksDBColumnFamilyOptions()),
+            error
+        )?.let {
+            RocksDB(it)
+        }?.also { db ->
+            convertAndAddColumnFamilyHandles(db, columnFamilyHandles)
+        }
+    } ?: throw RocksDBException("No Database could be opened at $path")
+}
+
+private fun convertAndAddColumnFamilyHandles(
+    db: RocksDB,
+    columnFamilyHandles: MutableList<ColumnFamilyHandle>
+) {
+    @Suppress("UNCHECKED_CAST")
+    for (handle in (db.native.columnFamilies() as List<RocksDBColumnFamilyHandle>)) {
+        val cfHandle = ColumnFamilyHandle(handle)
+        columnFamilyHandles.add(cfHandle)
+    }
+}
+
+private fun createRocksDBColumnFamilyDescriptor(columnFamilyDescriptors: List<ColumnFamilyDescriptor>): RocksDBColumnFamilyDescriptor {
+    val descriptors = RocksDBColumnFamilyDescriptor()
+    for (descriptor in columnFamilyDescriptors) {
+        descriptors.addColumnFamilyWithName(descriptor.getName().decodeToString(), descriptor.getOptions().native)
+    }
+    return descriptors
 }

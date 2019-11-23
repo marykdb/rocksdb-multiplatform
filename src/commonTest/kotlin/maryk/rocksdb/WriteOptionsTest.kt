@@ -1,9 +1,7 @@
 package maryk.rocksdb
 
-import kotlin.random.Random
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -41,21 +39,5 @@ class WriteOptionsTest {
             writeOptions.setLowPri(false)
             assertFalse(writeOptions.lowPri())
         }
-    }
-
-    @Test
-    fun copyConstructor() {
-        val origOpts = WriteOptions().apply {
-            setDisableWAL(Random.nextBoolean())
-            setIgnoreMissingColumnFamilies(Random.nextBoolean())
-            setSync(Random.nextBoolean())
-        }
-        val copyOpts = WriteOptions(origOpts)
-        assertEquals(origOpts.disableWAL(), copyOpts.disableWAL())
-        assertEquals(origOpts.ignoreMissingColumnFamilies(), copyOpts.ignoreMissingColumnFamilies())
-        assertEquals(origOpts.sync(), copyOpts.sync())
-
-        origOpts.close()
-        copyOpts.close()
     }
 }

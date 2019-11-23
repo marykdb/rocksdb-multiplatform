@@ -1,20 +1,26 @@
 package maryk.rocksdb
 
-actual class ColumnFamilyMetaData {
+import rocksdb.RocksDBColumnFamilyMetaData
+import rocksdb.RocksDBLevelFileMetaData
+
+actual class ColumnFamilyMetaData(
+    val native: RocksDBColumnFamilyMetaData
+) {
     actual fun size(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.size.toLong()
     }
 
     actual fun fileCount(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.fileCount.toLong()
     }
 
     actual fun name(): ByteArray {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.name.encodeToByteArray()
     }
 
     actual fun levels(): List<LevelMetaData> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        @Suppress("UNCHECKED_CAST")
+        val levels = native.levels as List<RocksDBLevelFileMetaData>
+        return levels.map { LevelMetaData(it) }
     }
-
 }

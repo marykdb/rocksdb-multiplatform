@@ -17,7 +17,7 @@ package maryk.rocksdb
  * non-const method, all threads accessing the same WriteBatch must use
  * external synchronization.
  */
-expect class WriteBatch : AbstractWriteBatch {
+expect class WriteBatch() : AbstractWriteBatch {
     /**
      * Retrieve data size of the batch.
      * @return the serialized data size of the batch.
@@ -30,36 +30,6 @@ expect class WriteBatch : AbstractWriteBatch {
      * @return the WAL termination point
      */
     fun getWalTerminationPoint(): WriteBatchSavePoint
-
-    /**
-     * Constructs a WriteBatch instance
-     */
-    constructor()
-
-    /**
-     * Constructs a WriteBatch instance with a given size.
-     *
-     * @param reserved_bytes reserved size for WriteBatch
-     */
-    constructor(reserved_bytes: Int = 0)
-
-    /**
-     * Constructs a WriteBatch instance from a serialized representation
-     * as returned by [.data].
-     *
-     * @param serialized the serialized representation.
-     */
-    constructor(serialized: ByteArray)
-
-    /**
-     * Support for iterating over the contents of a batch.
-     *
-     * @param handler A handler that is called back for each
-     * update present in the batch
-     *
-     * @throws RocksDBException If we cannot iterate over the batch
-     */
-    fun iterate(handler: WriteBatchHandler)
 
     /**
      * Retrieve the serialized version of this batch.

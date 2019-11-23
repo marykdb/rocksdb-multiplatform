@@ -1,10 +1,18 @@
 package maryk.rocksdb
 
+import rocksdb.RocksDBEnvPriority
+import rocksdb.RocksDBEnvPriority.RocksDBEnvPriorityBottom
+import rocksdb.RocksDBEnvPriority.RocksDBEnvPriorityHigh
+import rocksdb.RocksDBEnvPriority.RocksDBEnvPriorityLow
+import rocksdb.RocksDBEnvPriority.RocksDBEnvPriorityTotal
+import rocksdb.RocksDBEnvPriority.RocksDBEnvPriorityUser
+
 actual enum class Priority(
-    private val value: Byte
+    internal val value: RocksDBEnvPriority
 ) {
-    BOTTOM(0x0),
-    LOW(0x1),
-    HIGH(0x2),
-    TOTAL(0x3);
+    BOTTOM(RocksDBEnvPriorityBottom),
+    LOW(RocksDBEnvPriorityLow),
+    HIGH(RocksDBEnvPriorityHigh),
+    TOTAL(RocksDBEnvPriorityTotal),
+    USER(RocksDBEnvPriorityUser);
 }

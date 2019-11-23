@@ -15,10 +15,11 @@ class LRUCacheTest {
         val highPriPoolRatio = 5.0
         LRUCache(
             capacity,
-            numShardBits, strictCapacityLimit, highPriPoolRatio
+            numShardBits,
+            strictCapacityLimit,
+            highPriPoolRatio
         ).use {
             //no op
         }
     }
-
 }

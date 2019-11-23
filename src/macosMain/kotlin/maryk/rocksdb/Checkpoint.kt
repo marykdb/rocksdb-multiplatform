@@ -1,20 +1,25 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.CPointer
+import maryk.wrapWithErrorThrower
+import rocksdb.RocksDBCheckpoint
 
 actual class Checkpoint
-    internal constructor(db: RocksDB)
-: RocksObject(newCheckpoint(db.nativeHandle)) {
+    private constructor(private val native: RocksDBCheckpoint)
+: RocksObject() {
+    internal constructor(db: RocksDB) : this(
+        Unit.wrapWithErrorThrower { error ->
+            RocksDBCheckpoint(db.native, error)
+        }
+    )
+
     actual fun createCheckpoint(checkpointPath: String) {
+        wrapWithErrorThrower { error ->
+            native.createCheckpointAtPath(checkpointPath, error)
+        }
     }
 }
 
-fun newCheckpoint(nativeHandle: CPointer<*>): CPointer<*> {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-}
-
-actual fun createCheckpoint(db: RocksDB?): Checkpoint {
-    requireNotNull(db) { "RocksDB instance shall not be null." }
+actual fun createCheckpoint(db: RocksDB): Checkpoint {
     check(db.isOwningHandle()) { "RocksDB instance must be initialized." }
     return Checkpoint(db)
 }

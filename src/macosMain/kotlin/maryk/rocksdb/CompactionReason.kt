@@ -1,7 +1,7 @@
 package maryk.rocksdb
 
 actual enum class CompactionReason(
-    private val value: Byte
+    internal val value: Byte
 ) {
     kUnknown(0x0),
     kLevelL0FilesNum(0x1),

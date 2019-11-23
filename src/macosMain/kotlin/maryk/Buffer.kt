@@ -1,12 +1,17 @@
 package maryk
 
-actual abstract class Buffer {
+actual abstract class Buffer(
+    protected var capacity: Int
+) {
+    protected var position: Int = 0
+
     actual abstract fun array(): Any
-    actual fun flip(): Buffer {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+
+    actual open fun flip(): Buffer {
+        capacity = position
+        position = 0
+        return this
     }
 
-    actual fun remaining(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun remaining() = capacity - position
 }

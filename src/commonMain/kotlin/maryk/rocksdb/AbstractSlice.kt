@@ -70,7 +70,7 @@ expect abstract class AbstractSlice<T> : RocksMutableObject {
      * 2) == 0 if this == other
      * 3) > 0 if this > other
      */
-    fun compare(other: AbstractSlice<*>?): Int
+    fun compare(other: AbstractSlice<*>): Int
 
     override fun hashCode(): Int
 
@@ -96,5 +96,5 @@ expect abstract class AbstractSlice<T> : RocksMutableObject {
      * @return true when this slice starts with the
      * `prefix` slice
      */
-    fun startsWith(prefix: AbstractSlice<*>?): Boolean
+    fun startsWith(prefix: AbstractSlice<*>): Boolean
 }

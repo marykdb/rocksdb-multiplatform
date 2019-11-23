@@ -1,47 +1,51 @@
 package maryk.rocksdb
 
-actual class SstFileMetaData {
+import rocksdb.RocksDBSstFileMetaData
+
+actual class SstFileMetaData(
+    internal val native: RocksDBSstFileMetaData
+) : RocksObject() {
     actual fun fileName(): String {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.name
     }
 
     actual fun path(): String {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.dbPath
     }
 
     actual fun size(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.size.toLong()
     }
 
     actual fun smallestSeqno(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.smallestSeqno.toLong()
     }
 
     actual fun largestSeqno(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.largestSeqno.toLong()
     }
 
     actual fun smallestKey(): ByteArray {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.smallestKey.encodeToByteArray()
     }
 
     actual fun largestKey(): ByteArray {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.largestKey.encodeToByteArray()
     }
 
     actual fun numReadsSampled(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.numReadsSampled().toLong()
     }
 
     actual fun beingCompacted(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.beingCompacted
     }
 
     actual fun numEntries(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.numEntries().toLong()
     }
 
     actual fun numDeletions(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.numDeletions().toLong()
     }
 }

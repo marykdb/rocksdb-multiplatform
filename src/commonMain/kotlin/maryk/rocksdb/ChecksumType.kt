@@ -10,7 +10,4 @@ expect enum class ChecksumType {
     kCRC32c,
     /** XX Hash */
     kxxHash;
-
-    /** Returns the byte value of the enumerations value */
-    fun getValue(): Byte
 }

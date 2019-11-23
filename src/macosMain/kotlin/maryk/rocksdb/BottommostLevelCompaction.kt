@@ -3,24 +3,24 @@ package maryk.rocksdb
 import maryk.rocksdb.BottommostLevelCompaction.kForce
 import maryk.rocksdb.BottommostLevelCompaction.kIfHaveCompactionFilter
 import maryk.rocksdb.BottommostLevelCompaction.kSkip
-
-private const val VALUE_kSkip: Byte = 0
-private const val VALUE_kIfHaveCompactionFilter: Byte = 1
-private const val VALUE_kForce: Byte = 2
+import rocksdb.RocksDBBottommostLevelCompaction
+import rocksdb.RocksDBBottommostLevelCompaction.RocksDBBottommostLevelCompactionForce
+import rocksdb.RocksDBBottommostLevelCompaction.RocksDBBottommostLevelCompactionIfHaveCompactionFilter
+import rocksdb.RocksDBBottommostLevelCompaction.RocksDBBottommostLevelCompactionSkip
 
 actual enum class BottommostLevelCompaction(
-    private val value: Byte
+    internal val value: RocksDBBottommostLevelCompaction
 ) {
-    kSkip(VALUE_kSkip),
-    kIfHaveCompactionFilter(VALUE_kIfHaveCompactionFilter),
-    kForce(VALUE_kForce)
+    kSkip(RocksDBBottommostLevelCompactionSkip),
+    kIfHaveCompactionFilter(RocksDBBottommostLevelCompactionIfHaveCompactionFilter),
+    kForce(RocksDBBottommostLevelCompactionForce),
 }
 
-fun fromRocksId(bottommostLevelCompaction: Byte): BottommostLevelCompaction? {
+fun bottommostLevelCompactionFromByte(bottommostLevelCompaction: RocksDBBottommostLevelCompaction): BottommostLevelCompaction? {
     return when (bottommostLevelCompaction) {
-        VALUE_kSkip -> kSkip
-        VALUE_kIfHaveCompactionFilter -> kIfHaveCompactionFilter
-        VALUE_kForce -> kForce
+        RocksDBBottommostLevelCompactionSkip -> kSkip
+        RocksDBBottommostLevelCompactionIfHaveCompactionFilter -> kIfHaveCompactionFilter
+        RocksDBBottommostLevelCompactionForce -> kForce
         else -> null
     }
 }

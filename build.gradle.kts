@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     `maven-publish`
-    kotlin("multiplatform") version "1.3.50"
+    kotlin("multiplatform") version "1.3.60"
     id("com.jfrog.bintray").version("1.8.4")
 }
 
@@ -14,7 +14,7 @@ repositories {
 }
 
 group = "io.maryk.rocksdb"
-version = "0.1.4"
+version = "0.3.0"
 
 val rocksDBVersion = "6.2.2"
 
@@ -26,12 +26,13 @@ val objectiveRocksHome = "./xcodeBuild/Build/Products/Release"
 kotlin {
     macosX64("macos") {
         binaries.getTest("DEBUG").linkerOpts = mutableListOf(
-            "-L${objectiveRocksHome}", "-lobjectiveRocks-macOS"
+            "-L${objectiveRocksHome}", "-lobjectiveRocks-macOS",
+            "-Llib", "-lobjectiveRocks-macOS"
         )
 
         compilations["main"].cinterops {
             val rocksdb by creating {
-                includeDirs("${objectiveRocksHome}/usr/local/include")
+                includeDirs("${objectiveRocksHome}/usr/local/include", "../ObjectiveRocks/Code")
             }
         }
     }
@@ -44,6 +45,14 @@ kotlin {
         }
     }
     sourceSets {
+        all {
+            languageSettings.apply {
+                languageVersion = "1.3"
+                apiVersion = "1.3"
+                useExperimentalAnnotation("kotlin.ExperimentalUnsignedTypes")
+                progressiveMode = true
+            }
+        }
         val commonMain by getting {
             dependencies {
                 implementation(kotlin("stdlib-common"))

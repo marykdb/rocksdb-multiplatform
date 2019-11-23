@@ -1,16 +1,12 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.CPointer
-import maryk.rocksdb.ComparatorType.JAVA_COMPARATOR
+import rocksdb.RocksDBComparator
 
-actual abstract class Comparator actual constructor(copt: ComparatorOptions) : AbstractComparator<Slice>() {
-    override fun initializeNative(vararg nativeParameterHandles: CPointer<*>): CPointer<*> {
-        return createNewComparator0(nativeParameterHandles[0])
+actual abstract class Comparator internal constructor() : AbstractComparator<Slice>() {
+    @Suppress("LeakingThis")
+    override val native = RocksDBComparator(name()) { a, b ->
+        this.compare(Slice(a!!), Slice(b!!))
     }
 
-    override fun getComparatorType() = JAVA_COMPARATOR
-}
-
-private fun createNewComparator0(nativeHandle: CPointer<*>): CPointer<*> {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    actual constructor(copt: ComparatorOptions) : this()
 }

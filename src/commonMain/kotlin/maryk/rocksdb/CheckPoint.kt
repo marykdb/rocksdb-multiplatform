@@ -31,4 +31,4 @@ expect class Checkpoint : RocksObject {
  * @throws IllegalStateException if [RocksDB]
  * instance is not initialized.
  */
-expect fun createCheckpoint(db: RocksDB?): Checkpoint
+expect fun createCheckpoint(db: RocksDB): Checkpoint

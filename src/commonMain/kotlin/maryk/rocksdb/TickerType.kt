@@ -200,6 +200,16 @@ expect enum class TickerType {
     COMPACTION_RANGE_DEL_DROP_OBSOLETE,
 
     /**
+     * Deletions obsoleted before bottom level due to file gap optimization.
+     */
+    COMPACTION_OPTIMIZED_DEL_DROP_OBSOLETE,
+
+    /**
+     * If a compaction was cancelled in sfm to prevent ENOSPC
+     */
+    COMPACTION_CANCELLED,
+
+    /**
      * Number of keys written to the database via the Put and Write call's.
      */
     NUMBER_KEYS_WRITTEN,
@@ -468,16 +478,6 @@ expect enum class TickerType {
      * Number of iterators deleted.
      */
     NO_ITERATOR_DELETED,
-
-    /**
-     * Deletions obsoleted before bottom level due to file gap optimization.
-     */
-    COMPACTION_OPTIMIZED_DEL_DROP_OBSOLETE,
-
-    /**
-     * If a compaction was cancelled in sfm to prevent ENOSPC
-     */
-    COMPACTION_CANCELLED,
 
     /**
      * # of times bloom FullFilter has not avoided the reads.

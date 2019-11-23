@@ -9,7 +9,7 @@ package maryk.rocksdb
  * or [WriteType.LOG]
  * will not have a value.
  */
-expect class WriteEntry(type: WriteType, key: DirectSlice, value: DirectSlice) : AutoCloseable {
+expect class WriteEntry(type: WriteType, key: DirectSlice, value: DirectSlice?) : AutoCloseable {
     /**
      * Returns the type of the Write Entry
      *

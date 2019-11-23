@@ -125,7 +125,6 @@ class WriteBatchWithIndexTest {
     @Test
     operator fun iterator() {
         WriteBatchWithIndex(true).use { wbwi ->
-
             val k1 = "key1"
             val v1 = "value1"
             val k2 = "key2"
@@ -170,26 +169,31 @@ class WriteBatchWithIndexTest {
                 WriteEntry(
                     WriteType.PUT,
                     DirectSlice(k1), DirectSlice(v1)
-                ), WriteEntry(
+                ),
+                WriteEntry(
                     WriteType.PUT,
                     DirectSlice(k2), DirectSlice(v2)
-                ), WriteEntry(
+                ),
+                WriteEntry(
                     WriteType.PUT,
                     DirectSlice(k3), DirectSlice(v3)
-                ), WriteEntry(
+                ),
+                WriteEntry(
                     WriteType.DELETE,
                     DirectSlice(k4), DirectSliceNone
-                ), WriteEntry(
+                ),
+                WriteEntry(
                     WriteType.SINGLE_DELETE,
                     DirectSlice(k5), DirectSliceNone
-                ), WriteEntry(
+                ),
+                WriteEntry(
                     WriteType.DELETE_RANGE,
                     DirectSlice(k6), DirectSlice(k7)
                 )
             )
 
             wbwi.newIterator().use {
-                //direct access - seek to key offsets
+                // direct access - seek to key offsets
                 val testOffsets = intArrayOf(2, 0, 3, 4, 1, 5)
 
                 for (i in testOffsets.indices) {
@@ -197,13 +201,14 @@ class WriteBatchWithIndexTest {
                     val key = toArray(expected[testOffset].getKey().data())
 
                     it.seek(key)
+
                     assertTrue(it.isValid())
 
                     val entry = it.entry()
                     assertEquals(expected[testOffset], entry)
                 }
 
-                //forward iterative access
+                // forward iterative access
                 var i = 0
                 it.seekToFirst()
                 while (it.isValid()) {
@@ -211,7 +216,7 @@ class WriteBatchWithIndexTest {
                     it.next()
                 }
 
-                //reverse iterative access
+                // reverse iterative access
                 i = expected.size - 1
                 it.seekToLast()
                 while (it.isValid()) {
@@ -226,7 +231,7 @@ class WriteBatchWithIndexTest {
     fun zeroByteTests() {
         WriteBatchWithIndex(true).use { wbwi ->
             val zeroByteValue = byteArrayOf(0, 0)
-            //add zero byte value
+            // add zero byte value
             wbwi.put(zeroByteValue, zeroByteValue)
 
             val buffer = allocateDirectByteBuffer(zeroByteValue.size)
@@ -301,7 +306,6 @@ class WriteBatchWithIndexTest {
     @Test
     fun restorePoints() {
         WriteBatchWithIndex().use { wbwi ->
-
             wbwi.put("k1".encodeToByteArray(), "v1".encodeToByteArray())
             wbwi.put("k2".encodeToByteArray(), "v2".encodeToByteArray())
 
@@ -412,7 +416,6 @@ class WriteBatchWithIndexTest {
         WriteBatchWithIndex().use { wbwi ->
             val wb = wbwi.getWriteBatch()
             assertNotNull(wb)
-            assertFalse(wb.isOwningHandle())
         }
     }
 

@@ -1,69 +1,115 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.CPointer
+import maryk.toNSData
+import maryk.wrapWithErrorThrower
+import rocksdb.RocksDBKeyRange
+import rocksdb.RocksDBWriteBatchBase
+import rocksdb.getWriteBatch
 
-actual abstract class AbstractWriteBatch protected
-    constructor(nativeHandle: CPointer<*>)
-: RocksObject(nativeHandle), WriteBatchInterface {
-    actual override fun count(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+actual abstract class AbstractWriteBatch internal constructor(
+    private val nativeBase: RocksDBWriteBatchBase
+) : RocksObject(), WriteBatchInterface {
+    override fun singleDelete(key: ByteArray) {
+        wrapWithErrorThrower { error ->
+            nativeBase.singleDelete(key.toNSData(), error)
+        }
     }
 
-    actual override fun put(key: ByteArray, value: ByteArray) {
+    override fun singleDelete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray) {
+        wrapWithErrorThrower { error ->
+            nativeBase.singleDelete(key.toNSData(), columnFamilyHandle.native, error)
+        }
     }
 
-    actual override fun put(
-        columnFamilyHandle: ColumnFamilyHandle,
-        key: ByteArray,
-        value: ByteArray
-    ) {
+    override fun count(): Int {
+        return nativeBase.count()
     }
 
-    actual override fun merge(key: ByteArray, value: ByteArray) {
+    override fun put(key: ByteArray, value: ByteArray) {
+        wrapWithErrorThrower { error ->
+            nativeBase.setData(value.toNSData(), key.toNSData(), error)
+        }
     }
 
-    actual override fun merge(
-        columnFamilyHandle: ColumnFamilyHandle,
-        key: ByteArray,
-        value: ByteArray
-    ) {
+    override fun put(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, value: ByteArray) {
+        wrapWithErrorThrower { error ->
+            nativeBase.setData(value.toNSData(), key.toNSData(), columnFamilyHandle.native, error)
+        }
     }
 
-    actual override fun delete(key: ByteArray) {
+    override fun merge(key: ByteArray, value: ByteArray) {
+        wrapWithErrorThrower { error ->
+            nativeBase.mergeData(value.toNSData(), key.toNSData(), error)
+        }
     }
 
-    actual override fun delete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray) {
+    override fun merge(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, value: ByteArray) {
+        wrapWithErrorThrower { error ->
+            nativeBase.mergeData(value.toNSData(), key.toNSData(), columnFamilyHandle.native, error)
+        }
     }
 
-    actual override fun deleteRange(beginKey: ByteArray, endKey: ByteArray) {
+    override fun delete(key: ByteArray) {
+        wrapWithErrorThrower { error ->
+            nativeBase.deleteDataForKey(key.toNSData(), error)
+        }
     }
 
-    actual override fun deleteRange(
-        columnFamilyHandle: ColumnFamilyHandle,
-        beginKey: ByteArray,
-        endKey: ByteArray
-    ) {
+    override fun delete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray) {
+        wrapWithErrorThrower { error ->
+            nativeBase.deleteDataForKey(key.toNSData(), columnFamilyHandle.native, error)
+        }
     }
 
-    actual override fun putLogData(blob: ByteArray) {
+    override fun deleteRange(beginKey: ByteArray, endKey: ByteArray) {
+        wrapWithErrorThrower { error ->
+            val range = RocksDBKeyRange()
+            range.start = beginKey.toNSData()
+            range.end = endKey.toNSData()
+            nativeBase.deleteRange(range, error)
+        }
     }
 
-    actual override fun clear() {
+    override fun deleteRange(columnFamilyHandle: ColumnFamilyHandle, beginKey: ByteArray, endKey: ByteArray) {
+        wrapWithErrorThrower { error ->
+            val range = RocksDBKeyRange()
+            range.start = beginKey.toNSData()
+            range.end = endKey.toNSData()
+            nativeBase.deleteRange(range, columnFamilyHandle.native, error)
+        }
     }
 
-    actual override fun setSavePoint() {
+    override fun putLogData(blob: ByteArray) {
+        wrapWithErrorThrower { error ->
+            nativeBase.putLogData(blob.toNSData(), error)
+        }
     }
 
-    actual override fun rollbackToSavePoint() {
+    override fun clear() {
+        nativeBase.clear()
     }
 
-    actual override fun popSavePoint() {
+    override fun setSavePoint() {
+        nativeBase.setSavePoint()
     }
 
-    actual override fun setMaxBytes(maxBytes: Long) {
+    override fun rollbackToSavePoint() {
+        wrapWithErrorThrower { error ->
+            nativeBase.rollbackToSavePoint(error)
+        }
     }
 
-    actual override fun getWriteBatch(): WriteBatch {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun popSavePoint() {
+        wrapWithErrorThrower { error ->
+            nativeBase.popSavePoint(error)
+        }
+    }
+
+    override fun setMaxBytes(maxBytes: Long) {
+        nativeBase.setMaxBytes(maxBytes.toULong())
+    }
+
+    override fun getWriteBatch(): WriteBatch {
+        return WriteBatch(nativeBase.getWriteBatch()!!)
     }
 }

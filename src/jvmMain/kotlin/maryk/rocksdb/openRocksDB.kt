@@ -7,14 +7,14 @@ actual fun openRocksDB(options: Options, path: String) = RocksDB.open(options, p
 actual fun openRocksDB(
     path: String,
     columnFamilyDescriptors: List<ColumnFamilyDescriptor>,
-    columnFamilyHandles: List<ColumnFamilyHandle>
+    columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ) = RocksDB.open(path, columnFamilyDescriptors, columnFamilyHandles)
 
 actual fun openRocksDB(
     options: DBOptions,
     path: String,
     columnFamilyDescriptors: List<ColumnFamilyDescriptor>,
-    columnFamilyHandles: List<ColumnFamilyHandle>
+    columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ) = RocksDB.open(options, path, columnFamilyDescriptors, columnFamilyHandles)
 
 actual fun openReadOnlyRocksDB(path: String) =

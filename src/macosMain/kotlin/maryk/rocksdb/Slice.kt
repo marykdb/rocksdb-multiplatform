@@ -1,27 +1,27 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.readBytes
+import maryk.toCPointer
+import rocksdb.RocksDBSlice
 
-actual class Slice : AbstractSlice<ByteArray> {
-    actual constructor(str: String) : super(createNewSliceFromString(str))
+actual class Slice internal constructor(
+    native: RocksDBSlice = RocksDBSlice()
+) : AbstractSlice<ByteArray>(native) {
+    actual constructor(str: String) : this(RocksDBSlice(str))
 
-    actual constructor(data: ByteArray, offset: Int) : super(createNewSlice0(data, offset))
+    actual constructor(data: ByteArray, offset: Int) : this(RocksDBSlice(data.toCPointer(), offset.toULong(), (data.size - offset).toULong()))
 
-    actual constructor(data: ByteArray) : super(createNewSlice1(data))
+    actual constructor(data: ByteArray) : this(RocksDBSlice(data.toCPointer()))
+
+    override fun getData(): ByteArray {
+        return native.data()!!.readBytes(this.size())
+    }
 
     override fun removePrefix(n: Int) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.removePrefix(n.toULong())
     }
 
     override fun clear() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.clear()
     }
-}
-
-private fun createNewSlice0(data: ByteArray, offset: Int): CPointer<*> {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-}
-
-private fun createNewSlice1(data: ByteArray): CPointer<*> {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
 }

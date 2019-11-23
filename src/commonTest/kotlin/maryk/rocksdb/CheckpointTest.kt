@@ -2,19 +2,30 @@ package maryk.rocksdb
 
 import maryk.createFolder
 import maryk.decodeToString
+import maryk.deleteFolder
 import maryk.encodeToByteArray
 import maryk.rocksdb.util.createTestDBFolder
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class CheckPointTest {
-    private val checkpointFolder = "build/test-database/CheckPointTest".apply {
-        createFolder(this)
-    }
+    private val checkpointFolder = "build/test-database/CheckPointTest"
 
     private fun createTestFolder() = createTestDBFolder("CheckPointTest")
+
+    @BeforeTest
+    fun setup() {
+        createFolder(checkpointFolder)
+    }
+
+    @AfterTest
+    fun cleanup() {
+        deleteFolder(checkpointFolder)
+    }
 
     @Test
     fun checkPoint() {
@@ -46,13 +57,6 @@ class CheckPointTest {
                 assertEquals("value", db["key".encodeToByteArray()]!!.decodeToString())
                 assertEquals("value2", db["key2".encodeToByteArray()]!!.decodeToString())
             }
-        }
-    }
-
-    @Test
-    fun failIfDbIsNull() {
-        assertFailsWith<IllegalArgumentException> {
-            createCheckpoint(null).use {}
         }
     }
 

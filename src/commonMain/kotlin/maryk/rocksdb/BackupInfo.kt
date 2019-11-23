@@ -18,5 +18,5 @@ expect class BackupInfo {
     fun numberFiles(): Int
 
     /** @return the associated application metadata, or null */
-    fun appMetadata(): String
+    fun appMetadata(): String?
 }

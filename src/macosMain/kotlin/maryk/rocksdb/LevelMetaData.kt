@@ -1,15 +1,23 @@
 package maryk.rocksdb
 
-actual class LevelMetaData {
+import rocksdb.RocksDBLevelFileMetaData
+import rocksdb.RocksDBSstFileMetaData
+
+actual class LevelMetaData(
+    val native: RocksDBLevelFileMetaData
+) {
     actual fun level(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.level
     }
 
     actual fun size(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.size.toLong()
     }
 
     actual fun files(): List<SstFileMetaData> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        @Suppress("UNCHECKED_CAST")
+        return (native.files as List<RocksDBSstFileMetaData>).map { sstFileMetaData ->
+            SstFileMetaData(sstFileMetaData)
+        }
     }
 }

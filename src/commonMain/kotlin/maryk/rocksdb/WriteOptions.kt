@@ -8,16 +8,6 @@ package maryk.rocksdb
  */
 expect class WriteOptions() : RocksObject {
     /**
-     * Copy constructor for WriteOptions.
-     *
-     * NOTE: This does a shallow copy, which means comparator, merge_operator, compaction_filter,
-     * compaction_filter_factory and other pointers will be cloned!
-     *
-     * @param other The ColumnFamilyOptions to copy.
-     */
-    constructor(other: WriteOptions)
-
-    /**
      * If true, the write will be flushed from the operating system
      * buffer cache (by calling WritableFile::Sync()) before the write
      * is considered complete.  If this flag is true, writes will be

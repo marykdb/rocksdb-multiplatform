@@ -1,28 +1,41 @@
 package maryk.rocksdb
 
 import maryk.ByteBuffer
+import maryk.DirectByteBuffer
+import maryk.WrappedByteBuffer
+import rocksdb.RocksDBSlice
 
-actual class DirectSlice internal constructor() : AbstractSlice<ByteBuffer>() {
-    actual constructor(str: String) : this() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+actual class DirectSlice internal constructor(
+    native: RocksDBSlice = RocksDBSlice()
+) : AbstractSlice<ByteBuffer>(native) {
+    actual constructor(str: String) : this(RocksDBSlice(str))
+
+    actual constructor(data: ByteBuffer, length: Int) : this(RocksDBSlice(data.nativePointer, length.toULong())) {
+        if (data is WrappedByteBuffer) {
+            throw IllegalArgumentException("Cannot use non direct byte buffer with DirectSlice")
+        }
     }
 
-    actual constructor(data: ByteBuffer, length: Int) : this() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    actual constructor(data: ByteBuffer) : this(RocksDBSlice(data.nativePointer)) {
+        if (data is WrappedByteBuffer) {
+            throw IllegalArgumentException("Cannot use non direct byte buffer with DirectSlice")
+        }
     }
 
-    actual constructor(data: ByteBuffer) : this() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun getData(): ByteBuffer {
+        return DirectByteBuffer(native.data()!!, native.size().toInt())
     }
 
     actual operator fun get(offset: Int): Byte {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.get(offset)
     }
 
     actual override fun clear() {
+        native.clear()
     }
 
     actual override fun removePrefix(n: Int) {
+        native.removePrefix(n.toULong())
     }
 }
 

@@ -1,15 +1,15 @@
 package maryk.rocksdb
 
 /**
- * Similar to [org.rocksdb.WriteBatch] but with a binary searchable
+ * Similar to [WriteBatch] but with a binary searchable
  * index built for all the keys inserted.
  *
  * Calling put, merge, remove or putLogData calls the same function
- * as with [org.rocksdb.WriteBatch] whilst also building an index.
+ * as with [WriteBatch] whilst also building an index.
  *
- * A user can call [org.rocksdb.WriteBatchWithIndex.newIterator] to
+ * A user can call [WriteBatchWithIndex.newIterator] to
  * create an iterator over the write batch or
- * [org.rocksdb.WriteBatchWithIndex.newIteratorWithBase]
+ * [WriteBatchWithIndex.newIteratorWithBase]
  * to get an iterator for the database with Read-Your-Own-Writes like capability
  */
 expect class WriteBatchWithIndex : AbstractWriteBatch {
@@ -32,24 +32,6 @@ expect class WriteBatchWithIndex : AbstractWriteBatch {
      * show two entries with the same key.
      */
     constructor(overwriteKey: Boolean)
-
-    /**
-     * Creates a WriteBatchWithIndex
-     *
-     * @param fallbackIndexComparator We fallback to this comparator
-     * to compare keys within a column family if we cannot determine
-     * the column family and so look up it's comparator.
-     *
-     * @param reservedBytes reserved bytes in underlying WriteBatch
-     *
-     * @param overwriteKey if true, overwrite the key in the index when
-     * inserting a duplicate key, in this way an iterator will never
-     * show two entries with the same key.
-     */
-    constructor(
-        fallbackIndexComparator: AbstractComparator<out AbstractSlice<*>>, reservedBytes: Int,
-        overwriteKey: Boolean
-    )
 
     /**
      * Create an iterator of a column family. User can call
@@ -131,7 +113,7 @@ expect class WriteBatchWithIndex : AbstractWriteBatch {
     fun getFromBatch(
         columnFamilyHandle: ColumnFamilyHandle,
         options: DBOptions, key: ByteArray
-    ): ByteArray
+    ): ByteArray?
 
     /**
      * Similar to [RocksDB.get] but will only
@@ -146,7 +128,7 @@ expect class WriteBatchWithIndex : AbstractWriteBatch {
      * @throws RocksDBException if the batch does not have enough data to resolve
      * Merge operations, MergeInProgress status may be returned.
      */
-    fun getFromBatch(options: DBOptions, key: ByteArray): ByteArray
+    fun getFromBatch(options: DBOptions, key: ByteArray): ByteArray?
 
     /**
      * Similar to [RocksDB.get] but will also
@@ -174,7 +156,7 @@ expect class WriteBatchWithIndex : AbstractWriteBatch {
     fun getFromBatchAndDB(
         db: RocksDB, columnFamilyHandle: ColumnFamilyHandle,
         options: ReadOptions, key: ByteArray
-    ): ByteArray
+    ): ByteArray?
 
     /**
      * Similar to [RocksDB.get] but will also
@@ -201,5 +183,5 @@ expect class WriteBatchWithIndex : AbstractWriteBatch {
     fun getFromBatchAndDB(
         db: RocksDB, options: ReadOptions,
         key: ByteArray
-    ): ByteArray
+    ): ByteArray?
 }

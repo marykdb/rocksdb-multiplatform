@@ -1,81 +1,47 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.CPointer
+import maryk.toByteArray
+import rocksdb.RocksDBWriteBatch
 
-actual class WriteBatch : AbstractWriteBatch {
-    actual constructor() : this(0)
+actual class WriteBatch(internal val native: RocksDBWriteBatch) : AbstractWriteBatch(native) {
+    actual constructor() : this(RocksDBWriteBatch())
 
-    actual constructor(reserved_bytes: Int) : super(newWriteBatch(reserved_bytes))
-
-    actual constructor(serialized: ByteArray) : super(newWriteBatch(serialized, serialized.size))
-
-    actual fun getDataSize(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun getDataSize() = native.dataSize().toLong()
 
     actual fun getWalTerminationPoint(): WriteBatchSavePoint {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val terminationPoint = native.getWalTerminationPoint()
+        return WriteBatchSavePoint(
+            terminationPoint.size.toLong(),
+            terminationPoint.count.toLong(),
+            terminationPoint.contentFlags.toLong()
+        )
     }
 
-    actual fun iterate(handler: WriteBatchHandler) {
-    }
+    actual fun data() = native.data().toByteArray()
 
-    actual fun data(): ByteArray {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun hasPut() = native.hasPut()
 
-    actual fun hasPut(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun hasDelete() = native.hasDelete()
 
-    actual fun hasDelete(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun hasSingleDelete() = native.hasSingleDelete()
 
-    actual fun hasSingleDelete(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun hasDeleteRange() = native.hasDeleteRange()
 
-    actual fun hasDeleteRange(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun hasMerge() = native.hasMerge()
 
-    actual fun hasMerge(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun hasBeginPrepare() = native.hasBeginPrepare()
 
-    actual fun hasBeginPrepare(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun hasEndPrepare() = native.hasEndPrepare()
 
-    actual fun hasEndPrepare(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun hasCommit() = native.hasCommit()
 
-    actual fun hasCommit(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun hasRollback(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun hasRollback() = native.hasRollback()
 
     actual fun markWalTerminationPoint() {
+        native.markWalTerminationPoint()
     }
 
-    override fun singleDelete(key: ByteArray) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun getWriteBatch(): WriteBatch {
+        return this
     }
-
-    override fun singleDelete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
-
-private fun newWriteBatch(reservedBytes: Int): CPointer<*> {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-}
-
-private fun newWriteBatch(reservedBytes: ByteArray, size: Int): CPointer<*> {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
 }

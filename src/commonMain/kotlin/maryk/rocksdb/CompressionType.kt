@@ -19,9 +19,6 @@ expect enum class CompressionType {
   ZSTD_COMPRESSION,
   DISABLE_COMPRESSION_OPTION;
 
-  /** Returns the byte value of the enumerations value. */
-  fun getValue(): Byte
-
   /**
    * Returns the library name of the compression type
    * identified by the enumeration value.

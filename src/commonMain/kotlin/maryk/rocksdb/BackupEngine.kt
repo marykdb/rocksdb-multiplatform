@@ -95,7 +95,6 @@ expect class BackupEngine : RocksObject, AutoCloseable {
     fun getBackupInfo(): List<BackupInfo>
 
     /**
-     *
      * Returns a list of corrupted backup ids. If there
      * is no corrupted backup the method will return an
      * empty list.
@@ -105,7 +104,6 @@ expect class BackupEngine : RocksObject, AutoCloseable {
     fun getCorruptedBackups(): IntArray
 
     /**
-     *
      * Will delete all the files we don't need anymore. It will
      * do the full scan of the files/ directory and delete all the
      * files that are not referenced.

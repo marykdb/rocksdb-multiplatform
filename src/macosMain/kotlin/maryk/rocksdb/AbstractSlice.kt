@@ -1,57 +1,53 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.CPointer
+import rocksdb.RocksDBSlice
 
-actual abstract class AbstractSlice<T> : RocksMutableObject {
-    protected constructor() : super(null, false)
-
-    protected constructor(nativeHandle: CPointer<*>): super(nativeHandle, true)
+actual abstract class AbstractSlice<T> protected constructor(
+    val native: RocksDBSlice
+) : RocksMutableObject() {
 
     actual fun data(): T {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return this.getData()
     }
+
+    protected abstract fun getData(): T
 
     actual abstract fun removePrefix(n: Int)
 
     actual abstract fun clear()
 
     actual fun size(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.size().toInt()
     }
 
     actual fun empty(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.empty()
     }
 
     actual fun toString(hex: Boolean): String {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.toString(hex)!!
     }
 
     actual override fun toString(): String {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.toString(false)!!
     }
 
-    actual fun compare(other: AbstractSlice<*>?): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    actual fun compare(other: AbstractSlice<*>): Int {
+        return native.compare(other.native)
     }
 
     actual override fun hashCode(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return toString().hashCode()
     }
 
-    actual override fun equals(other: Any?): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    actual override fun equals(other: Any?) = when (other) {
+        null, !is AbstractSlice<*> -> false
+        else -> {
+            native.compare(other.native) == 0
+        }
     }
 
-    actual fun startsWith(prefix: AbstractSlice<*>?): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    actual fun startsWith(prefix: AbstractSlice<*>): Boolean {
+        return native.startsWith(prefix.native)
     }
-
-    override fun disposeInternal(handle: CPointer<*>) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
-
-internal fun createNewSliceFromString(str: String): CPointer<*> {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
 }

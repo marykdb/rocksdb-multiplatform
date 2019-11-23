@@ -1,17 +1,7 @@
 package maryk.rocksdb
 
 import maryk.assertContentEquals
-import maryk.decodeToString
 import maryk.encodeToByteArray
-import maryk.rocksdb.util.CapturingWriteBatchHandler
-import maryk.rocksdb.util.CapturingWriteBatchHandler.Action.DELETE
-import maryk.rocksdb.util.CapturingWriteBatchHandler.Action.DELETE_RANGE
-import maryk.rocksdb.util.CapturingWriteBatchHandler.Action.LOG
-import maryk.rocksdb.util.CapturingWriteBatchHandler.Action.MERGE
-import maryk.rocksdb.util.CapturingWriteBatchHandler.Action.PUT
-import maryk.rocksdb.util.CapturingWriteBatchHandler.Action.SINGLE_DELETE
-import maryk.rocksdb.util.CapturingWriteBatchHandler.Event
-import maryk.rocksdb.util.WriteBatchGetter
 import maryk.rocksdb.util.createTestDBFolder
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -35,41 +25,6 @@ class WriteBatchTest {
     fun emptyWriteBatch() {
         WriteBatch().use { batch ->
             assertEquals(0, batch.count())
-        }
-    }
-
-    @Test
-    fun multipleBatchOperations() {
-        val foo = "foo".encodeToByteArray()
-        val bar = "bar".encodeToByteArray()
-        val box = "box".encodeToByteArray()
-        val baz = "baz".encodeToByteArray()
-        val boo = "boo".encodeToByteArray()
-        val hoo = "hoo".encodeToByteArray()
-        val hello = "hello".encodeToByteArray()
-
-        WriteBatch().use { batch ->
-            batch.put(foo, bar)
-            batch.delete(box)
-            batch.put(baz, boo)
-            batch.merge(baz, hoo)
-            batch.singleDelete(foo)
-            batch.deleteRange(baz, foo)
-            batch.putLogData(hello)
-
-            CapturingWriteBatchHandler().use { handler ->
-                batch.iterate(handler)
-
-                assertEquals(7, handler.getEvents().size)
-
-                assertEquals(Event(PUT, foo, bar), handler.getEvents()[0])
-                assertEquals(Event(DELETE, box, null), handler.getEvents()[1])
-                assertEquals(Event(PUT, baz, boo), handler.getEvents()[2])
-                assertEquals(Event(MERGE, baz, hoo), handler.getEvents()[3])
-                assertEquals(Event(SINGLE_DELETE, foo, null), handler.getEvents()[4])
-                assertEquals(Event(DELETE_RANGE, baz, foo), handler.getEvents()[5])
-                assertEquals(Event(LOG, null, hello), handler.getEvents()[6])
-            }
         }
     }
 
@@ -131,49 +86,6 @@ class WriteBatchTest {
 //    }
 
     @Test
-    fun savePoints() {
-        WriteBatch().use { batch ->
-            batch.put("k1".encodeToByteArray(), "v1".encodeToByteArray())
-            batch.put("k2".encodeToByteArray(), "v2".encodeToByteArray())
-            batch.put("k3".encodeToByteArray(), "v3".encodeToByteArray())
-
-            assertEquals("v1", getFromWriteBatch(batch, "k1"))
-            assertEquals("v2", getFromWriteBatch(batch, "k2"))
-            assertEquals("v3", getFromWriteBatch(batch, "k3"))
-
-            batch.setSavePoint()
-
-            batch.delete("k2".encodeToByteArray())
-            batch.put("k3".encodeToByteArray(), "v3-2".encodeToByteArray())
-
-            assertNull(getFromWriteBatch(batch, "k2"))
-            assertEquals("v3-2", getFromWriteBatch(batch, "k3"))
-
-            batch.setSavePoint()
-
-            batch.put("k3".encodeToByteArray(), "v3-3".encodeToByteArray())
-            batch.put("k4".encodeToByteArray(), "v4".encodeToByteArray())
-
-            assertEquals("v3-3", getFromWriteBatch(batch, "k3"))
-            assertEquals("v4", getFromWriteBatch(batch, "k4"))
-
-            batch.rollbackToSavePoint()
-
-            assertNull(getFromWriteBatch(batch, "k2"))
-            assertEquals("v3-2", getFromWriteBatch(batch, "k3"))
-            assertNull(getFromWriteBatch(batch, "k4"))
-
-
-            batch.rollbackToSavePoint()
-
-            assertEquals("v1", getFromWriteBatch(batch, "k1"))
-            assertEquals("v2", getFromWriteBatch(batch, "k2"))
-            assertEquals("v3", getFromWriteBatch(batch, "k3"))
-            assertNull(getFromWriteBatch(batch, "k4"))
-        }
-    }
-
-    @Test
     fun deleteRange() {
         openRocksDB(createTestFolder()).use { db ->
             WriteBatch().use { batch ->
@@ -200,29 +112,6 @@ class WriteBatchTest {
     }
 
     @Test
-    fun restorePoints() {
-        WriteBatch().use { batch ->
-            batch.put("k1".encodeToByteArray(), "v1".encodeToByteArray())
-            batch.put("k2".encodeToByteArray(), "v2".encodeToByteArray())
-
-            batch.setSavePoint()
-
-            batch.put("k1".encodeToByteArray(), "123456789".encodeToByteArray())
-            batch.delete("k2".encodeToByteArray())
-
-            batch.rollbackToSavePoint()
-
-            CapturingWriteBatchHandler().use { handler ->
-                batch.iterate(handler)
-
-                assertEquals(2, handler.getEvents().size)
-                assertEquals(Event(PUT, "k1".encodeToByteArray(), "v1".encodeToByteArray()), handler.getEvents()[0])
-                assertEquals(Event(PUT, "k2".encodeToByteArray(), "v2".encodeToByteArray()), handler.getEvents()[1])
-            }
-        }
-    }
-
-    @Test
     fun restorePoints_withoutSavePoints() {
         WriteBatch().use { batch ->
             assertFailsWith<RocksDBException> {
@@ -240,33 +129,6 @@ class WriteBatchTest {
             assertFailsWith<RocksDBException> {
                 // without previous corresponding setSavePoint
                 batch.rollbackToSavePoint()
-            }
-        }
-    }
-
-    @Test
-    fun popSavePoint() {
-        WriteBatch().use { batch ->
-            batch.put("k1".encodeToByteArray(), "v1".encodeToByteArray())
-            batch.put("k2".encodeToByteArray(), "v2".encodeToByteArray())
-
-            batch.setSavePoint()
-
-            batch.put("k1".encodeToByteArray(), "123456789".encodeToByteArray())
-            batch.delete("k2".encodeToByteArray())
-
-            batch.setSavePoint()
-
-            batch.popSavePoint()
-
-            batch.rollbackToSavePoint()
-
-            CapturingWriteBatchHandler().use { handler ->
-                batch.iterate(handler)
-
-                assertEquals(2, handler.getEvents().size)
-                assertEquals(Event(PUT, "k1".encodeToByteArray(), "v1".encodeToByteArray()), handler.getEvents()[0])
-                assertEquals(Event(PUT, "k2".encodeToByteArray(), "v2".encodeToByteArray()), handler.getEvents()[1])
             }
         }
     }
@@ -308,35 +170,6 @@ class WriteBatchTest {
             batch.setMaxBytes(1)
             assertFailsWith<RocksDBException> {
                 batch.put("k1".encodeToByteArray(), "v1".encodeToByteArray())
-            }
-        }
-    }
-
-    @Test
-    fun data() {
-        WriteBatch().use { batch1 ->
-            batch1.delete("k0".encodeToByteArray())
-            batch1.put("k1".encodeToByteArray(), "v1".encodeToByteArray())
-            batch1.put("k2".encodeToByteArray(), "v2".encodeToByteArray())
-            batch1.put("k3".encodeToByteArray(), "v3".encodeToByteArray())
-            batch1.putLogData("log1".encodeToByteArray())
-            batch1.merge("k2".encodeToByteArray(), "v22".encodeToByteArray())
-            batch1.delete("k3".encodeToByteArray())
-
-            val serialized = batch1.data()
-
-            WriteBatch(serialized).use { batch2 ->
-                assertEquals(batch1.count(), batch2.count())
-
-                CapturingWriteBatchHandler().use { handler1 ->
-                    batch1.iterate(handler1)
-
-                    CapturingWriteBatchHandler().use { handler2 ->
-                        batch2.iterate(handler2)
-
-                        assertEquals(handler1.getEvents(), handler2.getEvents())
-                    }
-                }
             }
         }
     }
@@ -436,14 +269,5 @@ class WriteBatchTest {
         WriteBatch().use { batch ->
             assertEquals(batch, batch.getWriteBatch())
         }
-    }
-}
-
-internal fun getFromWriteBatch(wb: WriteBatch, key: String): String? {
-    val getter = WriteBatchGetter(key.encodeToByteArray())
-    wb.iterate(getter)
-    return when(val value = getter.value) {
-        null -> null
-        else -> value.decodeToString()
     }
 }

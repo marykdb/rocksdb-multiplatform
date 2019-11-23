@@ -1,22 +1,38 @@
 package maryk.rocksdb
 
-actual enum class InfoLogLevel(
-    private val value: Byte
-) {
-    DEBUG_LEVEL(0x0),
-    INFO_LEVEL(0x1),
-    WARN_LEVEL(0x2),
-    ERROR_LEVEL(0x3),
-    FATAL_LEVEL(0x4),
-    HEADER_LEVEL(0x5),
-    NUM_INFO_LOG_LEVELS(0x6);
+import rocksdb.RocksDBLogLevel
+import rocksdb.RocksDBLogLevelDebug
+import rocksdb.RocksDBLogLevelError
+import rocksdb.RocksDBLogLevelFatal
+import rocksdb.RocksDBLogLevelHeader
+import rocksdb.RocksDBLogLevelInfo
+import rocksdb.RocksDBLogLevelNumInfoLogLevels
+import rocksdb.RocksDBLogLevelWarn
 
-    actual fun getValue() = value
+actual enum class InfoLogLevel(
+    internal val value: RocksDBLogLevel
+) {
+    DEBUG_LEVEL(RocksDBLogLevelDebug),
+    INFO_LEVEL(RocksDBLogLevelInfo),
+    WARN_LEVEL(RocksDBLogLevelWarn),
+    ERROR_LEVEL(RocksDBLogLevelError),
+    FATAL_LEVEL(RocksDBLogLevelFatal),
+    HEADER_LEVEL(RocksDBLogLevelHeader),
+    NUM_INFO_LOG_LEVELS(RocksDBLogLevelNumInfoLogLevels);
 }
 
-actual fun getInfoLogLevel(value: Byte): InfoLogLevel {
+/**
+ * Get InfoLogLevel by byte value.
+ *
+ * @param value byte representation of InfoLogLevel.
+ *
+ * @return [InfoLogLevel] instance.
+ * @throws IllegalArgumentException if an invalid
+ * value is provided.
+ */
+fun getInfoLogLevel(value: RocksDBLogLevel): InfoLogLevel {
     for (infoLogLevel in InfoLogLevel.values()) {
-        if (infoLogLevel.getValue() == value) {
+        if (infoLogLevel.value == value) {
             return infoLogLevel
         }
     }

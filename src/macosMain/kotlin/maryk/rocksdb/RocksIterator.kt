@@ -1,49 +1,52 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.CPointer
+import maryk.toByteArray
+import maryk.toNSData
+import maryk.wrapWithErrorThrower
+import rocksdb.RocksDBIterator
 
-actual class RocksIterator
-    protected constructor(rocksDB: RocksDB, nativeHandle: CPointer<*>)
-: AbstractRocksIterator<RocksDB>(
-    rocksDB, nativeHandle
-) {
+actual class RocksIterator internal constructor(
+    internal val native: RocksDBIterator
+) : AbstractRocksIterator<RocksDB>() {
     actual fun key(): ByteArray {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.key().toByteArray()
     }
 
     actual fun value(): ByteArray {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.value().toByteArray()
     }
 
     override fun isValid(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.isValid()
     }
 
     override fun seekToFirst() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.seekToFirst()
     }
 
     override fun seekToLast() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.seekToLast()
     }
 
     override fun seek(target: ByteArray) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.seekToKey(target.toNSData())
     }
 
     override fun seekForPrev(target: ByteArray) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.seekForPrev(target.toNSData())
     }
 
     override fun next() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.next()
     }
 
     override fun prev() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.previous()
     }
 
     override fun status() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        wrapWithErrorThrower { error ->
+            native.status(error)
+        }
     }
 }

@@ -1,15 +1,7 @@
 package maryk.rocksdb
 
-import maryk.EnumSet
-
 expect class Statistics : RocksObject {
     constructor()
-
-    constructor(otherStatistics: Statistics)
-
-    constructor(ignoreHistograms: EnumSet<HistogramType>)
-
-    constructor(ignoreHistograms: EnumSet<HistogramType>, otherStatistics: Statistics)
 
     /**
      * Gets the current stats level.

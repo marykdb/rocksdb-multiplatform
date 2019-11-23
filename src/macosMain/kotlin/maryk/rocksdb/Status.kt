@@ -1,6 +1,7 @@
 package maryk.rocksdb
 
 import maryk.rocksdb.StatusSubCode.None
+import maryk.rocksdb.StatusSubCode.Undefined
 
 actual class Status actual constructor(
     private val code: StatusCode,
@@ -21,7 +22,7 @@ actual class Status actual constructor(
 }
 
 actual enum class StatusCode(
-    private val value: Byte
+    internal val value: Byte
 ) {
     Ok(0x0),
     NotFound(0x1),
@@ -40,8 +41,18 @@ actual enum class StatusCode(
     Undefined(0x7F)
 }
 
+fun getStatusCode(identifier: Byte): StatusCode {
+    for (statusCode in StatusCode.values()) {
+        if (statusCode.value == identifier) {
+            return statusCode
+        }
+    }
+
+    throw IllegalArgumentException("Illegal value provided for StatusCode.")
+}
+
 actual enum class StatusSubCode(
-    private val value: Byte
+    internal val value: Byte
 ) {
     None(0x0),
     MutexTimeout(0x1),
@@ -51,5 +62,17 @@ actual enum class StatusSubCode(
     Deadlock(0x5),
     StaleFile(0x6),
     MemoryLimit(0x7),
+    SpaceLimit(0x8),
+    PathNotFound(0x9),
+    MaxSubCode(0x10),
     Undefined(0x7F)
+}
+
+fun getStatusSubCode(identifier: Byte): StatusSubCode {
+    for (statusSubCode in StatusSubCode.values()) {
+        if (statusSubCode.value == identifier) {
+            return statusSubCode
+        }
+    }
+    return Undefined
 }

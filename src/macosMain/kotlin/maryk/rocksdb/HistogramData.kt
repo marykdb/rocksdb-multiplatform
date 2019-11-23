@@ -1,64 +1,43 @@
 package maryk.rocksdb
 
-actual class HistogramData {
-    actual constructor(
-        median: Double,
-        percentile95: Double,
-        percentile99: Double,
-        average: Double,
-        standardDeviation: Double
-    ) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+import rocksdb.RocksDBStatisticsHistogram
 
-    actual constructor(
-        median: Double,
-        percentile95: Double,
-        percentile99: Double,
-        average: Double,
-        standardDeviation: Double,
-        max: Double,
-        count: Long,
-        sum: Long,
-        min: Double
-    ) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
+actual class HistogramData(
+    val native: RocksDBStatisticsHistogram
+) {
     actual fun getMedian(): Double {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.median
     }
 
     actual fun getPercentile95(): Double {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.percentile95
     }
 
     actual fun getPercentile99(): Double {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.percentile99
     }
 
     actual fun getAverage(): Double {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.average
     }
 
     actual fun getStandardDeviation(): Double {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.standardDeviation
     }
 
     actual fun getMax(): Double {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.max
     }
 
     actual fun getCount(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.count.toLong()
     }
 
     actual fun getSum(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.sum.toLong()
     }
 
     actual fun getMin(): Double {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.min
     }
-
 }

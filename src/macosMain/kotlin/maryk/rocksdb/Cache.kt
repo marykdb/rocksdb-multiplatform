@@ -1,7 +1,7 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.CPointer
+import rocksdb.RocksDBCache
 
 actual abstract class Cache
-    protected constructor(nativeHandle: CPointer<*>)
-: RocksObject(nativeHandle)
+    protected constructor(internal val native: RocksDBCache)
+: RocksObject()

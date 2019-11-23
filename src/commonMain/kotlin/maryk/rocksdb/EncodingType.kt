@@ -35,11 +35,4 @@ expect enum class EncodingType {
      * will be returned if the two don't match.
      */
     kPrefix;
-
-    /**
-     * Returns the byte value of the enumerations value
-     *
-     * @return byte representation
-     */
-    fun getValue(): Byte
 }

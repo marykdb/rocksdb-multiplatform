@@ -1,465 +1,262 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.CPointer
+import rocksdb.RocksDBColumnFamilyOptions
+import rocksdb.RocksDBComparator
+import rocksdb.RocksDBPrefixExtractor
+import rocksdb.RocksDBPrefixType.RocksDBPrefixFixedLength
 
-actual class ColumnFamilyOptions private constructor(nativeHandle: CPointer<*>) : RocksObject(nativeHandle) {
-    actual constructor() : this(newColumnFamilyOptions())
-
-    actual constructor(other: ColumnFamilyOptions) : this(copyColumnFamilyOptions(other.nativeHandle)) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual constructor(options: Options) : this(newColumnFamilyOptionsFromOptions(options.nativeHandle))
+actual class ColumnFamilyOptions private constructor(
+    internal val native: RocksDBColumnFamilyOptions
+) : RocksObject() {
+    actual constructor() : this(RocksDBColumnFamilyOptions())
 
     actual fun setMinWriteBufferNumberToMerge(minWriteBufferNumberToMerge: Int): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        assert(isOwningHandle())
+        native.setMinWriteBufferNumberToMerge(minWriteBufferNumberToMerge)
+        return this
     }
 
     actual fun minWriteBufferNumberToMerge(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        assert(isOwningHandle())
+        return native.minWriteBufferNumberToMerge()
     }
 
     actual fun setMaxWriteBufferNumberToMaintain(maxWriteBufferNumberToMaintain: Int): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        assert(isOwningHandle())
+        native.setMaxWriteBufferNumber(maxWriteBufferNumberToMaintain)
+        return this
     }
 
     actual fun maxWriteBufferNumberToMaintain(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setInplaceUpdateSupport(inplaceUpdateSupport: Boolean): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun inplaceUpdateSupport(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        assert(isOwningHandle())
+        return native.maxWriteBufferNumber()
     }
 
     actual fun setBloomLocality(bloomLocality: Int): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        assert(isOwningHandle())
+        native.setBloomLocality(bloomLocality.toUInt())
+        return this
     }
 
     actual fun bloomLocality(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setCompressionPerLevel(compressionLevels: List<CompressionType>): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun compressionPerLevel(): List<CompressionType> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        assert(isOwningHandle())
+        return native.bloomLocality().toInt()
     }
 
     actual fun setNumLevels(numLevels: Int): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        assert(isOwningHandle())
+        native.setNumLevels(numLevels)
+        return this
     }
 
     actual fun numLevels(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        assert(isOwningHandle())
+        return native.numLevels()
     }
 
     actual fun setCompactionStyle(compactionStyle: CompactionStyle): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.setCompactionStyle(compactionStyle.value)
+        return this
     }
 
     actual fun compactionStyle(): CompactionStyle {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setCompactionPriority(compactionPriority: CompactionPriority): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun compactionPriority(): CompactionPriority {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setCompactionOptionsUniversal(compactionOptionsUniversal: CompactionOptionsUniversal): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun compactionOptionsUniversal(): CompactionOptionsUniversal {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setCompactionOptionsFIFO(compactionOptionsFIFO: CompactionOptionsFIFO): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun compactionOptionsFIFO(): CompactionOptionsFIFO {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setOptimizeFiltersForHits(optimizeFiltersForHits: Boolean): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun optimizeFiltersForHits(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setForceConsistencyChecks(forceConsistencyChecks: Boolean): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun forceConsistencyChecks(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun optimizeForSmallDb(): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun optimizeForPointLookup(blockCacheSizeMb: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun optimizeLevelStyleCompaction(): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun optimizeLevelStyleCompaction(memtableMemoryBudget: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun optimizeUniversalStyleCompaction(): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun optimizeUniversalStyleCompaction(memtableMemoryBudget: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return getCompactionStyle(native.compactionStyle)
     }
 
     actual fun setComparator(builtinComparator: BuiltinComparator): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.setComparator(RocksDBComparator.comparatorWithType(builtinComparator.native))
+        return this
     }
 
     actual fun setComparator(comparator: AbstractComparator<out AbstractSlice<*>>): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setMergeOperatorName(name: String): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setMergeOperator(mergeOperator: MergeOperator): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setCompactionFilter(compactionFilter: AbstractCompactionFilter<out AbstractSlice<*>>): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun compactionFilter(): AbstractCompactionFilter<out AbstractSlice<*>> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setCompactionFilterFactory(compactionFilterFactory: AbstractCompactionFilterFactory<out AbstractCompactionFilter<*>>): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun compactionFilterFactory(): AbstractCompactionFilterFactory<out AbstractCompactionFilter<*>> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.setComparator(comparator.native)
+        return this
     }
 
     actual fun useFixedLengthPrefixExtractor(n: Int): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun useCappedPrefixExtractor(n: Int): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setLevelZeroFileNumCompactionTrigger(numFiles: Int): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun levelZeroFileNumCompactionTrigger(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setLevelZeroSlowdownWritesTrigger(numFiles: Int): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun levelZeroSlowdownWritesTrigger(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setLevelZeroStopWritesTrigger(numFiles: Int): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun levelZeroStopWritesTrigger(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setMaxTableFilesSizeFIFO(maxTableFilesSize: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun maxTableFilesSizeFIFO(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun memTableConfig(): MemTableConfig {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setMemTableConfig(memTableConfig: MemTableConfig): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun memTableFactoryName(): String {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun tableFormatConfig(): TableFormatConfig {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setTableFormatConfig(config: TableFormatConfig): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun tableFactoryName(): String {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setBottommostCompressionType(bottommostCompressionType: CompressionType): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun bottommostCompressionType(): CompressionType {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setBottommostCompressionOptions(compressionOptions: CompressionOptions): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun bottommostCompressionOptions(): CompressionOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setCompressionOptions(compressionOptions: CompressionOptions): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun compressionOptions(): CompressionOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setWriteBufferSize(writeBufferSize: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun writeBufferSize(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setDisableAutoCompactions(disableAutoCompactions: Boolean): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun disableAutoCompactions(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setLevel0FileNumCompactionTrigger(level0FileNumCompactionTrigger: Int): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun level0FileNumCompactionTrigger(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setMaxCompactionBytes(maxCompactionBytes: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun maxCompactionBytes(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setMaxBytesForLevelBase(maxBytesForLevelBase: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun maxBytesForLevelBase(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setLevelCompactionDynamicLevelBytes(enableLevelCompactionDynamicLevelBytes: Boolean): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun levelCompactionDynamicLevelBytes(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setCompressionType(compressionType: CompressionType): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun compressionType(): CompressionType {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setMaxWriteBufferNumber(maxWriteBufferNumber: Int): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun maxWriteBufferNumber(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setInplaceUpdateNumLocks(inplaceUpdateNumLocks: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun inplaceUpdateNumLocks(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setMemtablePrefixBloomSizeRatio(memtablePrefixBloomSizeRatio: Double): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun memtablePrefixBloomSizeRatio(): Double {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setMemtableHugePageSize(memtableHugePageSize: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun memtableHugePageSize(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setArenaBlockSize(arenaBlockSize: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun arenaBlockSize(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setLevel0SlowdownWritesTrigger(level0SlowdownWritesTrigger: Int): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun level0SlowdownWritesTrigger(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setLevel0StopWritesTrigger(level0StopWritesTrigger: Int): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun level0StopWritesTrigger(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setTargetFileSizeBase(targetFileSizeBase: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun targetFileSizeBase(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setTargetFileSizeMultiplier(multiplier: Int): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun targetFileSizeMultiplier(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        assert(isOwningHandle())
+        native.setPrefixExtractor(
+            RocksDBPrefixExtractor.prefixExtractorWithType(
+                RocksDBPrefixFixedLength,
+                n.toULong()
+            )
+        )
+        return this
     }
 
     actual fun setMaxBytesForLevelMultiplier(multiplier: Double): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.maxBytesForLevelMultiplier = multiplier
+        return this
     }
 
     actual fun maxBytesForLevelMultiplier(): Double {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.maxBytesForLevelMultiplier
     }
 
-    actual fun setMaxBytesForLevelMultiplierAdditional(maxBytesForLevelMultiplierAdditional: IntArray): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    actual fun setWriteBufferSize(writeBufferSize: Long): ColumnFamilyOptions {
+        assert(isOwningHandle())
+        native.setWriteBufferSize(writeBufferSize.toULong())
+        return this
     }
 
-    actual fun maxBytesForLevelMultiplierAdditional(): IntArray {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    actual fun writeBufferSize(): Long {
+        assert(isOwningHandle())
+        return native.writeBufferSize().toLong()
     }
 
-    actual fun setSoftPendingCompactionBytesLimit(softPendingCompactionBytesLimit: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    actual fun setDisableAutoCompactions(disableAutoCompactions: Boolean): ColumnFamilyOptions {
+        assert(isOwningHandle())
+        native.setDisableAutoCompactions(disableAutoCompactions)
+        return this
     }
 
-    actual fun softPendingCompactionBytesLimit(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    actual fun disableAutoCompactions(): Boolean {
+        assert(isOwningHandle())
+        return native.disableAutoCompactions()
     }
 
-    actual fun setHardPendingCompactionBytesLimit(hardPendingCompactionBytesLimit: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    actual fun setLevel0FileNumCompactionTrigger(level0FileNumCompactionTrigger: Int): ColumnFamilyOptions {
+        assert(isOwningHandle())
+        native.setLevel0FileNumCompactionTrigger(level0FileNumCompactionTrigger)
+        return this
     }
 
-    actual fun hardPendingCompactionBytesLimit(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    actual fun level0FileNumCompactionTrigger(): Int {
+        assert(isOwningHandle())
+        return native.level0FileNumCompactionTrigger()
+    }
+
+    actual fun setMaxBytesForLevelBase(maxBytesForLevelBase: Long): ColumnFamilyOptions {
+        assert(isOwningHandle())
+        native.setMaxBytesForLevelBase(maxBytesForLevelBase.toULong())
+        return this
+    }
+
+    actual fun maxBytesForLevelBase(): Long {
+        assert(isOwningHandle())
+        return native.maxBytesForLevelBase().toLong()
+    }
+
+    actual fun setCompressionType(compressionType: CompressionType): ColumnFamilyOptions {
+        assert(isOwningHandle())
+        native.setCompressionType(compressionType.value)
+        return this
+    }
+
+    actual fun compressionType(): CompressionType {
+        assert(isOwningHandle())
+        return getCompressionType(
+            native.compressionType()
+        )
+    }
+
+    actual fun setMaxWriteBufferNumber(maxWriteBufferNumber: Int): ColumnFamilyOptions {
+        assert(isOwningHandle())
+        native.setMaxWriteBufferNumber(maxWriteBufferNumber)
+        return this
+    }
+
+    actual fun maxWriteBufferNumber(): Int {
+        assert(isOwningHandle())
+        return native.maxWriteBufferNumber()
+    }
+
+    actual fun setMemtablePrefixBloomSizeRatio(memtablePrefixBloomSizeRatio: Double): ColumnFamilyOptions {
+        assert(isOwningHandle())
+        native.setMemtablePrefixBloomSizeRatio(memtablePrefixBloomSizeRatio)
+        return this
+    }
+
+    actual fun memtablePrefixBloomSizeRatio(): Double {
+        assert(isOwningHandle())
+        return native.memtablePrefixBloomSizeRatio()
+    }
+
+    actual fun setMemtableHugePageSize(memtableHugePageSize: Long): ColumnFamilyOptions {
+        assert(isOwningHandle())
+        native.setMemtableHugePageTlbSize(memtableHugePageSize.toULong())
+        return this
+    }
+
+    actual fun memtableHugePageSize(): Long {
+        assert(isOwningHandle())
+        return native.memtableHugePageTlbSize.toLong()
+    }
+
+    actual fun setArenaBlockSize(arenaBlockSize: Long): ColumnFamilyOptions {
+        assert(isOwningHandle())
+        native.setArenaBlockSize(arenaBlockSize.toULong())
+        return this
+    }
+
+    actual fun arenaBlockSize(): Long {
+        assert(isOwningHandle())
+        return native.arenaBlockSize.toLong()
+    }
+
+    actual fun setLevel0SlowdownWritesTrigger(level0SlowdownWritesTrigger: Int): ColumnFamilyOptions {
+        assert(isOwningHandle())
+        native.setLevel0SlowdownWritesTrigger(level0SlowdownWritesTrigger)
+        return this
+    }
+
+    actual fun level0SlowdownWritesTrigger(): Int {
+        assert(isOwningHandle())
+        return native.level0SlowdownWritesTrigger()
+    }
+
+    actual fun setLevel0StopWritesTrigger(level0StopWritesTrigger: Int): ColumnFamilyOptions {
+        assert(isOwningHandle())
+        native.setLevel0StopWritesTrigger(level0StopWritesTrigger)
+        return this
+    }
+
+    actual fun level0StopWritesTrigger(): Int {
+        assert(isOwningHandle())
+        return native.level0StopWritesTrigger()
+    }
+
+    actual fun setTargetFileSizeBase(targetFileSizeBase: Long): ColumnFamilyOptions {
+        assert(isOwningHandle())
+        native.setTargetFileSizeBase(targetFileSizeBase.toULong())
+        return this
+    }
+
+    actual fun targetFileSizeBase(): Long {
+        assert(isOwningHandle())
+        return native.targetFileSizeBase().toLong()
+    }
+
+    actual fun setTargetFileSizeMultiplier(multiplier: Int): ColumnFamilyOptions {
+        assert(isOwningHandle())
+        native.setTargetFileSizeMultiplier(multiplier)
+        return this
+    }
+
+    actual fun targetFileSizeMultiplier(): Int {
+        assert(isOwningHandle())
+        return native.targetFileSizeMultiplier()
     }
 
     actual fun setMaxSequentialSkipInIterations(maxSequentialSkipInIterations: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        assert(isOwningHandle())
+        native.setMaxSequentialSkipInIterations(maxSequentialSkipInIterations.toULong())
+        return this
     }
 
     actual fun maxSequentialSkipInIterations(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        assert(isOwningHandle())
+        return native.maxSequentialSkipInIterations().toLong()
     }
 
     actual fun setMaxSuccessiveMerges(maxSuccessiveMerges: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        assert(isOwningHandle())
+        native.setMaxSuccessiveMerges(maxSuccessiveMerges.toULong())
+        return this
     }
 
     actual fun maxSuccessiveMerges(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        assert(isOwningHandle())
+        return native.maxSuccessiveMerges().toLong()
     }
-
-    actual fun setParanoidFileChecks(paranoidFileChecks: Boolean): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun paranoidFileChecks(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setReportBgIoStats(reportBgIoStats: Boolean): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun reportBgIoStats(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun setTtl(ttl: Long): ColumnFamilyOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    actual fun ttl(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
-
-fun newColumnFamilyOptions(): CPointer<*> {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-}
-
-private fun copyColumnFamilyOptions(nativeHandle: CPointer<*>): Options {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-}
-
-private fun newColumnFamilyOptionsFromOptions(nativeHandle: CPointer<*>): CPointer<*> {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
 }

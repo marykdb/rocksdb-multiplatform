@@ -71,7 +71,7 @@ expect fun openRocksDB(options: Options, path: String): RocksDB
 expect fun openRocksDB(
     path: String,
     columnFamilyDescriptors: List<ColumnFamilyDescriptor>,
-    columnFamilyHandles: List<ColumnFamilyHandle>
+    columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ): RocksDB
 
 /**
@@ -113,7 +113,7 @@ expect fun openRocksDB(
     options: DBOptions,
     path: String,
     columnFamilyDescriptors: List<ColumnFamilyDescriptor>,
-    columnFamilyHandles: List<ColumnFamilyHandle>
+    columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ): RocksDB
 
 /**

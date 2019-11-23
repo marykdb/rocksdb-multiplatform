@@ -18,11 +18,4 @@ expect enum class IndexType {
      * A two-level index implementation. Both levels are binary search indexes.
      */
     kTwoLevelIndexSearch;
-
-    /**
-     * Returns the byte value of the enumerations value
-     *
-     * @return byte representation
-     */
-    fun getValue(): Byte
 }

@@ -1053,7 +1053,7 @@ expect open class RocksDB : RocksObject {
      * @throws RocksDBException thrown if error happens in underlying
      * native library.
      */
-    fun multiGetAsList(keys: List<ByteArray>): List<ByteArray>
+    fun multiGetAsList(keys: List<ByteArray>): List<ByteArray?>
 
     /**
      * Returns a list of values for the given list of keys. List will contain
@@ -1076,7 +1076,7 @@ expect open class RocksDB : RocksObject {
     fun multiGetAsList(
         columnFamilyHandleList: List<ColumnFamilyHandle>,
         keys: List<ByteArray>
-    ): List<ByteArray>
+    ): List<ByteArray?>
 
     /**
      * Returns a list of values for the given list of keys. List will contain
@@ -1093,7 +1093,7 @@ expect open class RocksDB : RocksObject {
     fun multiGetAsList(
         opt: ReadOptions,
         keys: List<ByteArray>
-    ): List<ByteArray>
+    ): List<ByteArray?>
 
     /**
      * Returns a list of values for the given list of keys. List will contain
@@ -1118,7 +1118,7 @@ expect open class RocksDB : RocksObject {
         opt: ReadOptions,
         columnFamilyHandleList: List<ColumnFamilyHandle>,
         keys: List<ByteArray>
-    ): List<ByteArray>
+    ): List<ByteArray?>
 
     /**
      * If the [key] definitely does not exist in the database, then this method
@@ -1400,7 +1400,7 @@ expect open class RocksDB : RocksObject {
      *
      * @param snapshot [Snapshot] instance
      */
-    fun releaseSnapshot(snapshot: Snapshot?)
+    fun releaseSnapshot(snapshot: Snapshot)
 
     /**
      * DB implements can export properties about their state
@@ -1429,9 +1429,9 @@ expect open class RocksDB : RocksObject {
      * native library.
      */
     fun getProperty(
-        columnFamilyHandle: ColumnFamilyHandle?,
+        columnFamilyHandle: ColumnFamilyHandle,
         property: String
-    ): String
+    ): String?
 
     /**
      * DB implementations can export properties about their state
@@ -1455,7 +1455,7 @@ expect open class RocksDB : RocksObject {
      * @throws RocksDBException thrown if error happens in underlying
      * native library.
      */
-    fun getProperty(property: String): String
+    fun getProperty(property: String): String?
 
     /**
      * Gets a property map.
@@ -1480,7 +1480,7 @@ expect open class RocksDB : RocksObject {
      * @throws RocksDBException if an error happens in the underlying native code.
      */
     fun getMapProperty(
-        columnFamilyHandle: ColumnFamilyHandle?,
+        columnFamilyHandle: ColumnFamilyHandle,
         property: String
     ): Map<String, String>
 
@@ -1515,7 +1515,7 @@ expect open class RocksDB : RocksObject {
      * @throws RocksDBException if an error happens in the underlying native code.
      */
     fun getLongProperty(
-        columnFamilyHandle: ColumnFamilyHandle?,
+        columnFamilyHandle: ColumnFamilyHandle,
         property: String
     ) : Long
 
@@ -1526,95 +1526,6 @@ expect open class RocksDB : RocksObject {
      * owned by DB.
      */
     fun resetStats()
-
-    /**
-     * Return sum of the getLongProperty of all the column families
-     *
-     * The value should be treated as unsigned long using provided methods
-     * of type [Long].
-     *
-     * @param property to be fetched.
-     *
-     * @return numerical property value
-     *
-     * @throws RocksDBException if an error happens in the underlying native code.
-     */
-    fun getAggregatedLongProperty(property: String): Long
-
-    /**
-     * Get the approximate file system space used by keys in each range.
-     *
-     * Note that the returned sizes measure file system space usage, so
-     * if the user data compresses by a factor of ten, the returned
-     * sizes will be one-tenth the size of the corresponding user data size.
-     *
-     * If `sizeApproximationFlags` defines whether the returned size
-     * should include the recently written data in the mem-tables (if
-     * the mem-table type supports it), data serialized to disk, or both.
-     *
-     * @param columnFamilyHandle [maryk.rocksdb.ColumnFamilyHandle]
-     * instance, or null for the default column family
-     * @param ranges the ranges over which to approximate sizes
-     * @param sizeApproximationFlags flags to determine what to include in the
-     * approximation.
-     *
-     * @return the sizes
-     */
-    fun getApproximateSizes(
-        columnFamilyHandle: ColumnFamilyHandle?,
-        ranges: List<Range>,
-        vararg sizeApproximationFlags: SizeApproximationFlag
-    ): LongArray
-
-    /**
-     * Get the approximate file system space used by keys in each range for
-     * the default column family.
-     *
-     * Note that the returned sizes measure file system space usage, so
-     * if the user data compresses by a factor of ten, the returned
-     * sizes will be one-tenth the size of the corresponding user data size.
-     *
-     * If `sizeApproximationFlags` defines whether the returned size
-     * should include the recently written data in the mem-tables (if
-     * the mem-table type supports it), data serialized to disk, or both.
-     *
-     * @param ranges the ranges over which to approximate sizes
-     * @param sizeApproximationFlags flags to determine what to include in the
-     * approximation.
-     *
-     * @return the sizes.
-     */
-    fun getApproximateSizes(
-        ranges: List<Range>,
-        vararg sizeApproximationFlags: SizeApproximationFlag
-    ): LongArray
-
-    /**
-     * This method is similar to [.getApproximateSizes],
-     * except that it returns approximate number of records and size in memtables.
-     *
-     * @param columnFamilyHandle [maryk.rocksdb.ColumnFamilyHandle]
-     * instance, or null for the default column family
-     * @param range the ranges over which to get the memtable stats
-     *
-     * @return the count and size for the range
-     */
-    fun getApproximateMemTableStats(
-        columnFamilyHandle: ColumnFamilyHandle?,
-        range: Range
-    ): CountAndSize
-
-    /**
-     * This method is similar to [.getApproximateSizes],
-     * except that it returns approximate number of records and size in memtables.
-     *
-     * @param range the ranges over which to get the memtable stats
-     *
-     * @return the count and size for the range
-     */
-    fun getApproximateMemTableStats(
-        range: Range
-    ): CountAndSize
 
     /**
      * Range compaction of database.
@@ -1649,7 +1560,7 @@ expect open class RocksDB : RocksObject {
      * part of the library.
      */
     fun compactRange(
-        columnFamilyHandle: ColumnFamilyHandle?
+        columnFamilyHandle: ColumnFamilyHandle
     )
 
     /**
@@ -1689,8 +1600,8 @@ expect open class RocksDB : RocksObject {
      * part of the library.
      */
     fun compactRange(
-        columnFamilyHandle: ColumnFamilyHandle?,
-        begin: ByteArray?, end: ByteArray?
+        columnFamilyHandle: ColumnFamilyHandle,
+        begin: ByteArray, end: ByteArray
     )
 
     /**
@@ -1711,101 +1622,9 @@ expect open class RocksDB : RocksObject {
      */
     fun compactRange(
         columnFamilyHandle: ColumnFamilyHandle,
-        begin: ByteArray?, end: ByteArray?,
+        begin: ByteArray, end: ByteArray,
         compactRangeOptions: CompactRangeOptions
     )
-
-    /**
-     * Change the options for the column family handle.
-     *
-     * @param columnFamilyHandle [org.rocksdb.ColumnFamilyHandle]
-     * instance, or null for the default column family.
-     * @param mutableColumnFamilyOptions the options.
-     * @throws RocksDBException thrown if an error occurs within the native
-     * part of the library.
-     */
-    fun setOptions(
-        columnFamilyHandle: ColumnFamilyHandle,
-        mutableColumnFamilyOptions: MutableColumnFamilyOptions
-    )
-
-    /**
-     * Change the options for the default column family handle.
-     *
-     * @param mutableColumnFamilyOptions the options.
-     *
-     * @throws RocksDBException thrown if an error occurs within the native
-     * part of the library.
-     */
-    fun setOptions(
-        mutableColumnFamilyOptions: MutableColumnFamilyOptions
-    )
-
-    /**
-     * Set the options for the column family handle.
-     *
-     * @param mutableDBoptions the options.
-     * @throws RocksDBException thrown if an error occurs within the native
-     * part of the library.
-     */
-    fun setDBOptions(mutableDBoptions: MutableDBOptions)
-
-    /**
-     * Takes a list of files specified by file names and
-     * compacts them to the specified level.
-     *
-     * Note that the behavior is different from
-     * [.compactRange]
-     * in that CompactFiles() performs the compaction job using the CURRENT
-     * thread.
-     *
-     * @param compactionOptions compaction options
-     * @param inputFileNames the name of the files to compact
-     * @param outputLevel the level to which they should be compacted
-     * @param outputPathId the id of the output path, or -1
-     * @param compactionJobInfo the compaction job info, this parameter
-     * will be updated with the info from compacting the files,
-     * can just be null if you don't need it.
-     * @throws RocksDBException thrown if an error occurs within the native
-     * part of the library.
-     */
-    fun compactFiles(
-        compactionOptions: CompactionOptions,
-        inputFileNames: List<String>,
-        outputLevel: Int,
-        outputPathId: Int,
-        compactionJobInfo: CompactionJobInfo?
-    ): List<String>
-
-    /**
-     * Takes a list of files specified by file names and
-     * compacts them to the specified level.
-     *
-     * Note that the behavior is different from
-     * [.compactRange]
-     * in that CompactFiles() performs the compaction job using the CURRENT
-     * thread.
-     *
-     * @param compactionOptions compaction options
-     * @param columnFamilyHandle columnFamilyHandle, or null for the
-     * default column family
-     * @param inputFileNames the name of the files to compact
-     * @param outputLevel the level to which they should be compacted
-     * @param outputPathId the id of the output path, or -1
-     * @param compactionJobInfo the compaction job info, this parameter
-     * will be updated with the info from compacting the files,
-     * can just be null if you don't need it.
-     * @throws RocksDBException thrown if an error occurs within the native
-     * part of the library.
-     */
-    fun compactFiles(
-        compactionOptions: CompactionOptions,
-        /* @Nullable */ columnFamilyHandle: ColumnFamilyHandle?,
-        inputFileNames: List<String>,
-        outputLevel: Int,
-        outputPathId: Int,
-        /* @Nullable */ compactionJobInfo: CompactionJobInfo?
-    ): List<String>
 
     /**
      * This function will wait until all currently running background processes
@@ -1861,7 +1680,7 @@ expect open class RocksDB : RocksObject {
      *
      * @return the number of levels
      */
-    fun numberLevels(columnFamilyHandle: ColumnFamilyHandle?): Int
+    fun numberLevels(columnFamilyHandle: ColumnFamilyHandle): Int
 
     /**
      * Maximum level to which a new compacted memtable is pushed if it
@@ -1876,7 +1695,7 @@ expect open class RocksDB : RocksObject {
      * @param columnFamilyHandle the column family handle
      */
     fun maxMemCompactionLevel(
-        /* @Nullable */columnFamilyHandle: ColumnFamilyHandle?
+        columnFamilyHandle: ColumnFamilyHandle
     ): Int
 
     /**
@@ -1890,7 +1709,7 @@ expect open class RocksDB : RocksObject {
      * @param columnFamilyHandle the column family handle
      */
     fun level0StopWriteTrigger(
-        columnFamilyHandle: ColumnFamilyHandle?
+        columnFamilyHandle: ColumnFamilyHandle
     ): Int
 
     /**
@@ -1907,58 +1726,6 @@ expect open class RocksDB : RocksObject {
      * @return the env
      */
     fun getEnv(): Env
-
-    /**
-     *
-     * Flush all memory table data.
-     *
-     *
-     * Note: it must be ensured that the FlushOptions instance
-     * is not GC'ed before this method finishes. If the wait parameter is
-     * set to false, flush processing is asynchronous.
-     *
-     * @param flushOptions [maryk.rocksdb.FlushOptions] instance.
-     * @throws RocksDBException thrown if an error occurs within the native
-     * part of the library.
-     */
-    fun flush(flushOptions: FlushOptions)
-
-    /**
-     * Flush all memory table data.
-     *
-     * Note: it must be ensured that the FlushOptions instance
-     * is not GC'ed before this method finishes. If the wait parameter is
-     * set to false, flush processing is asynchronous.
-     *
-     * @param flushOptions [maryk.rocksdb.FlushOptions] instance.
-     * @param columnFamilyHandle [maryk.rocksdb.ColumnFamilyHandle] instance.
-     * @throws RocksDBException thrown if an error occurs within the native
-     * part of the library.
-     */
-    fun flush(
-        flushOptions: FlushOptions,
-        columnFamilyHandle: ColumnFamilyHandle?
-    )
-
-    /**
-     * Flushes multiple column families.
-     *
-     * If atomic flush is not enabled, this is equivalent to calling
-     * [.flush] multiple times.
-     *
-     * If atomic flush is enabled, this will flush all column families
-     * specified up to the latest sequence number at the time when flush is
-     * requested.
-     *
-     * @param flushOptions [maryk.rocksdb.FlushOptions] instance.
-     * @param columnFamilyHandles column family handles.
-     * @throws RocksDBException thrown if an error occurs within the native
-     * part of the library.
-     */
-    fun flush(
-        flushOptions: FlushOptions,
-        /* @Nullable */ columnFamilyHandles: List<ColumnFamilyHandle>?
-    )
 
     /**
      * Flush the WAL memory buffer to the file. If `sync` is true,
@@ -2007,7 +1774,6 @@ expect open class RocksDB : RocksObject {
     fun setPreserveDeletesSequenceNumber(sequenceNumber: Long): Boolean
 
     /**
-     *
      * Prevent file deletions. Compactions will continue to occur,
      * but no obsolete files will be deleted. Calling this multiple
      * times have the same effect as calling it once.
@@ -2018,13 +1784,11 @@ expect open class RocksDB : RocksObject {
     fun disableFileDeletions()
 
     /**
-     *
      * Allow compactions to delete obsolete files.
      * If force == true, the call to EnableFileDeletions()
      * will guarantee that file deletions are enabled after
      * the call, even if DisableFileDeletions() was called
      * multiple times before.
-     *
      *
      * If force == false, EnableFileDeletions will only
      * enable file deletion after it's been called at least
@@ -2042,64 +1806,6 @@ expect open class RocksDB : RocksObject {
     fun enableFileDeletions(force: Boolean)
 
     /**
-     * Retrieve the list of all files in the database after flushing the memtable.
-     *
-     * See [.getLiveFiles].
-     *
-     * @return the live files
-     */
-    fun getLiveFiles(): LiveFiles
-
-    /**
-     * Retrieve the list of all files in the database.
-     *
-     * In case you have multiple column families, even if `flushMemtable`
-     * is true, you still need to call [.getSortedWalFiles]
-     * after [.getLiveFiles] to compensate for new data that
-     * arrived to already-flushed column families while other column families
-     * were flushing.
-     *
-     * NOTE: Calling [.getLiveFiles] followed by
-     * [.getSortedWalFiles] can generate a lossless backup.
-     *
-     * @param flushMemtable set to true to flush before recoding the live
-     * files. Setting to false is useful when we don't want to wait for flush
-     * which may have to wait for compaction to complete taking an
-     * indeterminate time.
-     *
-     * @return the live files
-     */
-    fun getLiveFiles(flushMemtable: Boolean): LiveFiles
-
-    /**
-     * Retrieve the sorted list of all wal files with earliest file first.
-     *
-     * @return the log files
-     */
-    fun getSortedWalFiles(): List<LogFile>
-
-    /**
-     *
-     * Returns an iterator that is positioned at a write-batch containing
-     * seq_number. If the sequence number is non existent, it returns an iterator
-     * at the first available seq_no after the requested seq_no.
-     *
-     *
-     * Must set WAL_ttl_seconds or WAL_size_limit_MB to large values to
-     * use this api, else the WAL files will get
-     * cleared aggressively and the iterator might keep getting invalid before
-     * an update is read.
-     *
-     * @param sequenceNumber sequence number offset
-     *
-     * @return [maryk.rocksdb.TransactionLogIterator] instance.
-     *
-     * @throws RocksDBException if iterator cannot be retrieved
-     * from native-side.
-     */
-    fun getUpdatesSince(sequenceNumber: Long): TransactionLogIterator
-
-    /**
      * Delete the file name from the db directory and update the internal state to
      * reflect that. Supports deletion of sst and log files only. 'name' must be
      * path relative to the db directory. eg. 000001.sst, /archive/000003.log
@@ -2109,13 +1815,6 @@ expect open class RocksDB : RocksObject {
     fun deleteFile(name: String)
 
     /**
-     * Gets a list of all table files metadata.
-     *
-     * @return table files metadata.
-     */
-    fun getLiveFilesMetaData(): List<LiveFileMetaData>
-
-    /**
      * Obtains the meta data of the specified column family of the DB.
      *
      * @param columnFamilyHandle the column family
@@ -2123,7 +1822,7 @@ expect open class RocksDB : RocksObject {
      * @return the column family metadata
      */
     fun getColumnFamilyMetaData(
-        columnFamilyHandle: ColumnFamilyHandle?
+        columnFamilyHandle: ColumnFamilyHandle
     ): ColumnFamilyMetaData
 
     /**
@@ -2132,52 +1831,6 @@ expect open class RocksDB : RocksObject {
      * @return the column family metadata
      */
     fun GetColumnFamilyMetaData(): ColumnFamilyMetaData
-
-    /**
-     * ingestExternalFile will load a list of external SST files (1) into the DB
-     * We will try to find the lowest possible level that the file can fit in, and
-     * ingest the file into this level (2). A file that have a key range that
-     * overlap with the memtable key range will require us to Flush the memtable
-     * first before ingesting the file.
-     *
-     * (1) External SST files can be created using [SstFileWriter]
-     * (2) We will try to ingest the files to the lowest possible level
-     * even if the file compression doesn't match the level compression
-     *
-     * @param filePathList The list of files to ingest
-     * @param ingestExternalFileOptions the options for the ingestion
-     *
-     * @throws RocksDBException thrown if error happens in underlying
-     * native library.
-     */
-    fun ingestExternalFile(
-        filePathList: List<String>,
-        ingestExternalFileOptions: IngestExternalFileOptions
-    )
-
-    /**
-     * ingestExternalFile will load a list of external SST files (1) into the DB
-     * We will try to find the lowest possible level that the file can fit in, and
-     * ingest the file into this level (2). A file that have a key range that
-     * overlap with the memtable key range will require us to Flush the memtable
-     * first before ingesting the file.
-     *
-     * (1) External SST files can be created using [SstFileWriter]
-     * (2) We will try to ingest the files to the lowest possible level
-     * even if the file compression doesn't match the level compression
-     *
-     * @param columnFamilyHandle The column family for the ingested files
-     * @param filePathList The list of files to ingest
-     * @param ingestExternalFileOptions the options for the ingestion
-     *
-     * @throws RocksDBException thrown if error happens in underlying
-     * native library.
-     */
-    fun ingestExternalFile(
-        columnFamilyHandle: ColumnFamilyHandle,
-        filePathList: List<String>,
-        ingestExternalFileOptions: IngestExternalFileOptions
-    )
 
     /**
      * Verify checksum
@@ -2193,103 +1846,19 @@ expect open class RocksDB : RocksObject {
     fun getDefaultColumnFamily(): ColumnFamilyHandle
 
     /**
-     * Get the properties of all tables.
-     *
-     * @param columnFamilyHandle the column family handle, or null for the default
-     * column family.
-     *
-     * @return the properties
-     */
-    fun getPropertiesOfAllTables(
-        columnFamilyHandle: ColumnFamilyHandle?
-    ): Map<String, TableProperties>
-
-    /**
-     * Get the properties of all tables in the default column family.
-     *
-     * @return the properties
-     */
-    fun getPropertiesOfAllTables(): Map<String, TableProperties>
-
-    /**
-     * Get the properties of tables in range.
-     *
-     * @param columnFamilyHandle the column family handle, or null for the default
-     * column family.
-     * @param ranges the ranges over which to get the table properties
-     *
-     * @return the properties
-     */
-    fun getPropertiesOfTablesInRange(
-        columnFamilyHandle: ColumnFamilyHandle?,
-        ranges: List<Range>
-    ): Map<String, TableProperties>
-
-    /**
-     * Get the properties of tables in range for the default column family.
-     *
-     * @param ranges the ranges over which to get the table properties
-     *
-     * @return the properties
-     */
-    fun getPropertiesOfTablesInRange(
-        ranges: List<Range>
-    ): Map<String, TableProperties>
-
-    /**
-     * Suggest the range to compact.
-     *
-     * @param columnFamilyHandle the column family handle, or null for the default
-     * column family.
-     *
-     * @return the suggested range.
-     */
-    fun suggestCompactRange(
-        /* @Nullable */columnFamilyHandle: ColumnFamilyHandle?
-    ): Range
-
-    /**
-     * Suggest the range to compact for the default column family.
-     *
-     * @return the suggested range.
-     */
-    fun suggestCompactRange(): Range
-
-    /**
      * Promote L0.
      *
      * @param columnFamilyHandle the column family handle,
      * or null for the default column family.
      */
     fun promoteL0(
-        columnFamilyHandle: ColumnFamilyHandle?,
+        columnFamilyHandle: ColumnFamilyHandle,
         targetLevel: Int
     )
 
     /** Promote L0 for the default column family. */
     fun promoteL0(targetLevel: Int)
-
-    /**
-     * Trace DB operations.
-     *
-     * Use [.endTrace] to stop tracing.
-     *
-     * @param traceOptions the options
-     * @param traceWriter the trace writer
-     */
-    fun startTrace(
-        traceOptions: TraceOptions,
-        traceWriter: AbstractTraceWriter
-    )
-
-    /**
-     * Stop tracing DB operations.
-     *
-     * See [.startTrace]
-     */
-    fun endTrace()
 }
-
 
 /**
  * Static method to destroy the contents of the specified database.

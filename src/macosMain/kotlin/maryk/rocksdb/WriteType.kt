@@ -1,13 +1,41 @@
 package maryk.rocksdb
 
+import maryk.rocksdb.WriteType.DELETE
+import maryk.rocksdb.WriteType.DELETE_RANGE
+import maryk.rocksdb.WriteType.LOG
+import maryk.rocksdb.WriteType.MERGE
+import maryk.rocksdb.WriteType.PUT
+import maryk.rocksdb.WriteType.SINGLE_DELETE
+import maryk.rocksdb.WriteType.XID
+import rocksdb.RocksDBWriteBatchEntryType
+import rocksdb.RocksDBWriteBatchEntryType.RocksDBWriteBatchEntryTypeDeleteRangeRecord
+import rocksdb.RocksDBWriteBatchEntryType.RocksDBWriteBatchEntryTypeDeleteRecord
+import rocksdb.RocksDBWriteBatchEntryType.RocksDBWriteBatchEntryTypeLogDataRecord
+import rocksdb.RocksDBWriteBatchEntryType.RocksDBWriteBatchEntryTypeMergeRecord
+import rocksdb.RocksDBWriteBatchEntryType.RocksDBWriteBatchEntryTypePutRecord
+import rocksdb.RocksDBWriteBatchEntryType.RocksDBWriteBatchEntryTypeSingleDeleteRecord
+import rocksdb.RocksDBWriteBatchEntryType.RocksDBWriteBatchEntryTypeXIDRecord
+
 actual enum class WriteType(
-    private val value: Byte
+    internal val value: RocksDBWriteBatchEntryType
 ) {
-    PUT(0x0),
-    MERGE(0x1),
-    DELETE(0x2),
-    SINGLE_DELETE(0x3),
-    DELETE_RANGE(0x4),
-    LOG(0x5),
-    XID(0x6);
+    PUT(RocksDBWriteBatchEntryTypePutRecord),
+    MERGE(RocksDBWriteBatchEntryTypeMergeRecord),
+    DELETE(RocksDBWriteBatchEntryTypeDeleteRecord),
+    SINGLE_DELETE(RocksDBWriteBatchEntryTypeSingleDeleteRecord),
+    DELETE_RANGE(RocksDBWriteBatchEntryTypeDeleteRangeRecord),
+    LOG(RocksDBWriteBatchEntryTypeLogDataRecord),
+    XID(RocksDBWriteBatchEntryTypeXIDRecord);
+}
+
+internal fun getWriteTypeByValue(value: RocksDBWriteBatchEntryType): WriteType {
+    return when (value) {
+        RocksDBWriteBatchEntryTypePutRecord -> PUT
+        RocksDBWriteBatchEntryTypeMergeRecord -> MERGE
+        RocksDBWriteBatchEntryTypeDeleteRecord -> DELETE
+        RocksDBWriteBatchEntryTypeSingleDeleteRecord -> SINGLE_DELETE
+        RocksDBWriteBatchEntryTypeDeleteRangeRecord -> DELETE_RANGE
+        RocksDBWriteBatchEntryTypeLogDataRecord -> LOG
+        RocksDBWriteBatchEntryTypeXIDRecord -> XID
+    }
 }

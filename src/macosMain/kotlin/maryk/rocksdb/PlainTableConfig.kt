@@ -1,67 +1,81 @@
 package maryk.rocksdb
 
-actual class PlainTableConfig actual constructor() : TableFormatConfig() {
+import rocksdb.RocksDBPlainTableOptions
+
+actual class PlainTableConfig internal constructor(
+    val native: RocksDBPlainTableOptions
+) : TableFormatConfig() {
+    actual constructor() : this(RocksDBPlainTableOptions())
+
     actual fun setKeySize(keySize: Int): PlainTableConfig {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.userKeyLen = keySize.toUInt()
+        return this
     }
 
     actual fun keySize(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.userKeyLen.toInt()
     }
 
     actual fun setBloomBitsPerKey(bitsPerKey: Int): PlainTableConfig {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.bloomBitsPerKey = bitsPerKey
+        return this
     }
 
     actual fun bloomBitsPerKey(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.bloomBitsPerKey
     }
 
     actual fun setHashTableRatio(ratio: Double): PlainTableConfig {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.hashTableRatio = ratio
+        return this
     }
 
     actual fun hashTableRatio(): Double {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.hashTableRatio
     }
 
     actual fun setIndexSparseness(sparseness: Int): PlainTableConfig {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.indexSparseness = sparseness.toULong()
+        return this
     }
 
     actual fun indexSparseness(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.indexSparseness.toLong()
     }
 
     actual fun setHugePageTlbSize(hugePageTlbSize: Int): PlainTableConfig {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.hugePageTlbSize = hugePageTlbSize.toULong()
+        return this
     }
 
     actual fun hugePageTlbSize(): Int {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.hugePageTlbSize.toInt()
     }
 
     actual fun setEncodingType(encodingType: EncodingType): PlainTableConfig {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.encodingType = encodingType.value
+        return this
     }
 
     actual fun encodingType(): EncodingType? {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return toEncodingType(native.encodingType)
     }
 
     actual fun setFullScanMode(fullScanMode: Boolean): PlainTableConfig {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.fullScanMode = fullScanMode
+        return this
     }
 
     actual fun fullScanMode(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.fullScanMode
     }
 
     actual fun setStoreIndexInFile(storeIndexInFile: Boolean): PlainTableConfig {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.storeIndexInFile = storeIndexInFile
+        return this
     }
 
     actual fun storeIndexInFile(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.storeIndexInFile
     }
 }

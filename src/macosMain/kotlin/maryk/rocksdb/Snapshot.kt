@@ -1,9 +1,9 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.CPointer
+import rocksdb.RocksDBSnapshot
 
-actual class Snapshot internal constructor(nativeHandle: CPointer<*>) : RocksObject(nativeHandle) {
-    actual fun getSequenceNumber(): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+actual class Snapshot internal constructor(
+    internal val native: RocksDBSnapshot
+) : RocksObject() {
+    actual fun getSequenceNumber() = native.sequenceNumber().toLong()
 }

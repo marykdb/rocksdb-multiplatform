@@ -1,61 +1,48 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.CPointer
+import rocksdb.RocksDBWriteOptions
 
-actual class WriteOptions : RocksObject {
-    actual constructor() : super(newWriteOptions())
-
-    actual constructor(other: WriteOptions) : super(copyWriteOptions(other.nativeHandle))
-
-    constructor(nativeHandle: CPointer<*>) : super(nativeHandle) {
-        disOwnNativeHandle()
-    }
+actual class WriteOptions private constructor(
+    internal val native: RocksDBWriteOptions
+) : RocksObject() {
+    actual constructor() : this(RocksDBWriteOptions())
 
     actual fun setSync(flag: Boolean): WriteOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.syncWrites = flag
+        return this
     }
 
-    actual fun sync(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun sync() = native.syncWrites
 
     actual fun setDisableWAL(flag: Boolean): WriteOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.disableWriteAheadLog = flag
+        return this
     }
 
-    actual fun disableWAL(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun disableWAL() = native.disableWriteAheadLog
 
     actual fun setIgnoreMissingColumnFamilies(ignoreMissingColumnFamilies: Boolean): WriteOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.ignoreMissingColumnFamilies = ignoreMissingColumnFamilies
+        return this
     }
 
-    actual fun ignoreMissingColumnFamilies(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    actual fun ignoreMissingColumnFamilies() = native.ignoreMissingColumnFamilies
 
     actual fun setNoSlowdown(noSlowdown: Boolean): WriteOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.noSlowdown = noSlowdown
+        return this
     }
 
     actual fun noSlowdown(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.noSlowdown
     }
 
     actual fun setLowPri(lowPri: Boolean): WriteOptions {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        native.setLowPriority(lowPri)
+        return this
     }
 
     actual fun lowPri(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return native.lowPriority
     }
-}
-
-private fun newWriteOptions(): CPointer<*> {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-}
-
-private fun copyWriteOptions(nativeHandle: CPointer<*>): CPointer<*> {
-    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
 }

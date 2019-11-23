@@ -73,4 +73,6 @@ expect abstract class AbstractComparator<T : AbstractSlice<*>> : RocksCallbackOb
      * @return a shorter key, or null
      */
     open fun findShortSuccessor(key: String): String?
+
+    override fun close()
 }
