@@ -1,1 +1,2 @@
-headers = c.h
+language = Objective-C
+headers = ObjectiveRocks.h
