@@ -9,4 +9,4 @@ then
   echo "$OUTPUT"
   exit 1
 fi
-echo "${RESULT}\n"
+echo "${RESULT}"

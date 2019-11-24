@@ -14,7 +14,7 @@ repositories {
 }
 
 group = "io.maryk.rocksdb"
-version = "0.3.0"
+version = "0.3.2"
 
 val rocksDBVersion = "6.2.2"
 
@@ -34,13 +34,12 @@ kotlin {
     ios {
         binaries {
             getTest("DEBUG").linkerOpts = mutableListOf(
-                "-L${objectiveRocksHome}", "-lobjectiveRocks-iOS",
-                "-Llib", "-lobjectiveRocks-iOS"
+                "-L${objectiveRocksHome}", "-lobjectiveRocks-iOS"
             )
         }
 
         compilations["main"].cinterops {
-            val rocksdb by creating {
+            val rocksdbIOS by creating {
                 includeDirs("${objectiveRocksHome}/usr/local/include", "../ObjectiveRocks/Code")
             }
         }
@@ -53,13 +52,12 @@ kotlin {
     macosX64("macos") {
         binaries {
             getTest("DEBUG").linkerOpts = mutableListOf(
-                "-L${objectiveRocksHome}", "-lobjectiveRocks-macOS",
-                "-Llib", "-lobjectiveRocks-macOS"
+                "-L${objectiveRocksHome}", "-lobjectiveRocks-macOS"
             )
         }
 
         compilations["main"].cinterops {
-            val rocksdb by creating {
+            val rocksdbMacOS by creating {
                 includeDirs("${objectiveRocksHome}/usr/local/include", "../ObjectiveRocks/Code")
             }
         }
@@ -122,12 +120,12 @@ val buildIOS by tasks.creating(Exec::class) {
 }
 
 val macos: KotlinNativeTarget by kotlin.targets
-tasks[macos.compilations["main"].cinterops["rocksdb"].interopProcessingTaskName].dependsOn(buildMacOS)
+tasks[macos.compilations["main"].cinterops["rocksdbMacOS"].interopProcessingTaskName].dependsOn(buildMacOS)
 
 val iosX64: KotlinNativeTarget by kotlin.targets
-tasks[iosX64.compilations["main"].cinterops["rocksdb"].interopProcessingTaskName].dependsOn(buildIOS)
+tasks[iosX64.compilations["main"].cinterops["rocksdbIOS"].interopProcessingTaskName].dependsOn(buildIOS)
 val iosArm64: KotlinNativeTarget by kotlin.targets
-tasks[iosArm64.compilations["main"].cinterops["rocksdb"].interopProcessingTaskName].dependsOn(buildIOS)
+tasks[iosArm64.compilations["main"].cinterops["rocksdbIOS"].interopProcessingTaskName].dependsOn(buildIOS)
 
 // Creates the folders for the database
 val createOrEraseDBFolders = task("createOrEraseDBFolders") {
