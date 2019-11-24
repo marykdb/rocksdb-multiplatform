@@ -24,11 +24,20 @@ val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
 val objectiveRocksHome = "./xcodeBuild/Build/Products/Release"
 
 kotlin {
-    macosX64("macos") {
-        binaries.getTest("DEBUG").linkerOpts = mutableListOf(
-            "-L${objectiveRocksHome}", "-lobjectiveRocks-macOS",
-            "-Llib", "-lobjectiveRocks-macOS"
-        )
+    val nativeMain by sourceSets.creating {
+        dependsOn(sourceSets["commonMain"])
+    }
+    val nativeTest by sourceSets.creating {
+        dependsOn(sourceSets["commonTest"])
+    }
+
+    ios {
+        binaries {
+            getTest("DEBUG").linkerOpts = mutableListOf(
+                "-L${objectiveRocksHome}", "-lobjectiveRocks-iOS",
+                "-Llib", "-lobjectiveRocks-iOS"
+            )
+        }
 
         compilations["main"].cinterops {
             val rocksdb by creating {
@@ -36,6 +45,28 @@ kotlin {
             }
         }
     }
+    sourceSets["iosX64Main"].dependsOn(nativeMain)
+    sourceSets["iosX64Test"].dependsOn(nativeTest)
+    sourceSets["iosArm64Main"].dependsOn(nativeMain)
+    sourceSets["iosArm64Test"].dependsOn(nativeTest)
+
+    macosX64("macos") {
+        binaries {
+            getTest("DEBUG").linkerOpts = mutableListOf(
+                "-L${objectiveRocksHome}", "-lobjectiveRocks-macOS",
+                "-Llib", "-lobjectiveRocks-macOS"
+            )
+        }
+
+        compilations["main"].cinterops {
+            val rocksdb by creating {
+                includeDirs("${objectiveRocksHome}/usr/local/include", "../ObjectiveRocks/Code")
+            }
+        }
+    }
+    sourceSets["macosMain"].dependsOn(nativeMain)
+    sourceSets["macosTest"].dependsOn(nativeTest)
+
     jvm {
         compilations.all {
             kotlinOptions {
@@ -82,18 +113,21 @@ kotlin {
 
 val buildMacOS by tasks.creating(Exec::class) {
     workingDir = projectDir
-    commandLine("./buildObjectiveRocksiOS.sh")
+    commandLine("./buildObjectiveRocksMac.sh")
 }
 
 val buildIOS by tasks.creating(Exec::class) {
     workingDir = projectDir
-    commandLine("./buildObjectiveRocksMac.sh")
+    commandLine("./buildObjectiveRocksiOS.sh")
 }
 
 val macos: KotlinNativeTarget by kotlin.targets
-tasks[macos.compilations["main"].cinterops["rocksdb"].interopProcessingTaskName]
-    .dependsOn(buildMacOS)
-    .dependsOn(buildIOS)
+tasks[macos.compilations["main"].cinterops["rocksdb"].interopProcessingTaskName].dependsOn(buildMacOS)
+
+val iosX64: KotlinNativeTarget by kotlin.targets
+tasks[iosX64.compilations["main"].cinterops["rocksdb"].interopProcessingTaskName].dependsOn(buildIOS)
+val iosArm64: KotlinNativeTarget by kotlin.targets
+tasks[iosArm64.compilations["main"].cinterops["rocksdb"].interopProcessingTaskName].dependsOn(buildIOS)
 
 // Creates the folders for the database
 val createOrEraseDBFolders = task("createOrEraseDBFolders") {
