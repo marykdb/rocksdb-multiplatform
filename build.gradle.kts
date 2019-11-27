@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     `maven-publish`
-    kotlin("multiplatform") version "1.3.60"
+    kotlin("multiplatform") version "1.3.61"
     id("com.jfrog.bintray").version("1.8.4")
 }
 
@@ -14,9 +14,9 @@ repositories {
 }
 
 group = "io.maryk.rocksdb"
-version = "0.3.2"
+version = "0.3.3"
 
-val rocksDBVersion = "6.2.2"
+val rocksDBVersion = "6.4.6"
 
 val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
     ?: File(System.getProperty("user.home")).resolve(".konan")
