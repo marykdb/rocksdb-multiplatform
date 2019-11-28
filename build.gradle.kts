@@ -24,10 +24,10 @@ val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
 val objectiveRocksHome = "./xcodeBuild/Build/Products/Release"
 
 kotlin {
-    val nativeMain by sourceSets.creating {
+    val appleMain by sourceSets.creating {
         dependsOn(sourceSets["commonMain"])
     }
-    val nativeTest by sourceSets.creating {
+    val appleTest by sourceSets.creating {
         dependsOn(sourceSets["commonTest"])
     }
 
@@ -44,10 +44,10 @@ kotlin {
             }
         }
     }
-    sourceSets["iosX64Main"].dependsOn(nativeMain)
-    sourceSets["iosX64Test"].dependsOn(nativeTest)
-    sourceSets["iosArm64Main"].dependsOn(nativeMain)
-    sourceSets["iosArm64Test"].dependsOn(nativeTest)
+    sourceSets["iosX64Main"].dependsOn(appleMain)
+    sourceSets["iosX64Test"].dependsOn(appleTest)
+    sourceSets["iosArm64Main"].dependsOn(appleMain)
+    sourceSets["iosArm64Test"].dependsOn(appleTest)
 
     macosX64("macos") {
         binaries {
@@ -62,8 +62,8 @@ kotlin {
             }
         }
     }
-    sourceSets["macosMain"].dependsOn(nativeMain)
-    sourceSets["macosTest"].dependsOn(nativeTest)
+    sourceSets["macosMain"].dependsOn(appleMain)
+    sourceSets["macosTest"].dependsOn(appleTest)
 
     jvm {
         compilations.all {
