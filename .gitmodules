@@ -1,3 +1,3 @@
 [submodule "ObjectiveRocks"]
 	path = ObjectiveRocks
-	url = git@github.com:jurmous/ObjectiveRocks.git
+url=git@github.com:marykdb/ObjectiveRocks.git
