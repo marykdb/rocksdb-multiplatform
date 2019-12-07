@@ -2,14 +2,16 @@ import com.jfrog.bintray.gradle.BintrayExtension
 import com.jfrog.bintray.gradle.tasks.BintrayUploadTask
 import org.gradle.api.publish.maven.internal.artifact.FileBasedMavenArtifact
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 
 plugins {
-    `maven-publish`
+    id("maven-publish")
     kotlin("multiplatform") version "1.3.61"
     id("com.jfrog.bintray").version("1.8.4")
 }
 
 repositories {
+    jcenter()
     maven {
         setUrl("https://dl.bintray.com/maryk/maven")
     }
@@ -17,63 +19,100 @@ repositories {
 }
 
 group = "io.maryk.rocksdb"
-version = "0.3.5"
+version = "0.4.0"
 
 val rocksDBVersion = "6.5.2"
+val rocksDBAndroidVersion = "0.6.0"
 
 val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
     ?: File(System.getProperty("user.home")).resolve(".konan")
 
 val objectiveRocksHome = "./xcodeBuild/Build/Products/Release"
 
+val buildMacOS by tasks.creating(Exec::class) {
+    workingDir = projectDir
+    commandLine("./buildObjectiveRocksMac.sh")
+}
+
+val buildIOS by tasks.creating(Exec::class) {
+    workingDir = projectDir
+    commandLine("./buildObjectiveRocksiOS.sh")
+}
+
 kotlin {
     val appleMain by sourceSets.creating {
         dependsOn(sourceSets["commonMain"])
+        dependencies {
+            // Added so dependencies are resolved in IDE
+            compileOnly(files("build/libs/macos/main/rocksdb-multiplatform-cinterop-rocksdbMacOS.klib"))
+        }
     }
     val appleTest by sourceSets.creating {
         dependsOn(sourceSets["commonTest"])
     }
 
+    fun KotlinNativeTarget.setupAppleTarget(definitionName: String, buildTask: Exec) {
+        binaries {
+            getTest("DEBUG").linkerOpts = mutableListOf(
+                "-L${objectiveRocksHome}", "-lobjectiveRocks-$definitionName"
+            )
+        }
+
+        compilations["main"].apply {
+            cinterops {
+                this.create("rocksdb${definitionName.capitalize()}") {
+                    tasks[interopProcessingTaskName].dependsOn(buildTask)
+                    includeDirs("${objectiveRocksHome}/usr/local/include", "../ObjectiveRocks/Code")
+                }
+            }
+
+            source(appleMain)
+        }
+        compilations["test"].apply {
+            source(appleTest)
+        }
+    }
+
     ios {
-        binaries {
-            getTest("DEBUG").linkerOpts = mutableListOf(
-                "-L${objectiveRocksHome}", "-lobjectiveRocks-iOS"
-            )
-        }
-
-        compilations["main"].cinterops {
-            val rocksdbIOS by creating {
-                includeDirs("${objectiveRocksHome}/usr/local/include", "../ObjectiveRocks/Code")
-            }
-        }
+        setupAppleTarget("iOS", buildIOS)
     }
-    sourceSets["iosX64Main"].dependsOn(appleMain)
-    sourceSets["iosX64Test"].dependsOn(appleTest)
-    sourceSets["iosArm64Main"].dependsOn(appleMain)
-    sourceSets["iosArm64Test"].dependsOn(appleTest)
 
-    macosX64("macos") {
-        binaries {
-            getTest("DEBUG").linkerOpts = mutableListOf(
-                "-L${objectiveRocksHome}", "-lobjectiveRocks-macOS"
-            )
-        }
-
-        compilations["main"].cinterops {
-            val rocksdbMacOS by creating {
-                includeDirs("${objectiveRocksHome}/usr/local/include", "../ObjectiveRocks/Code")
-            }
-        }
+    macosX64 {
+        setupAppleTarget("macOS", buildMacOS)
     }
-    sourceSets["macosMain"].dependsOn(appleMain)
-    sourceSets["macosTest"].dependsOn(appleTest)
 
-    jvm {
+    fun KotlinJvmTarget.setupJvmTarget() {
         compilations.all {
             kotlinOptions {
                 allWarningsAsErrors = true
-                jvmTarget = "1.8"
+                kotlinOptions.jvmTarget = "1.8"
             }
+        }
+        compilations["main"].dependencies {
+            implementation(kotlin("stdlib"))
+        }
+        compilations["test"].dependencies {
+            implementation(kotlin("test"))
+            implementation(kotlin("test-junit"))
+            implementation("org.assertj:assertj-core:1.7.1")
+        }
+    }
+    jvm {
+        setupJvmTarget()
+        compilations["main"].dependencies {
+            api("io.maryk.rocksdb:rocksdbjni:$rocksDBVersion")
+        }
+    }
+    jvm("android") {
+        setupJvmTarget()
+        compilations["main"].dependencies {
+            api("io.maryk.rocksdb:rocksdb-android:$rocksDBAndroidVersion")
+        }
+        jvm().compilations["main"].allKotlinSourceSets.forEach {
+            compilations["main"].defaultSourceSet.dependsOn(it)
+        }
+        jvm().compilations["test"].allKotlinSourceSets.forEach {
+            compilations["test"].defaultSourceSet.dependsOn(it)
         }
     }
     sourceSets {
@@ -96,39 +135,8 @@ kotlin {
                 implementation(kotlin("test-annotations-common"))
             }
         }
-        jvm().compilations["main"].defaultSourceSet {
-            dependencies {
-                implementation("io.maryk.rocksdb:rocksdbjni:$rocksDBVersion")
-                implementation(kotlin("stdlib"))
-            }
-        }
-        jvm().compilations["test"].defaultSourceSet {
-            dependencies {
-                implementation(kotlin("test"))
-                implementation(kotlin("test-junit"))
-                implementation("org.assertj:assertj-core:1.7.1")
-            }
-        }
     }
 }
-
-val buildMacOS by tasks.creating(Exec::class) {
-    workingDir = projectDir
-    commandLine("./buildObjectiveRocksMac.sh")
-}
-
-val buildIOS by tasks.creating(Exec::class) {
-    workingDir = projectDir
-    commandLine("./buildObjectiveRocksiOS.sh")
-}
-
-val macos: KotlinNativeTarget by kotlin.targets
-tasks[macos.compilations["main"].cinterops["rocksdbMacOS"].interopProcessingTaskName].dependsOn(buildMacOS)
-
-val iosX64: KotlinNativeTarget by kotlin.targets
-tasks[iosX64.compilations["main"].cinterops["rocksdbIOS"].interopProcessingTaskName].dependsOn(buildIOS)
-val iosArm64: KotlinNativeTarget by kotlin.targets
-tasks[iosArm64.compilations["main"].cinterops["rocksdbIOS"].interopProcessingTaskName].dependsOn(buildIOS)
 
 // Creates the folders for the database
 val createOrEraseDBFolders = task("createOrEraseDBFolders") {
