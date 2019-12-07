@@ -10,13 +10,16 @@ plugins {
 }
 
 repositories {
+    maven {
+        setUrl("https://dl.bintray.com/maryk/maven")
+    }
     mavenCentral()
 }
 
 group = "io.maryk.rocksdb"
-version = "0.3.3"
+version = "0.3.5"
 
-val rocksDBVersion = "6.4.6"
+val rocksDBVersion = "6.5.2"
 
 val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
     ?: File(System.getProperty("user.home")).resolve(".konan")
@@ -95,7 +98,7 @@ kotlin {
         }
         jvm().compilations["main"].defaultSourceSet {
             dependencies {
-                api("org.rocksdb:rocksdbjni:$rocksDBVersion")
+                implementation("io.maryk.rocksdb:rocksdbjni:$rocksDBVersion")
                 implementation(kotlin("stdlib"))
             }
         }
