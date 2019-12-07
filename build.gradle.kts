@@ -156,11 +156,11 @@ bintray {
     publish = true
     pkg(delegateClosureOf<BintrayExtension.PackageConfig> {
         repo = "maven"
-        name = "RocksDB"
+        name = "rocksdb-multiplatform"
         userOrg = "maryk"
         setLicenses("Apache-2.0")
         setPublications(*project.publishing.publications.names.toTypedArray())
-        vcsUrl = "https://github.com/maryk-io/rocksdb.git"
+        vcsUrl = "https://github.com/marykdb/rocksdb-multiplatform.git"
     })
 }
 
@@ -186,7 +186,7 @@ afterEvaluate {
             asNode().apply {
                 appendNode("name", project.name)
                 appendNode("description", "Kotlin multiplatform RocksDB interface")
-                appendNode("url", "https://github.com/maryk-io/rocksdb")
+                appendNode("url", "https://github.com/marykdb/rocksdb-multiplatform")
                 appendNode("licenses").apply {
                     appendNode("license").apply {
                         appendNode("name", "The Apache Software License, Version 2.0")
@@ -201,7 +201,7 @@ afterEvaluate {
                     }
                 }
                 appendNode("scm").apply {
-                    appendNode("url", "https://github.com/maryk-io/rocksdb")
+                    appendNode("url", "https://github.com/marykdb/rocksdb-multiplatform")
                 }
             }
         }
