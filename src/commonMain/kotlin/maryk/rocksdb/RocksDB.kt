@@ -1132,7 +1132,7 @@ expect open class RocksDB : RocksObject {
      * found in block-cache.
      * @return boolean value indicating if key does not exist or might exist.
      */
-    fun keyMayExist(key: ByteArray, value: StringBuilder): Boolean
+    fun keyMayExist(key: ByteArray, value: StringBuilder?): Boolean
 
     /**
      * If the key definitely does not exist in the database, then this method
@@ -1153,7 +1153,7 @@ expect open class RocksDB : RocksObject {
      */
     fun keyMayExist(
         key: ByteArray, offset: Int, len: Int,
-        value: StringBuilder
+        value: StringBuilder?
     ): Boolean
 
     /**
@@ -1171,7 +1171,7 @@ expect open class RocksDB : RocksObject {
      */
     fun keyMayExist(
         columnFamilyHandle: ColumnFamilyHandle,
-        key: ByteArray, value: StringBuilder
+        key: ByteArray, value: StringBuilder?
     ): Boolean
 
     /**
@@ -1193,7 +1193,7 @@ expect open class RocksDB : RocksObject {
      */
     fun keyMayExist(
         columnFamilyHandle: ColumnFamilyHandle,
-        key: ByteArray, offset: Int, len: Int, value: StringBuilder
+        key: ByteArray, offset: Int, len: Int, value: StringBuilder?
     ): Boolean
 
     /**
@@ -1211,7 +1211,7 @@ expect open class RocksDB : RocksObject {
      */
     fun keyMayExist(
         readOptions: ReadOptions,
-        key: ByteArray, value: StringBuilder
+        key: ByteArray, value: StringBuilder?
     ): Boolean
 
     /**
@@ -1234,7 +1234,7 @@ expect open class RocksDB : RocksObject {
     fun keyMayExist(
         readOptions: ReadOptions,
         key: ByteArray, offset: Int, len: Int,
-        value: StringBuilder
+        value: StringBuilder?
     ): Boolean
 
     /**
@@ -1254,7 +1254,7 @@ expect open class RocksDB : RocksObject {
     fun keyMayExist(
         readOptions: ReadOptions,
         columnFamilyHandle: ColumnFamilyHandle, key: ByteArray,
-        value: StringBuilder
+        value: StringBuilder?
     ): Boolean
 
     /**
@@ -1278,7 +1278,7 @@ expect open class RocksDB : RocksObject {
     fun keyMayExist(
         readOptions: ReadOptions,
         columnFamilyHandle: ColumnFamilyHandle, key: ByteArray,
-        offset: Int, len: Int, value: StringBuilder
+        offset: Int, len: Int, value: StringBuilder?
     ): Boolean
 
     /**

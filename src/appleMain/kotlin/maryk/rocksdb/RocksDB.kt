@@ -820,10 +820,10 @@ actual open class RocksDB
         }
     }
 
-    actual fun keyMayExist(key: ByteArray, value: StringBuilder): Boolean {
+    actual fun keyMayExist(key: ByteArray, value: StringBuilder?): Boolean {
         val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
         return native.keyMayExist(key.toNSData(), valueStringRef.ptr).also {
-            value.append(valueStringRef.value)
+            value?.append(valueStringRef.value)
         }
     }
 
@@ -831,21 +831,21 @@ actual open class RocksDB
         key: ByteArray,
         offset: Int,
         len: Int,
-        value: StringBuilder
+        value: StringBuilder?
     ): Boolean {
         val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
         return native.keyMayExist(
             key.toNSData(offset, len),
             valueStringRef.ptr
         ).also {
-            value.append(valueStringRef.value)
+            value?.append(valueStringRef.value)
         }
     }
 
     actual fun keyMayExist(
         columnFamilyHandle: ColumnFamilyHandle,
         key: ByteArray,
-        value: StringBuilder
+        value: StringBuilder?
     ): Boolean {
         val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
         return native.keyMayExist(
@@ -853,7 +853,7 @@ actual open class RocksDB
             columnFamilyHandle.native,
             valueStringRef.ptr
         ).also {
-            value.append(valueStringRef.value)
+            value?.append(valueStringRef.value)
         }
     }
 
@@ -862,7 +862,7 @@ actual open class RocksDB
         key: ByteArray,
         offset: Int,
         len: Int,
-        value: StringBuilder
+        value: StringBuilder?
     ): Boolean {
         val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
         return native.keyMayExist(
@@ -870,14 +870,14 @@ actual open class RocksDB
             columnFamilyHandle.native,
             valueStringRef.ptr
         ).also {
-            value.append(valueStringRef.value)
+            value?.append(valueStringRef.value)
         }
     }
 
     actual fun keyMayExist(
         readOptions: ReadOptions,
         key: ByteArray,
-        value: StringBuilder
+        value: StringBuilder?
     ): Boolean {
         val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
         return native.keyMayExist(
@@ -885,7 +885,7 @@ actual open class RocksDB
             readOptions.native,
             valueStringRef.ptr
         ).also {
-            value.append(valueStringRef.value)
+            value?.append(valueStringRef.value)
         }
     }
 
@@ -894,7 +894,7 @@ actual open class RocksDB
         key: ByteArray,
         offset: Int,
         len: Int,
-        value: StringBuilder
+        value: StringBuilder?
     ): Boolean {
         val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
         return native.keyMayExist(
@@ -902,7 +902,7 @@ actual open class RocksDB
             readOptions.native,
             valueStringRef.ptr
         ).also {
-            value.append(valueStringRef.value)
+            value?.append(valueStringRef.value)
         }
     }
 
@@ -910,7 +910,7 @@ actual open class RocksDB
         readOptions: ReadOptions,
         columnFamilyHandle: ColumnFamilyHandle,
         key: ByteArray,
-        value: StringBuilder
+        value: StringBuilder?
     ): Boolean {
         val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
         return native.keyMayExist(
@@ -919,7 +919,7 @@ actual open class RocksDB
             readOptions.native,
             valueStringRef.ptr
         ).also {
-            value.append(valueStringRef.value)
+            value?.append(valueStringRef.value)
         }
     }
 
@@ -929,7 +929,7 @@ actual open class RocksDB
         key: ByteArray,
         offset: Int,
         len: Int,
-        value: StringBuilder
+        value: StringBuilder?
     ): Boolean {
         val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
         return native.keyMayExist(
@@ -938,7 +938,7 @@ actual open class RocksDB
             readOptions.native,
             valueStringRef.ptr
         ).also {
-            value.append(valueStringRef.value)
+            value?.append(valueStringRef.value)
         }
     }
 
