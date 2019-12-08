@@ -12,9 +12,6 @@ plugins {
 
 repositories {
     jcenter()
-    maven {
-        setUrl("https://dl.bintray.com/maryk/maven")
-    }
     mavenCentral()
 }
 
