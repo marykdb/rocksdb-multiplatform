@@ -1,18 +1,20 @@
 import com.jfrog.bintray.gradle.BintrayExtension
 import com.jfrog.bintray.gradle.tasks.BintrayUploadTask
 import org.gradle.api.publish.maven.internal.artifact.FileBasedMavenArtifact
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
+import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
+
+repositories {
+    google()
+    jcenter()
+}
 
 plugins {
     id("maven-publish")
+    id("com.android.library") version "3.5.3"
     kotlin("multiplatform") version "1.3.61"
     id("com.jfrog.bintray").version("1.8.4")
-}
-
-repositories {
-    jcenter()
-    mavenCentral()
 }
 
 group = "io.maryk.rocksdb"
@@ -36,6 +38,18 @@ val buildIOS by tasks.creating(Exec::class) {
     commandLine("./buildObjectiveRocksiOS.sh")
 }
 
+android {
+    buildToolsVersion = "29.0.0"
+    compileSdkVersion(29)
+    defaultConfig {
+        minSdkVersion(21)
+        targetSdkVersion(29)
+        multiDexEnabled = true
+        versionCode = 1
+        testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
+    }
+}
+
 kotlin {
     val appleMain by sourceSets.creating {
         dependsOn(sourceSets["commonMain"])
@@ -46,6 +60,23 @@ kotlin {
     }
     val appleTest by sourceSets.creating {
         dependsOn(sourceSets["commonTest"])
+    }
+
+    val jvmSharedMain by sourceSets.creating {
+        dependsOn(sourceSets["commonMain"])
+        dependencies {
+            // Added so dependencies are resolved in IDE
+            compileOnly("io.maryk.rocksdb:rocksdbjni:$rocksDBVersion")
+            implementation(kotlin("stdlib"))
+        }
+    }
+    val jvmSharedTest by sourceSets.creating {
+        dependsOn(sourceSets["commonTest"])
+        dependencies {
+            implementation(kotlin("test"))
+            implementation(kotlin("test-junit"))
+            implementation("org.assertj:assertj-core:1.7.1")
+        }
     }
 
     fun KotlinNativeTarget.setupAppleTarget(definitionName: String, buildTask: Exec) {
@@ -78,40 +109,37 @@ kotlin {
         setupAppleTarget("macOS", buildMacOS)
     }
 
-    fun KotlinJvmTarget.setupJvmTarget() {
+    fun KotlinTarget.setupJvmTarget() {
         compilations.all {
             kotlinOptions {
                 allWarningsAsErrors = true
-                kotlinOptions.jvmTarget = "1.8"
+                if (this is KotlinJvmOptions) {
+                    jvmTarget = "1.8"
+                }
             }
-        }
-        compilations["main"].dependencies {
-            implementation(kotlin("stdlib"))
-        }
-        compilations["test"].dependencies {
-            implementation(kotlin("test"))
-            implementation(kotlin("test-junit"))
-            implementation("org.assertj:assertj-core:1.7.1")
         }
     }
     jvm {
         setupJvmTarget()
-        compilations["main"].dependencies {
-            api("io.maryk.rocksdb:rocksdbjni:$rocksDBVersion")
-        }
+        compilations["main"].source(jvmSharedMain)
+        compilations["test"].source(jvmSharedTest)
     }
-    jvm("android") {
+    android {
+        compilations.all {
+            when (this.name) {
+                "release", "debug" -> {
+                    source(jvmSharedMain)
+                }
+                "releaseTest", "debugTest" ->{
+                    source(jvmSharedTest)
+                }
+            }
+        }
         setupJvmTarget()
-        compilations["main"].dependencies {
-            api("io.maryk.rocksdb:rocksdb-android:$rocksDBAndroidVersion")
-        }
-        jvm().compilations["main"].allKotlinSourceSets.forEach {
-            compilations["main"].defaultSourceSet.dependsOn(it)
-        }
-        jvm().compilations["test"].allKotlinSourceSets.forEach {
-            compilations["test"].defaultSourceSet.dependsOn(it)
-        }
+        publishAllLibraryVariants()
+        publishLibraryVariantsGroupedByFlavor = true
     }
+
     sourceSets {
         all {
             languageSettings.apply {
@@ -130,6 +158,16 @@ kotlin {
             dependencies {
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
+            }
+        }
+        val androidMain by getting {
+            dependencies {
+                api("io.maryk.rocksdb:rocksdb-android:$rocksDBAndroidVersion")
+            }
+        }
+        val jvmMain by getting {
+            dependencies {
+                api("io.maryk.rocksdb:rocksdbjni:$rocksDBVersion")
             }
         }
     }
@@ -157,38 +195,38 @@ tasks.withType<Test> {
     }
 }
 
-fun findProperty(s: String) = project.findProperty(s) as String?
-bintray {
-    user = findProperty("bintrayUser")
-    key = findProperty("bintrayApiKey")
-    publish = true
-    pkg(delegateClosureOf<BintrayExtension.PackageConfig> {
-        repo = "maven"
-        name = "rocksdb-multiplatform"
-        userOrg = "maryk"
-        setLicenses("Apache-2.0")
-        setPublications(*project.publishing.publications.names.toTypedArray())
-        vcsUrl = "https://github.com/marykdb/rocksdb-multiplatform.git"
-    })
-}
-
-// https://github.com/bintray/gradle-bintray-plugin/issues/229
-tasks.withType<BintrayUploadTask> {
-    doFirst {
-        publishing.publications
-            .filterIsInstance<MavenPublication>()
-            .forEach { publication ->
-                val moduleFile = buildDir.resolve("publications/${publication.name}/module.json")
-                if (moduleFile.exists()) {
-                    publication.artifact(object : FileBasedMavenArtifact(moduleFile) {
-                        override fun getDefaultExtension() = "module"
-                    })
-                }
-            }
-    }
-}
-
 afterEvaluate {
+    fun findProperty(s: String) = project.findProperty(s) as String?
+    bintray {
+        user = findProperty("bintrayUser")
+        key = findProperty("bintrayApiKey")
+        publish = true
+        pkg(delegateClosureOf<BintrayExtension.PackageConfig> {
+            repo = "maven"
+            name = "rocksdb-multiplatform"
+            userOrg = "maryk"
+            setLicenses("Apache-2.0")
+            setPublications(*project.publishing.publications.names.toTypedArray())
+            vcsUrl = "https://github.com/marykdb/rocksdb-multiplatform.git"
+        })
+    }
+
+    // https://github.com/bintray/gradle-bintray-plugin/issues/229
+    tasks.withType<BintrayUploadTask> {
+        doFirst {
+            publishing.publications
+                .filterIsInstance<MavenPublication>()
+                .forEach { publication ->
+                    val moduleFile = buildDir.resolve("publications/${publication.name}/module.json")
+                    if (moduleFile.exists()) {
+                        publication.artifact(object : FileBasedMavenArtifact(moduleFile) {
+                            override fun getDefaultExtension() = "module"
+                        })
+                    }
+                }
+        }
+    }
+
     project.publishing.publications.withType<MavenPublication>().forEach { publication ->
         publication.pom.withXml {
             asNode().apply {
