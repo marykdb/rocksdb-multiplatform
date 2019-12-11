@@ -664,20 +664,6 @@ expect open class RocksDB : RocksObject {
     fun write(writeOpts: WriteOptions, updates: WriteBatch)
 
     /**
-     * Apply the specified updates to the database.
-     *
-     * @param writeOpts WriteOptions instance
-     * @param updates WriteBatchWithIndex instance
-     *
-     * @throws RocksDBException thrown if error happens in underlying
-     * native library.
-     */
-    fun write(
-        writeOpts: WriteOptions,
-        updates: WriteBatchWithIndex
-    )
-
-    /**
      * Get the value associated with the specified key within column family*
      *
      * @param key the key to retrieve the value.

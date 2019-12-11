@@ -570,16 +570,6 @@ actual open class RocksDB
         }
     }
 
-    actual fun write(writeOpts: WriteOptions, updates: WriteBatchWithIndex) {
-        wrapWithErrorThrower { error ->
-            native.applyWriteBatch(
-                updates.native,
-                writeOpts.native,
-                error
-            )
-        }
-    }
-
     actual fun get(key: ByteArray, value: ByteArray) = wrapWithNullErrorThrower { error ->
         native.dataForKey(
             key.toNSData(),
