@@ -18,7 +18,7 @@ plugins {
 }
 
 group = "io.maryk.rocksdb"
-version = "0.4.0"
+version = "0.5.0"
 
 val rocksDBVersion = "6.5.2"
 val rocksDBAndroidVersion = "0.6.0"
@@ -38,6 +38,11 @@ val buildIOS by tasks.creating(Exec::class) {
     commandLine("./buildObjectiveRocksiOS.sh")
 }
 
+val buildIOSSimulator by tasks.creating(Exec::class) {
+    workingDir = projectDir
+    commandLine("./buildObjectiveRocksiOS.sh", "iphonesimulator")
+}
+
 android {
     buildToolsVersion = "29.0.0"
     compileSdkVersion(29)
@@ -55,7 +60,7 @@ kotlin {
         dependsOn(sourceSets["commonMain"])
         dependencies {
             // Added so dependencies are resolved in IDE
-            compileOnly(files("build/libs/macos/main/rocksdb-multiplatform-cinterop-rocksdbMacOS.klib"))
+            compileOnly(files("build/libs/macosX64/main/rocksdb-multiplatform-cinterop-rocksdbMacOS.klib"))
         }
     }
     val appleTest by sourceSets.creating {
@@ -102,7 +107,11 @@ kotlin {
     }
 
     ios {
-        setupAppleTarget("iOS", buildIOS)
+        if (this.name == "iosX64") {
+            setupAppleTarget("iOSSimulator", buildIOSSimulator)
+        } else {
+            setupAppleTarget("iOS", buildIOS)
+        }
     }
 
     macosX64 {
@@ -186,6 +195,10 @@ val createOrEraseDBFolders = task("createOrEraseDBFolders") {
         subdir.deleteRecursively()
         subdir.mkdirs()
     }
+}
+
+tasks.getByName("clean", Delete::class) {
+    delete("xcodeBuild")
 }
 
 tasks.withType<Test> {

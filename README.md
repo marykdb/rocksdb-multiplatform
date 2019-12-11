@@ -29,5 +29,5 @@ be created to support more platforms.
 ## Dependency
 
 ```kotlin
-implementation("io.maryk.rocksdb:rocksdb-multiplatform:0.4.0")
+implementation("io.maryk.rocksdb:rocksdb-multiplatform:0.5.0")
 ```
