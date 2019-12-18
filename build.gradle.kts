@@ -56,34 +56,6 @@ android {
 }
 
 kotlin {
-    val appleMain by sourceSets.creating {
-        dependsOn(sourceSets["commonMain"])
-        dependencies {
-            // Added so dependencies are resolved in IDE
-            compileOnly(files("build/libs/macosX64/main/rocksdb-multiplatform-cinterop-rocksdbMacOS.klib"))
-        }
-    }
-    val appleTest by sourceSets.creating {
-        dependsOn(sourceSets["commonTest"])
-    }
-
-    val jvmSharedMain by sourceSets.creating {
-        dependsOn(sourceSets["commonMain"])
-        dependencies {
-            // Added so dependencies are resolved in IDE
-            compileOnly("io.maryk.rocksdb:rocksdbjni:$rocksDBVersion")
-            implementation(kotlin("stdlib"))
-        }
-    }
-    val jvmSharedTest by sourceSets.creating {
-        dependsOn(sourceSets["commonTest"])
-        dependencies {
-            implementation(kotlin("test"))
-            implementation(kotlin("test-junit"))
-            implementation("org.assertj:assertj-core:1.7.1")
-        }
-    }
-
     fun KotlinNativeTarget.setupAppleTarget(definitionName: String, buildTask: Exec) {
         binaries {
             getTest("DEBUG").linkerOpts = mutableListOf(
@@ -98,11 +70,19 @@ kotlin {
                     includeDirs("${objectiveRocksHome}/usr/local/include", "../ObjectiveRocks/Code")
                 }
             }
-
-            source(appleMain)
+            defaultSourceSet {
+                kotlin.apply {
+                    srcDirs("src/appleMain/kotlin")
+                }
+            }
         }
+
         compilations["test"].apply {
-            source(appleTest)
+            defaultSourceSet {
+                kotlin.apply {
+                    srcDirs("src/appleTest/kotlin")
+                }
+            }
         }
     }
 
@@ -130,20 +110,8 @@ kotlin {
     }
     jvm {
         setupJvmTarget()
-        compilations["main"].source(jvmSharedMain)
-        compilations["test"].source(jvmSharedTest)
     }
     android {
-        compilations.all {
-            when (this.name) {
-                "release", "debug" -> {
-                    source(jvmSharedMain)
-                }
-                "releaseTest", "debugTest" ->{
-                    source(jvmSharedTest)
-                }
-            }
-        }
         setupJvmTarget()
         publishAllLibraryVariants()
         publishLibraryVariantsGroupedByFlavor = true
@@ -169,14 +137,26 @@ kotlin {
                 implementation(kotlin("test-annotations-common"))
             }
         }
-        val androidMain by getting {
-            dependencies {
-                api("io.maryk.rocksdb:rocksdb-android:$rocksDBAndroidVersion")
-            }
-        }
         val jvmMain by getting {
             dependencies {
+                implementation(kotlin("stdlib"))
                 api("io.maryk.rocksdb:rocksdbjni:$rocksDBVersion")
+            }
+        }
+        val jvmTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation(kotlin("test-junit"))
+                implementation("org.assertj:assertj-core:1.7.1")
+            }
+        }
+        val androidMain by getting {
+            kotlin.apply {
+                setSrcDirs(jvmMain.kotlin.srcDirs)
+            }
+            dependencies {
+                implementation(kotlin("stdlib"))
+                api("io.maryk.rocksdb:rocksdb-android:$rocksDBAndroidVersion")
             }
         }
     }
