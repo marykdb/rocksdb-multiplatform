@@ -21,7 +21,7 @@ group = "io.maryk.rocksdb"
 version = "0.5.1"
 
 val rocksDBVersion = "6.5.2"
-val rocksDBAndroidVersion = "0.6.0"
+val rocksDBAndroidVersion = "0.6.1"
 
 val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
     ?: File(System.getProperty("user.home")).resolve(".konan")

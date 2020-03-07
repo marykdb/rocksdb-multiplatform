@@ -15,5 +15,3 @@ pluginManagement {
     }
 }
 rootProject.name = "rocksdb-multiplatform"
-
-enableFeaturePreview("GRADLE_METADATA")
