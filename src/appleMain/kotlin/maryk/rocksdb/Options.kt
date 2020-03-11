@@ -146,7 +146,7 @@ actual class Options private constructor(val native: RocksDBOptions) : RocksObje
         return this
     }
 
-    actual fun setComparator(comparator: AbstractComparator<out AbstractSlice<*>>): Options {
+    actual fun setComparator(comparator: AbstractComparator): Options {
         native.setComparator(comparator.native)
         return this
     }

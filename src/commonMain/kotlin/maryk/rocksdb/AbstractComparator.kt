@@ -1,16 +1,16 @@
 package maryk.rocksdb
 
+import maryk.ByteBuffer
+
 /**
  * Comparators are used by RocksDB to determine
  * the ordering of keys.
- *
- * This class is package private, implementers
- * should extend either of the public abstract classes:
- * @see maryk.rocksdb.Comparator
- *
- * @see maryk.rocksdb.DirectComparator
  */
-expect abstract class AbstractComparator<T : AbstractSlice<*>> : RocksCallbackObject {
+expect abstract class AbstractComparator protected constructor() : RocksCallbackObject {
+    protected constructor(
+        copt: ComparatorOptions?
+    )
+
     /**
      * The name of the comparator.  Used to check for comparator
      * mismatches (i.e., a DB created with one comparator is
@@ -27,17 +27,24 @@ expect abstract class AbstractComparator<T : AbstractSlice<*>> : RocksCallbackOb
     abstract fun name(): String
 
     /**
-     * Three-way key comparison
+     * Three-way key comparison. Implementations should provide a
+     * <a href="https://en.wikipedia.org/wiki/Total_order">total order</a>
+     * on keys that might be passed to it.
      *
-     * @param a Slice access to first key
-     * @param b Slice access to second key
+     * The implementation may modify the {@code ByteBuffer}s passed in, though
+     * it would be unconventional to modify the "limit" or any of the
+     * underlying bytes. As a callback, RocksJava will ensure that {@code a}
+     * is a different instance from {@code b}.
+     *
+     * @param a buffer containing the first key in its "remaining" elements
+     * @param b buffer containing the second key in its "remaining" elements
      *
      * @return Should return either:
-     * 1) < 0 if "a" < "b"
-     * 2) == 0 if "a" == "b"
-     * 3) > 0 if "a" > "b"
+     *    1) &lt; 0 if "a" &lt; "b"
+     *    2) == 0 if "a" == "b"
+     *    3) &gt; 0 if "a" &gt; "b"
      */
-    abstract fun compare(a: T, b: T): Int
+    abstract fun compare(a: ByteBuffer, b: ByteBuffer): Int
 
     /**
      * Used to reduce the space requirements
@@ -55,7 +62,7 @@ expect abstract class AbstractComparator<T : AbstractSlice<*>> : RocksCallbackOb
      *
      * @return a shorter start, or null
      */
-    open fun findShortestSeparator(start: String, limit: T): String?
+    open fun findShortestSeparator(start: ByteBuffer, limit: ByteBuffer)
 
     /**
      * Used to reduce the space requirements
@@ -72,7 +79,7 @@ expect abstract class AbstractComparator<T : AbstractSlice<*>> : RocksCallbackOb
      *
      * @return a shorter key, or null
      */
-    open fun findShortSuccessor(key: String): String?
+    open fun findShortSuccessor(key: ByteBuffer)
 
     override fun close()
 }

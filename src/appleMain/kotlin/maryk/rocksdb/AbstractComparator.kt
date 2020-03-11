@@ -1,19 +1,31 @@
 package maryk.rocksdb
 
+import maryk.ByteBuffer
+import maryk.DirectByteBuffer
 import rocksdb.RocksDBComparator
 
-actual abstract class AbstractComparator<T : AbstractSlice<*>> : RocksCallbackObject() {
-    internal abstract val native: RocksDBComparator
+actual abstract class AbstractComparator
+    protected actual constructor(val copt: ComparatorOptions?)
+: RocksCallbackObject() {
+    protected actual constructor() : this(null)
+
+    @Suppress("LeakingThis")
+    val native = RocksDBComparator(name()) { a, b ->
+        val bufferA = DirectByteBuffer(a!!.data()!!, a.size().toInt())
+        val bufferB = DirectByteBuffer(b!!.data()!!, b.size().toInt())
+
+        this.compare(bufferA, bufferB)
+    }
 
     actual abstract fun name(): String
 
-    actual abstract fun compare(a: T, b: T): Int
+    actual abstract fun compare(a: ByteBuffer, b: ByteBuffer): Int
 
-    actual open fun findShortestSeparator(start: String, limit: T): String? {
-        return null
+    actual open fun findShortestSeparator(start: ByteBuffer, limit: ByteBuffer) {
+        // no opp
     }
 
-    actual open fun findShortSuccessor(key: String): String? {
-        return null
+    actual open fun findShortSuccessor(key: ByteBuffer) {
+        // no opp
     }
 }

@@ -7,13 +7,14 @@ import kotlinx.cinterop.get
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.readBytes
 import kotlinx.cinterop.set
+import kotlin.experimental.xor
 
 private val MAX_BYTE = 0b1111_1111.toUByte()
 
 actual abstract class ByteBuffer(
     internal val nativePointer: CPointer<ByteVar>,
     capacity: Int
-) : Buffer(capacity) {
+) : Buffer(capacity, capacity) {
     actual final override fun array(): ByteArray {
         return nativePointer.readBytes(capacity)
     }
@@ -54,6 +55,22 @@ actual abstract class ByteBuffer(
     }
 
     actual abstract operator fun get(index: Int): Byte
+
+    actual abstract fun duplicate(): ByteBuffer
+
+    actual abstract fun getInt(): Int
+
+    internal fun readInt(): Int {
+        if (position + 4 > capacity) {
+            throw IllegalStateException("Not enough bytes left for int")
+        }
+        var int = 0 xor (this[position++].toInt() and 0xFF)
+        for (it in 1 until 4) {
+            int = int shl 8
+            int = int xor (this[position++].toInt() and 0xFF)
+        }
+        return int
+    }
 }
 
 class DirectByteBuffer internal constructor(
@@ -61,6 +78,16 @@ class DirectByteBuffer internal constructor(
     capacity: Int
 ) : ByteBuffer(nativePointer, capacity) {
     override fun get(index: Int) = nativePointer[index]
+
+    override fun duplicate(): ByteBuffer {
+        val newPointer = nativeHeap.allocArray<ByteVar>(capacity)
+        for (i in 0..capacity) {
+            newPointer[i] = nativePointer[i]
+        }
+        return DirectByteBuffer(newPointer, capacity)
+    }
+
+    override fun getInt() = readInt()
 
     override fun put(index: Int, byte: Byte): ByteBuffer {
         nativePointer[index] = byte
@@ -73,11 +100,20 @@ class WrappedByteBuffer internal constructor(
     capacity: Int
 ) : ByteBuffer(nativePointer, capacity) {
     override fun get(index: Int) = nativePointer[index]
+    override fun duplicate(): ByteBuffer {
+        val newPointer = nativeHeap.allocArray<ByteVar>(capacity)
+        for (i in 0..capacity) {
+            newPointer[i] = nativePointer[i]
+        }
+        return WrappedByteBuffer(newPointer, capacity)
+    }
 
     override fun put(index: Int, byte: Byte): ByteBuffer {
         nativePointer[index] = byte
         return this
     }
+
+    override fun getInt() = readInt()
 }
 
 actual fun allocateByteBuffer(capacity: Int): ByteBuffer {

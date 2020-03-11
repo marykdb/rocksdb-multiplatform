@@ -1,3 +1,4 @@
 package maryk.rocksdb
 
-actual typealias AbstractComparator<T> = org.rocksdb.AbstractComparator<T>
+@Suppress("NO_ACTUAL_CLASS_MEMBER_FOR_EXPECTED_CLASS")
+actual typealias AbstractComparator = org.rocksdb.AbstractComparator

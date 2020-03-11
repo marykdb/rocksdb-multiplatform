@@ -68,7 +68,7 @@ actual class ColumnFamilyOptions private constructor(
         return this
     }
 
-    actual fun setComparator(comparator: AbstractComparator<out AbstractSlice<*>>): ColumnFamilyOptions {
+    actual fun setComparator(comparator: AbstractComparator): ColumnFamilyOptions {
         native.setComparator(comparator.native)
         return this
     }

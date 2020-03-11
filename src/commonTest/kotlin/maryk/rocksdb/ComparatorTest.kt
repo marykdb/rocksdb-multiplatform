@@ -1,5 +1,6 @@
 package maryk.rocksdb
 
+import maryk.ByteBuffer
 import maryk.assertContentEquals
 import maryk.encodeToByteArray
 import maryk.rocksdb.BuiltinComparator.BYTEWISE_COMPARATOR
@@ -16,36 +17,6 @@ class ComparatorTest {
     }
 
     private fun createTestFolder() = createTestDBFolder("ComparatorTest")
-
-    @Test
-    fun javaComparator() {
-        val comparatorTest = object : AbstractComparatorTest() {
-            override val ascendingIntKeyComparator = object : Comparator(ComparatorOptions()) {
-                override fun name() = "test.AscendingIntKeyComparator"
-                override fun compare(a: Slice, b: Slice) = compareIntKeys(a.data(), b.data())
-            }
-        }
-
-        // test the round-tripability of keys written and read with the Comparator
-        comparatorTest.testRoundtrip(
-            createTestFolder()
-        )
-    }
-
-    @Test
-    fun javaComparatorCf() {
-        val comparatorTest = object : AbstractComparatorTest() {
-            override val ascendingIntKeyComparator = object : Comparator(ComparatorOptions()) {
-                override fun name() = "test.AscendingIntKeyComparator"
-                override fun compare(a: Slice, b: Slice) = compareIntKeys(a.data(), b.data())
-            }
-        }
-
-        // test the round-tripability of keys written and read with the Comparator
-        comparatorTest.testRoundtripCf(
-            createTestFolder()
-        )
-    }
 
     @Test
     fun builtinForwardComparator() {

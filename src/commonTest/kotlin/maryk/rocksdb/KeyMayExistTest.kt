@@ -2,10 +2,12 @@ package maryk.rocksdb
 
 import maryk.assertContentEquals
 import maryk.encodeToByteArray
+import maryk.decodeToString
 import maryk.rocksdb.util.createTestDBFolder
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class KeyMayExistTest {
@@ -36,10 +38,11 @@ class KeyMayExistTest {
                     assertEquals(2, columnFamilyHandleList.size)
                     db.put("key".encodeToByteArray(), "value".encodeToByteArray())
                     // Test without column family
-                    var retValue = StringBuilder()
-                    var exists = db.keyMayExist("key".encodeToByteArray(), retValue)
+                    var holder = Holder<ByteArray>()
+                    var exists = db.keyMayExist("key".encodeToByteArray(), holder)
                     assertTrue(exists)
-                    assertEquals("value", retValue.toString())
+                    assertNotNull(holder.getValue())
+                    assertEquals("value", holder.getValue()?.decodeToString())
 
                     // Slice key
                     val builder = StringBuilder("prefix")
@@ -52,69 +55,66 @@ class KeyMayExistTest {
                     val sliceValue = "slice value 0".encodeToByteArray()
                     db.put(sliceKey, offset, len, sliceValue, 0, sliceValue.size)
 
-                    retValue = StringBuilder()
-                    exists = db.keyMayExist(sliceKey, offset, len, retValue)
+                    exists = db.keyMayExist(sliceKey, offset, len, holder)
                     assertTrue(exists)
-                    assertContentEquals(sliceValue, retValue.toString().encodeToByteArray())
+                    assertContentEquals(sliceValue, holder.getValue())
 
                     // Test without column family but with readOptions
                     ReadOptions().use { readOptions ->
-                        retValue = StringBuilder()
-                        exists = db.keyMayExist(readOptions, "key".encodeToByteArray(), retValue)
+                        exists = db.keyMayExist(readOptions, "key".encodeToByteArray(), holder)
                         assertTrue(exists)
-                        assertEquals("value", retValue.toString())
+                        assertNotNull(holder.getValue())
+                        assertEquals("value", holder.getValue()?.decodeToString())
 
-                        retValue = StringBuilder()
-                        exists = db.keyMayExist(readOptions, sliceKey, offset, len, retValue)
+                        exists = db.keyMayExist(readOptions, sliceKey, offset, len, holder)
                         assertTrue(exists)
-                        assertContentEquals(sliceValue, retValue.toString().encodeToByteArray())
+                        assertNotNull(holder.getValue())
+                        assertContentEquals(sliceValue, holder.getValue())
                     }
 
                     // Test with column family
-                    retValue = StringBuilder()
                     exists = db.keyMayExist(
                         columnFamilyHandleList[0], "key".encodeToByteArray(),
-                        retValue
+                        holder
                     )
                     assertTrue(exists)
-                    assertEquals("value", retValue.toString())
+                    assertNotNull(holder.getValue())
+                    assertEquals("value", holder.getValue()?.decodeToString())
 
                     // Test slice sky with column family
-                    retValue = StringBuilder()
+                    holder = Holder<ByteArray>()
                     exists = db.keyMayExist(
                         columnFamilyHandleList[0], sliceKey, offset, len,
-                        retValue
+                        holder
                     )
                     assertTrue(exists)
-                    assertContentEquals(sliceValue, retValue.toString().encodeToByteArray())
+                    assertContentEquals(sliceValue, holder.getValue())
 
                     // Test with column family and readOptions
                     ReadOptions().use { readOptions ->
-                        retValue = StringBuilder()
                         exists = db.keyMayExist(
-                            readOptions,
-                            columnFamilyHandleList[0], "key".encodeToByteArray(),
-                            retValue
+                            columnFamilyHandleList[0], readOptions,
+                            "key".encodeToByteArray(),
+                            holder
                         )
                         assertTrue(exists)
-                        assertEquals("value", retValue.toString())
+                        assertEquals("value", holder.getValue()?.decodeToString())
 
                         // Test slice key with column family and read options
-                        retValue = StringBuilder()
                         exists = db.keyMayExist(
-                            readOptions,
-                            columnFamilyHandleList[0], sliceKey, offset, len,
-                            retValue
+                            columnFamilyHandleList[0], readOptions,
+                            sliceKey, offset, len,
+                            holder
                         )
                         assertTrue(exists)
-                        assertContentEquals(sliceValue, retValue.toString().encodeToByteArray())
+                        assertContentEquals(sliceValue, holder.getValue())
                     }
 
                     // KeyMayExist in CF1 must return false
                     assertFalse(
                         db.keyMayExist(
                             columnFamilyHandleList[1],
-                            "key".encodeToByteArray(), retValue
+                            "key".encodeToByteArray(), holder
                         )
                     )
 
@@ -122,7 +122,7 @@ class KeyMayExistTest {
                     assertFalse(
                         db.keyMayExist(
                             columnFamilyHandleList[1],
-                            sliceKey, 1, 3, retValue
+                            sliceKey, 1, 3, holder
                         )
                     )
                 } finally {
@@ -130,6 +130,37 @@ class KeyMayExistTest {
                         columnFamilyHandle.close()
                     }
                 }
+            }
+        }
+    }
+
+    @Test
+    fun keyMayExistNonUnicodeString() {
+        Options().apply {
+            setCreateIfMissing(true)
+            setCreateMissingColumnFamilies(true)
+        }.use { options ->
+            openRocksDB(
+                options,
+                createTestFolder()
+            ).use { db ->
+                val key = "key".encodeToByteArray()
+                val value = byteArrayOf(0x80.toByte()) // invalid unicode code-point
+
+                db.put(key, value)
+
+                val buf = ByteArray(10)
+                val read = db.get(key, buf)
+                assertEquals(1, read)
+                assertTrue { buf[0] == 0x80.toByte() }
+
+                val holder = Holder<ByteArray>()
+                var exists = db.keyMayExist(key, holder)
+                assertTrue(exists)
+                assertNotNull(holder.getValue())
+                assertContentEquals(value, holder.getValue())
+                exists = db.keyMayExist(key, null)
+                assertTrue(exists)
             }
         }
     }

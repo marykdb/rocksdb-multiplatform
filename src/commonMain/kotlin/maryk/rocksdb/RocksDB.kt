@@ -1,5 +1,7 @@
 package maryk.rocksdb
 
+import maryk.ByteBuffer
+
 expect val defaultColumnFamily: ByteArray
 expect val rocksDBNotFound: Int
 
@@ -1114,11 +1116,12 @@ expect open class RocksDB : RocksObject {
      * to make this lighter weight is to avoid doing any IOs.
      *
      * @param key byte array of a key to search for
-     * @param value StringBuilder instance which is a out parameter if a value is
-     * found in block-cache.
+     * @param valueHolder non-null to retrieve the value if it is found, or null
+     *     if the value is not needed. If non-null, upon return of the function,
+     *     the {@code value} will be set if it could be retrieved.
      * @return boolean value indicating if key does not exist or might exist.
      */
-    fun keyMayExist(key: ByteArray, value: StringBuilder?): Boolean
+    fun keyMayExist(key: ByteArray, valueHolder: Holder<ByteArray>?): Boolean
 
     /**
      * If the key definitely does not exist in the database, then this method
@@ -1132,14 +1135,15 @@ expect open class RocksDB : RocksObject {
      * non-negative and no larger than "key".length
      * @param len the length of the "key" array to be used, must be non-negative
      * and no larger than "key".length
-     * @param value StringBuilder instance which is a out parameter if a value is
-     * found in block-cache.
+     * @param valueHolder non-null to retrieve the value if it is found, or null
+     *     if the value is not needed. If non-null, upon return of the function,
+     *     the {@code value} will be set if it could be retrieved.
      *
      * @return boolean value indicating if key does not exist or might exist.
      */
     fun keyMayExist(
         key: ByteArray, offset: Int, len: Int,
-        value: StringBuilder?
+        valueHolder: Holder<ByteArray>?
     ): Boolean
 
     /**
@@ -1151,13 +1155,14 @@ expect open class RocksDB : RocksObject {
      *
      * @param columnFamilyHandle [ColumnFamilyHandle] instance
      * @param key byte array of a key to search for
-     * @param value StringBuilder instance which is a out parameter if a value is
-     * found in block-cache.
+     * @param valueHolder non-null to retrieve the value if it is found, or null
+     *     if the value is not needed. If non-null, upon return of the function,
+     *     the {@code value} will be set if it could be retrieved.
      * @return boolean value indicating if key does not exist or might exist.
      */
     fun keyMayExist(
         columnFamilyHandle: ColumnFamilyHandle,
-        key: ByteArray, value: StringBuilder?
+        key: ByteArray, valueHolder: Holder<ByteArray>?
     ): Boolean
 
     /**
@@ -1173,13 +1178,14 @@ expect open class RocksDB : RocksObject {
      * non-negative and no larger than "key".length
      * @param len the length of the "key" array to be used, must be non-negative
      * and no larger than "key".length
-     * @param value StringBuilder instance which is a out parameter if a value is
-     * found in block-cache.
+     * @param valueHolder non-null to retrieve the value if it is found, or null
+     *     if the value is not needed. If non-null, upon return of the function,
+     *     the {@code value} will be set if it could be retrieved.
      * @return boolean value indicating if key does not exist or might exist.
      */
     fun keyMayExist(
         columnFamilyHandle: ColumnFamilyHandle,
-        key: ByteArray, offset: Int, len: Int, value: StringBuilder?
+        key: ByteArray, offset: Int, len: Int, valueHolder: Holder<ByteArray>?
     ): Boolean
 
     /**
@@ -1191,13 +1197,14 @@ expect open class RocksDB : RocksObject {
      *
      * @param readOptions [ReadOptions] instance
      * @param key byte array of a key to search for
-     * @param value StringBuilder instance which is a out parameter if a value is
-     * found in block-cache.
+     * @param valueHolder non-null to retrieve the value if it is found, or null
+     *     if the value is not needed. If non-null, upon return of the function,
+     *     the {@code value} will be set if it could be retrieved.
      * @return boolean value indicating if key does not exist or might exist.
      */
     fun keyMayExist(
         readOptions: ReadOptions,
-        key: ByteArray, value: StringBuilder?
+        key: ByteArray, valueHolder: Holder<ByteArray>?
     ): Boolean
 
     /**
@@ -1213,14 +1220,15 @@ expect open class RocksDB : RocksObject {
      * non-negative and no larger than "key".length
      * @param len the length of the "key" array to be used, must be non-negative
      * and no larger than "key".length
-     * @param value StringBuilder instance which is a out parameter if a value is
-     * found in block-cache.
+     * @param valueHolder non-null to retrieve the value if it is found, or null
+     *     if the value is not needed. If non-null, upon return of the function,
+     *     the {@code value} will be set if it could be retrieved.
      * @return boolean value indicating if key does not exist or might exist.
      */
     fun keyMayExist(
         readOptions: ReadOptions,
         key: ByteArray, offset: Int, len: Int,
-        value: StringBuilder?
+        valueHolder: Holder<ByteArray>?
     ): Boolean
 
     /**
@@ -1230,17 +1238,19 @@ expect open class RocksDB : RocksObject {
      * This check is potentially lighter-weight than invoking DB::Get(). One way
      * to make this lighter weight is to avoid doing any IOs.
      *
-     * @param readOptions [ReadOptions] instance
      * @param columnFamilyHandle [ColumnFamilyHandle] instance
+     * @param readOptions [ReadOptions] instance
      * @param key byte array of a key to search for
-     * @param value StringBuilder instance which is a out parameter if a value is
-     * found in block-cache.
+     * @param valueHolder non-null to retrieve the value if it is found, or null
+     *     if the value is not needed. If non-null, upon return of the function,
+     *     the {@code value} will be set if it could be retrieved.
      * @return boolean value indicating if key does not exist or might exist.
      */
     fun keyMayExist(
+        columnFamilyHandle: ColumnFamilyHandle,
         readOptions: ReadOptions,
-        columnFamilyHandle: ColumnFamilyHandle, key: ByteArray,
-        value: StringBuilder?
+        key: ByteArray,
+        valueHolder: Holder<ByteArray>?
     ): Boolean
 
     /**
@@ -1257,14 +1267,16 @@ expect open class RocksDB : RocksObject {
      * non-negative and no larger than "key".length
      * @param len the length of the "key" array to be used, must be non-negative
      * and no larger than "key".length
-     * @param value StringBuilder instance which is a out parameter if a value is
-     * found in block-cache.
+     * @param valueHolder non-null to retrieve the value if it is found, or null
+     *     if the value is not needed. If non-null, upon return of the function,
+     *     the {@code value} will be set if it could be retrieved.
      * @return boolean value indicating if key does not exist or might exist.
      */
     fun keyMayExist(
+        columnFamilyHandle: ColumnFamilyHandle,
         readOptions: ReadOptions,
-        columnFamilyHandle: ColumnFamilyHandle, key: ByteArray,
-        offset: Int, len: Int, value: StringBuilder?
+        key: ByteArray,
+        offset: Int, len: Int, valueHolder: Holder<ByteArray>?
     ): Boolean
 
     /**

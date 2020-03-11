@@ -11,6 +11,7 @@ import maryk.toNSData
 import maryk.wrapWithErrorThrower
 import maryk.wrapWithNullErrorThrower
 import platform.Foundation.NSData
+import platform.Foundation.NSMutableData
 import rocksdb.RocksDBCompactRangeOptions
 import rocksdb.RocksDBDefaultColumnFamilyName
 import rocksdb.RocksDBIterator
@@ -810,10 +811,10 @@ actual open class RocksDB
         }
     }
 
-    actual fun keyMayExist(key: ByteArray, value: StringBuilder?): Boolean {
-        val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
-        return native.keyMayExist(key.toNSData(), valueStringRef.ptr).also {
-            value?.append(valueStringRef.value)
+    actual fun keyMayExist(key: ByteArray, valueHolder: Holder<ByteArray>?): Boolean {
+        val mutableValue = if(valueHolder != null) NSMutableData() else null
+        return native.keyMayExist(key.toNSData(), mutableValue).also {
+            valueHolder?.setValue(mutableValue?.toByteArray())
         }
     }
 
@@ -821,29 +822,29 @@ actual open class RocksDB
         key: ByteArray,
         offset: Int,
         len: Int,
-        value: StringBuilder?
+        valueHolder: Holder<ByteArray>?
     ): Boolean {
-        val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
+        val mutableValue = if(valueHolder != null) NSMutableData() else null
         return native.keyMayExist(
             key.toNSData(offset, len),
-            valueStringRef.ptr
+            mutableValue
         ).also {
-            value?.append(valueStringRef.value)
+            valueHolder?.setValue(mutableValue?.toByteArray())
         }
     }
 
     actual fun keyMayExist(
         columnFamilyHandle: ColumnFamilyHandle,
         key: ByteArray,
-        value: StringBuilder?
+        valueHolder: Holder<ByteArray>?
     ): Boolean {
-        val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
+        val mutableValue = if(valueHolder != null) NSMutableData() else null
         return native.keyMayExist(
             key.toNSData(),
             columnFamilyHandle.native,
-            valueStringRef.ptr
+            mutableValue
         ).also {
-            value?.append(valueStringRef.value)
+            valueHolder?.setValue(mutableValue?.toByteArray())
         }
     }
 
@@ -852,30 +853,30 @@ actual open class RocksDB
         key: ByteArray,
         offset: Int,
         len: Int,
-        value: StringBuilder?
+        valueHolder: Holder<ByteArray>?
     ): Boolean {
-        val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
+        val mutableValue = if(valueHolder != null) NSMutableData() else null
         return native.keyMayExist(
             key.toNSData(offset, len),
             columnFamilyHandle.native,
-            valueStringRef.ptr
+            mutableValue
         ).also {
-            value?.append(valueStringRef.value)
+            valueHolder?.setValue(mutableValue?.toByteArray())
         }
     }
 
     actual fun keyMayExist(
         readOptions: ReadOptions,
         key: ByteArray,
-        value: StringBuilder?
+        valueHolder: Holder<ByteArray>?
     ): Boolean {
-        val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
+        val mutableValue = if(valueHolder != null) NSMutableData() else null
         return native.keyMayExist(
             key.toNSData(),
             readOptions.native,
-            valueStringRef.ptr
+            mutableValue
         ).also {
-            value?.append(valueStringRef.value)
+            valueHolder?.setValue(mutableValue?.toByteArray())
         }
     }
 
@@ -884,51 +885,51 @@ actual open class RocksDB
         key: ByteArray,
         offset: Int,
         len: Int,
-        value: StringBuilder?
+        valueHolder: Holder<ByteArray>?
     ): Boolean {
-        val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
+        val mutableValue = if(valueHolder != null) NSMutableData() else null
         return native.keyMayExist(
             key.toNSData(offset, len),
             readOptions.native,
-            valueStringRef.ptr
+            mutableValue
         ).also {
-            value?.append(valueStringRef.value)
+            valueHolder?.setValue(mutableValue?.toByteArray())
         }
     }
 
     actual fun keyMayExist(
-        readOptions: ReadOptions,
         columnFamilyHandle: ColumnFamilyHandle,
+        readOptions: ReadOptions,
         key: ByteArray,
-        value: StringBuilder?
+        valueHolder: Holder<ByteArray>?
     ): Boolean {
-        val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
+        val mutableValue = if(valueHolder != null) NSMutableData() else null
         return native.keyMayExist(
             key.toNSData(),
             columnFamilyHandle.native,
             readOptions.native,
-            valueStringRef.ptr
+            mutableValue
         ).also {
-            value?.append(valueStringRef.value)
+            valueHolder?.setValue(mutableValue?.toByteArray())
         }
     }
 
     actual fun keyMayExist(
-        readOptions: ReadOptions,
         columnFamilyHandle: ColumnFamilyHandle,
+        readOptions: ReadOptions,
         key: ByteArray,
         offset: Int,
         len: Int,
-        value: StringBuilder?
+        valueHolder: Holder<ByteArray>?
     ): Boolean {
-        val valueStringRef = nativeHeap.alloc<ObjCObjectVar<String?>>()
+        val mutableValue = if(valueHolder != null) NSMutableData() else null
         return native.keyMayExist(
             key.toNSData(offset, len),
             columnFamilyHandle.native,
             readOptions.native,
-            valueStringRef.ptr
+            mutableValue
         ).also {
-            value?.append(valueStringRef.value)
+            valueHolder?.setValue(mutableValue?.toByteArray())
         }
     }
 

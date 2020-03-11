@@ -324,7 +324,7 @@ expect class Options() : RocksObject {
      * @return the instance of the current object.
      */
     fun setComparator(
-        comparator: AbstractComparator<out AbstractSlice<*>>
+        comparator: AbstractComparator
     ): Options
 
     /**

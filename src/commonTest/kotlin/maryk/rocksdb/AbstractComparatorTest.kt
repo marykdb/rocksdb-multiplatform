@@ -18,7 +18,7 @@ abstract class AbstractComparatorTest {
      *
      * @return An integer ascending order key comparator
      */
-    abstract val ascendingIntKeyComparator: AbstractComparator<*>
+    abstract val ascendingIntKeyComparator: AbstractComparator
 
     /**
      * Test which stores random keys into the database
