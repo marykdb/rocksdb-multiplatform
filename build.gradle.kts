@@ -18,7 +18,7 @@ plugins {
 }
 
 group = "io.maryk.rocksdb"
-version = "0.5.1"
+version = "0.6.0"
 
 val rocksDBVersion = "6.8.0"
 val rocksDBAndroidVersion = "6.8.0"
