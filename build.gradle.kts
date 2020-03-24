@@ -13,12 +13,12 @@ repositories {
 plugins {
     id("maven-publish")
     id("com.android.library") version "3.6.0"
-    kotlin("multiplatform") version "1.3.70"
+    kotlin("multiplatform") version "1.3.71"
     id("com.jfrog.bintray").version("1.8.4")
 }
 
 group = "io.maryk.rocksdb"
-version = "0.6.0"
+version = "0.6.1"
 
 val rocksDBVersion = "6.8.0"
 val rocksDBAndroidVersion = "6.8.0"
