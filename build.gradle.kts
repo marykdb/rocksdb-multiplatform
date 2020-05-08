@@ -13,15 +13,15 @@ repositories {
 plugins {
     id("maven-publish")
     id("com.android.library") version "3.6.0"
-    kotlin("multiplatform") version "1.3.71"
+    kotlin("multiplatform") version "1.3.72"
     id("com.jfrog.bintray").version("1.8.4")
 }
 
 group = "io.maryk.rocksdb"
-version = "0.6.1"
+version = "0.6.2"
 
-val rocksDBVersion = "6.8.0"
-val rocksDBAndroidVersion = "6.8.0"
+val rocksDBVersion = "6.8.1"
+val rocksDBAndroidVersion = "6.8.1"
 
 val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
     ?: File(System.getProperty("user.home")).resolve(".konan")
@@ -140,7 +140,7 @@ kotlin {
         val jvmMain by getting {
             dependencies {
                 implementation(kotlin("stdlib"))
-                api("io.maryk.rocksdb:rocksdbjni:$rocksDBVersion")
+                api("org.rocksdb:rocksdbjni:$rocksDBVersion")
             }
         }
         val jvmTest by getting {
