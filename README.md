@@ -3,14 +3,14 @@
 # Kotlin Multi-platform RocksDB implementation
 
 This projects provides a multi-platform Kotlin implemententation for RocksDB. 
-It supports the JVM (Linux/Arm64/MacOS) and native macOS/iOS.
+It supports the JVM, Android and native macOS/iOS.
 
 ## RocksDB API Support
 
 While the JVM and Android platforms support the full RocksDB Java interfaces
-the iOS/macOS native platforms are not fully covered. The common library is
-thus limited to what is supported there. It contains most common operations 
-and additions can always be requested or added with an MR.
+the iOS/macOS native platforms are not yet fully covered. The common library is
+thus limited to what is supported on iOS and Mac. It contains most common operations 
+and additions can always be requested in an issue or added with an MR.
 
 ## Native platforms
 
@@ -26,8 +26,24 @@ be created to support more platforms.
 - [API reference](src/commonMain/kotlin/maryk/rocksdb)
 - [RocksDB](https://rocksdb.org)
 
-## Dependency
+## Gradle Dependency
 
 ```kotlin
-implementation("io.maryk.rocksdb:rocksdb-multiplatform:0.5.0")
+implementation("io.maryk.rocksdb:rocksdb-multiplatform:0.6.2")
 ```
+
+## Usage Example
+
+Opening a RocksDB, writing a key and value pair and getting a value by that key.
+```kotlin
+openRocksDB("path_to_store_on_disk").use { db ->
+    val key = "test".encodeToByteArray()
+    db.put(key, "value".encodeToByteArray())
+    
+    val value = db.get("test".encodeToByteArray())
+    
+    println(value?.decodeToString())
+}
+```
+
+Check for more usage examples the [tests](src/commonTest/kotlin/maryk/rocksdb). 
