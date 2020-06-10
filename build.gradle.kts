@@ -56,18 +56,18 @@ android {
 }
 
 kotlin {
-    fun KotlinNativeTarget.setupAppleTarget(definitionName: String, buildTask: Exec) {
+    fun KotlinNativeTarget.setupAppleTarget(definitionName: String, buildTask: Exec, folderExtension: String = "") {
         binaries {
             getTest("DEBUG").linkerOpts = mutableListOf(
-                "-L${objectiveRocksHome}", "-lobjectiveRocks-$definitionName"
+                "-L$objectiveRocksHome${folderExtension}", "-lobjectiveRocks-$definitionName"
             )
         }
 
         compilations["main"].apply {
             cinterops {
-                this.create("rocksdb${definitionName.capitalize()}") {
+                this.create("rocksdb${definitionName.capitalize()}$folderExtension") {
                     tasks[interopProcessingTaskName].dependsOn(buildTask)
-                    includeDirs("${objectiveRocksHome}/usr/local/include", "../ObjectiveRocks/Code")
+                    includeDirs("../ObjectiveRocks/Code")
                 }
             }
             defaultSourceSet {
@@ -88,7 +88,7 @@ kotlin {
 
     ios {
         if (this.name == "iosX64") {
-            setupAppleTarget("iOSSimulator", buildIOSSimulator)
+            setupAppleTarget("iOS", buildIOSSimulator, "-iphonesimulator")
         } else {
             setupAppleTarget("iOS", buildIOS)
         }
