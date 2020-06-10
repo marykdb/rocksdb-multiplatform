@@ -1,6 +1,7 @@
 package maryk.rocksdb
 
 import rocksdb.RocksDBColumnFamilyHandle
+import maryk.toByteArray
 
 actual class ColumnFamilyHandle
     internal constructor(
@@ -8,7 +9,7 @@ actual class ColumnFamilyHandle
     )
 : RocksObject() {
     actual fun getName() =
-        native.name?.encodeToByteArray()
+        native.name?.toByteArray()
             ?: throw RocksDBException("Missing Column Family Name")
 
     actual fun getID() = native.id.toInt()

@@ -1227,6 +1227,6 @@ actual fun listColumnFamilies(
             path,
             RocksDBOptions(),
             error
-        ).map { (it as String).encodeToByteArray() }
+        ).map { (it as NSData).toByteArray() }
     }
 }

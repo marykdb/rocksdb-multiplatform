@@ -103,7 +103,6 @@ class ColumnFamilyTest {
                 options,
                 testFolder
             ).use { db ->
-
                 val columnFamilyHandle = db.createColumnFamily(cfDescriptor)
 
                 try {
@@ -182,6 +181,40 @@ class ColumnFamilyTest {
                                 "dfkey2".encodeToByteArray()
                             )
                         )
+                    } finally {
+                        for (columnFamilyHandle in columnFamilyHandleList) {
+                            columnFamilyHandle.close()
+                        }
+                    }
+                }
+            }
+    }
+
+    @Test
+    fun openWithByteArrayColumnFamilies() {
+        val cfNames = listOf(
+            ColumnFamilyDescriptor(defaultColumnFamily),
+            ColumnFamilyDescriptor(byteArrayOf(0, 1)),
+            ColumnFamilyDescriptor(byteArrayOf(0, 2))
+        )
+
+        val columnFamilyHandleList = mutableListOf<ColumnFamilyHandle>()
+
+        // Test open database with column family names
+        DBOptions()
+            .setCreateIfMissing(true)
+            .setCreateMissingColumnFamilies(true).use { options ->
+                openRocksDB(
+                    options,
+                    createTestFolder(), cfNames,
+                    columnFamilyHandleList
+                ).use {
+                    try {
+                        assertEquals(3, columnFamilyHandleList.size)
+
+                        assertContentEquals(cfNames[0].getName(), columnFamilyHandleList[0].getName())
+                        assertContentEquals(cfNames[1].getName(), columnFamilyHandleList[1].getName())
+                        assertContentEquals(cfNames[2].getName(), columnFamilyHandleList[2].getName())
                     } finally {
                         for (columnFamilyHandle in columnFamilyHandleList) {
                             columnFamilyHandle.close()

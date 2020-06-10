@@ -1,6 +1,7 @@
 package maryk.rocksdb
 
 import rocksdb.RocksDBSstFileMetaData
+import maryk.toByteArray
 
 actual class SstFileMetaData(
     internal val native: RocksDBSstFileMetaData
@@ -26,11 +27,11 @@ actual class SstFileMetaData(
     }
 
     actual fun smallestKey(): ByteArray {
-        return native.smallestKey.encodeToByteArray()
+        return native.smallestKey.toByteArray()
     }
 
     actual fun largestKey(): ByteArray {
-        return native.largestKey.encodeToByteArray()
+        return native.largestKey.toByteArray()
     }
 
     actual fun numReadsSampled(): Long {
