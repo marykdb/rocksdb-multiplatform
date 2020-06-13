@@ -5,9 +5,12 @@ import kotlinx.cinterop.get
 import platform.Foundation.NSData
 import platform.posix.uint8_tVar
 
+private val emptyByteArray = byteArrayOf()
+
 fun NSData.toByteArray(): ByteArray {
     @Suppress("UNCHECKED_CAST")
-    val bytePtr = (this.bytes as CPointer<uint8_tVar>)
+    val bytePtr = (this.bytes as? CPointer<uint8_tVar>)
+        ?: return emptyByteArray
 
     return ByteArray(this.length.toInt()) { index ->
         bytePtr[index].toByte()
