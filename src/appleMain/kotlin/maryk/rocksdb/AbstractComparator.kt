@@ -3,19 +3,23 @@ package maryk.rocksdb
 import maryk.ByteBuffer
 import maryk.DirectByteBuffer
 import rocksdb.RocksDBComparator
+import rocksdb.RocksDBSlice
 
 actual abstract class AbstractComparator
     protected actual constructor(val copt: ComparatorOptions?)
 : RocksCallbackObject() {
     protected actual constructor() : this(null)
 
-    @Suppress("LeakingThis")
-    val native = RocksDBComparator(name()) { a, b ->
+    @SharedImmutable
+    private val sliceToByteArrayComparator: (RocksDBSlice?, RocksDBSlice?) -> Int = { a, b ->
         val bufferA = DirectByteBuffer(a!!.data()!!, a.size().toInt())
         val bufferB = DirectByteBuffer(b!!.data()!!, b.size().toInt())
 
-        this.compare(bufferA, bufferB)
+        compare(bufferA, bufferB)
     }
+
+    @Suppress("LeakingThis")
+    val native = RocksDBComparator(name(), sliceToByteArrayComparator)
 
     actual abstract fun name(): String
 
