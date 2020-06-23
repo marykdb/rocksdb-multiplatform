@@ -18,7 +18,7 @@ plugins {
 }
 
 group = "io.maryk.rocksdb"
-version = "0.6.5"
+version = "0.6.6"
 
 val rocksDBVersion = "6.8.1"
 val rocksDBAndroidVersion = "6.8.1"
@@ -35,7 +35,7 @@ val buildMacOS by tasks.creating(Exec::class) {
 
 val buildIOS by tasks.creating(Exec::class) {
     workingDir = projectDir
-    commandLine("./buildObjectiveRocksiOS.sh")
+    commandLine("./buildObjectiveRocksiOS.sh", "iphoneos")
 }
 
 val buildIOSSimulator by tasks.creating(Exec::class) {
@@ -44,7 +44,7 @@ val buildIOSSimulator by tasks.creating(Exec::class) {
 }
 
 android {
-    buildToolsVersion = "29.0.0"
+    buildToolsVersion = "29.0.3"
     compileSdkVersion(29)
     defaultConfig {
         minSdkVersion(21)
