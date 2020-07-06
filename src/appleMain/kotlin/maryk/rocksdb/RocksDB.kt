@@ -63,6 +63,7 @@ import rocksdb.valueForMapProperty
 import rocksdb.valueForProperty
 import rocksdb.verifyChecksum
 
+@SharedImmutable
 actual val defaultColumnFamily = RocksDBDefaultColumnFamilyName.encodeToByteArray()
 actual val rocksDBNotFound = -1
 

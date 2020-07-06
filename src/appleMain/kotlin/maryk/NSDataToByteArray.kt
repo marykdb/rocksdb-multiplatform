@@ -5,6 +5,7 @@ import kotlinx.cinterop.get
 import platform.Foundation.NSData
 import platform.posix.uint8_tVar
 
+@SharedImmutable
 private val emptyByteArray = byteArrayOf()
 
 fun NSData.toByteArray(): ByteArray {

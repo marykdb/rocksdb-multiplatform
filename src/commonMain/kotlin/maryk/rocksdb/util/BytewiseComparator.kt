@@ -5,7 +5,6 @@ import maryk.rocksdb.AbstractComparator
 import maryk.rocksdb.ComparatorOptions
 import kotlin.math.min
 
-
 /**
  * This is a Common implementation of the C++
  * equivalent BytewiseComparatorImpl using [ByteBuffer]
