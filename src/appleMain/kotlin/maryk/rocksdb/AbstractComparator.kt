@@ -10,7 +10,6 @@ actual abstract class AbstractComparator
 : RocksCallbackObject() {
     protected actual constructor() : this(null)
 
-    @SharedImmutable
     private val sliceToByteArrayComparator: (RocksDBSlice?, RocksDBSlice?) -> Int = { a, b ->
         val bufferA = DirectByteBuffer(a!!.data()!!, a.size().toInt())
         val bufferB = DirectByteBuffer(b!!.data()!!, b.size().toInt())

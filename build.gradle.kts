@@ -6,6 +6,8 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 repositories {
+    maven ("https://dl.bintray.com/kotlin/kotlin-eap")
+    maven ("https://kotlin.bintray.com/kotlinx")
     google()
     jcenter()
 }
@@ -13,12 +15,12 @@ repositories {
 plugins {
     id("maven-publish")
     id("com.android.library") version "4.0.1"
-    kotlin("multiplatform") version "1.3.72"
+    kotlin("multiplatform") version "1.4-M2"
     id("com.jfrog.bintray").version("1.8.5")
 }
 
 group = "io.maryk.rocksdb"
-version = "0.6.10"
+version = "0.6.10-1.4-M2"
 
 val rocksDBVersion = "6.11.4"
 val rocksDBAndroidVersion = "6.11.4"
@@ -120,8 +122,8 @@ kotlin {
     sourceSets {
         all {
             languageSettings.apply {
-                languageVersion = "1.3"
-                apiVersion = "1.3"
+                languageVersion = "1.4"
+                apiVersion = "1.4"
                 useExperimentalAnnotation("kotlin.ExperimentalUnsignedTypes")
                 progressiveMode = true
             }
