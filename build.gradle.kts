@@ -15,12 +15,12 @@ repositories {
 plugins {
     id("maven-publish")
     id("com.android.library") version "4.0.1"
-    kotlin("multiplatform") version "1.4-M2"
+    kotlin("multiplatform") version "1.4.0-rc"
     id("com.jfrog.bintray").version("1.8.5")
 }
 
 group = "io.maryk.rocksdb"
-version = "0.6.10-1.4-M2"
+version = "0.6.10-1.4.0-rc"
 
 val rocksDBVersion = "6.11.4"
 val rocksDBAndroidVersion = "6.11.4"
@@ -92,7 +92,7 @@ kotlin {
         if (this.name == "iosX64") {
             setupAppleTarget("iOS", buildIOSSimulator, "-iphonesimulator")
         } else {
-            setupAppleTarget("iOS", buildIOS)
+            setupAppleTarget("iOS", buildIOS, "-iphoneos")
         }
     }
 
