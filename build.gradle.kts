@@ -128,11 +128,6 @@ kotlin {
                 progressiveMode = true
             }
         }
-        val commonMain by getting {
-            dependencies {
-                implementation(kotlin("stdlib-common"))
-            }
-        }
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test-common"))
@@ -141,7 +136,6 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                implementation(kotlin("stdlib"))
                 api("org.rocksdb:rocksdbjni:$rocksDBVersion")
             }
         }
@@ -149,7 +143,6 @@ kotlin {
             dependencies {
                 implementation(kotlin("test"))
                 implementation(kotlin("test-junit"))
-                implementation("org.assertj:assertj-core:1.7.1")
             }
         }
         val androidMain by getting {
