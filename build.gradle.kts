@@ -6,8 +6,6 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 repositories {
-    maven ("https://dl.bintray.com/kotlin/kotlin-eap")
-    maven ("https://kotlin.bintray.com/kotlinx")
     google()
     jcenter()
 }
@@ -15,12 +13,12 @@ repositories {
 plugins {
     id("maven-publish")
     id("com.android.library") version "4.0.1"
-    kotlin("multiplatform") version "1.4.0-rc"
+    kotlin("multiplatform") version "1.4.0"
     id("com.jfrog.bintray").version("1.8.5")
 }
 
 group = "io.maryk.rocksdb"
-version = "0.6.10-1.4.0-rc"
+version = "0.7.0"
 
 val rocksDBVersion = "6.11.4"
 val rocksDBAndroidVersion = "6.11.4"
