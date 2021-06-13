@@ -1182,7 +1182,7 @@ actual open class RocksDB
         return ColumnFamilyMetaData(native.columnFamilyMetaData(columnFamilyHandle.native))
     }
 
-    actual fun GetColumnFamilyMetaData(): ColumnFamilyMetaData {
+    actual fun getColumnFamilyMetaData(): ColumnFamilyMetaData {
         return ColumnFamilyMetaData(native.columnFamilyMetaData())
     }
 

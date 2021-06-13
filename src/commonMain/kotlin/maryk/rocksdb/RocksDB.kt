@@ -1828,7 +1828,7 @@ expect open class RocksDB : RocksObject {
      *
      * @return the column family metadata
      */
-    fun GetColumnFamilyMetaData(): ColumnFamilyMetaData
+    fun getColumnFamilyMetaData(): ColumnFamilyMetaData
 
     /**
      * Verify checksum

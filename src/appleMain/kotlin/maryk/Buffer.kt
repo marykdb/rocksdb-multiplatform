@@ -1,9 +1,9 @@
 package maryk
 
 actual abstract class Buffer(
-    protected var capacity: Int,
-    protected var limit: Int,
-    protected var position: Int = 0
+    internal var capacity: Int,
+    internal var limit: Int,
+    internal var position: Int = 0
 ) {
 
     actual abstract fun array(): Any

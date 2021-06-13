@@ -7,7 +7,6 @@ import kotlinx.cinterop.get
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.readBytes
 import kotlinx.cinterop.set
-import kotlin.experimental.xor
 
 private val MAX_BYTE = 0b1111_1111.toUByte()
 
@@ -56,8 +55,6 @@ actual abstract class ByteBuffer(
 
     actual abstract operator fun get(index: Int): Byte
 
-    actual abstract fun duplicate(): ByteBuffer
-
     actual abstract fun getInt(): Int
 
     internal fun readInt(): Int {
@@ -79,14 +76,6 @@ class DirectByteBuffer internal constructor(
 ) : ByteBuffer(nativePointer, capacity) {
     override fun get(index: Int) = nativePointer[index]
 
-    override fun duplicate(): ByteBuffer {
-        val newPointer = nativeHeap.allocArray<ByteVar>(capacity)
-        for (i in 0..capacity) {
-            newPointer[i] = nativePointer[i]
-        }
-        return DirectByteBuffer(newPointer, capacity)
-    }
-
     override fun getInt() = readInt()
 
     override fun put(index: Int, byte: Byte): ByteBuffer {
@@ -100,13 +89,6 @@ class WrappedByteBuffer internal constructor(
     capacity: Int
 ) : ByteBuffer(nativePointer, capacity) {
     override fun get(index: Int) = nativePointer[index]
-    override fun duplicate(): ByteBuffer {
-        val newPointer = nativeHeap.allocArray<ByteVar>(capacity)
-        for (i in 0..capacity) {
-            newPointer[i] = nativePointer[i]
-        }
-        return WrappedByteBuffer(newPointer, capacity)
-    }
 
     override fun put(index: Int, byte: Byte): ByteBuffer {
         nativePointer[index] = byte
@@ -114,6 +96,18 @@ class WrappedByteBuffer internal constructor(
     }
 
     override fun getInt() = readInt()
+}
+
+actual fun duplicateByteBuffer(byteBuffer: ByteBuffer): ByteBuffer {
+    val newPointer = nativeHeap.allocArray<ByteVar>(byteBuffer.capacity)
+    for (i in 0..byteBuffer.capacity) {
+        newPointer[i] = byteBuffer.nativePointer[i]
+    }
+    if (byteBuffer is WrappedByteBuffer) {
+        return WrappedByteBuffer(newPointer, byteBuffer.capacity)
+    } else {
+        return DirectByteBuffer(newPointer, byteBuffer.capacity)
+    }
 }
 
 actual fun allocateByteBuffer(capacity: Int): ByteBuffer {

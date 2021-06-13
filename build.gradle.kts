@@ -1,27 +1,25 @@
-import com.jfrog.bintray.gradle.BintrayExtension
-import com.jfrog.bintray.gradle.tasks.BintrayUploadTask
-import org.gradle.api.publish.maven.internal.artifact.FileBasedMavenArtifact
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
 import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.gradle.api.publish.maven.MavenPublication
+import java.util.*
 
 repositories {
     google()
-    jcenter()
+    mavenCentral()
 }
 
 plugins {
     id("maven-publish")
-    id("com.android.library") version "4.0.1"
-    kotlin("multiplatform") version "1.4.0"
-    id("com.jfrog.bintray").version("1.8.5")
+    id("com.android.library") version "4.1.0"
+    kotlin("multiplatform") version "1.5.10"
 }
 
 group = "io.maryk.rocksdb"
-version = "0.7.0"
+version = "6.20.4"
 
-val rocksDBVersion = "6.11.4"
-val rocksDBAndroidVersion = "6.11.4"
+val rocksDBVersion = "6.20.3"
+val rocksDBAndroidVersion = "6.20.4"
 
 val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
     ?: File(System.getProperty("user.home")).resolve(".konan")
@@ -44,11 +42,11 @@ val buildIOSSimulator by tasks.creating(Exec::class) {
 }
 
 android {
-    buildToolsVersion = "29.0.3"
-    compileSdkVersion(29)
+    buildToolsVersion = "30.0.3"
+    compileSdkVersion(30)
     defaultConfig {
         minSdkVersion(21)
-        targetSdkVersion(29)
+        targetSdkVersion(30)
         multiDexEnabled = true
         versionCode = 1
         testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
@@ -67,7 +65,7 @@ kotlin {
             cinterops {
                 this.create("rocksdb${definitionName.capitalize()}$folderExtension") {
                     tasks[interopProcessingTaskName].dependsOn(buildTask)
-                    includeDirs("../ObjectiveRocks/Code")
+                    includeDirs("./xcodeBuild/Build/Products/Release/usr/local/include")
                 }
             }
             defaultSourceSet {
@@ -103,7 +101,7 @@ kotlin {
             kotlinOptions {
                 allWarningsAsErrors = true
                 if (this is KotlinJvmOptions) {
-                    jvmTarget = "1.8"
+                    jvmTarget = "15"
                 }
             }
         }
@@ -120,9 +118,8 @@ kotlin {
     sourceSets {
         all {
             languageSettings.apply {
-                languageVersion = "1.4"
-                apiVersion = "1.4"
-                useExperimentalAnnotation("kotlin.ExperimentalUnsignedTypes")
+                languageVersion = "1.5"
+                apiVersion = "1.5"
                 progressiveMode = true
             }
         }
@@ -181,61 +178,75 @@ tasks.withType<Test> {
     }
 }
 
-afterEvaluate {
-    fun findProperty(s: String) = project.findProperty(s) as String?
-    bintray {
-        user = findProperty("bintrayUser")
-        key = findProperty("bintrayApiKey")
-        publish = true
-        pkg(delegateClosureOf<BintrayExtension.PackageConfig> {
-            repo = "maven"
-            name = "rocksdb-multiplatform"
-            userOrg = "maryk"
-            setLicenses("Apache-2.0")
-            setPublications(*project.publishing.publications.names.toTypedArray())
-            vcsUrl = "https://github.com/marykdb/rocksdb-multiplatform.git"
-        })
-    }
+// Stub secrets to let the project sync and build without the publication values set up
+ext["signing.keyId"] = null
+ext["signing.password"] = null
+ext["signing.secretKeyRingFile"] = null
+ext["ossrhUsername"] = null
+ext["ossrhPassword"] = null
 
-    // https://github.com/bintray/gradle-bintray-plugin/issues/229
-    tasks.withType<BintrayUploadTask> {
-        doFirst {
-            publishing.publications
-                .filterIsInstance<MavenPublication>()
-                .forEach { publication ->
-                    val moduleFile = buildDir.resolve("publications/${publication.name}/module.json")
-                    if (moduleFile.exists()) {
-                        publication.artifact(object : FileBasedMavenArtifact(moduleFile) {
-                            override fun getDefaultExtension() = "module"
-                        })
-                    }
-                }
+// Grabbing secrets from local.properties file or from environment variables, which could be used on CI
+val secretPropsFile = project.rootProject.file("local.properties")
+if (secretPropsFile.exists()) {
+    secretPropsFile.reader().use {
+        Properties().apply {
+            load(it)
         }
+    }.onEach { (name, value) ->
+        ext[name.toString()] = value
     }
+} else {
+    ext["signing.keyId"] = System.getenv("SIGNING_KEY_ID")
+    ext["signing.password"] = System.getenv("SIGNING_PASSWORD")
+    ext["signing.secretKeyRingFile"] = System.getenv("SIGNING_SECRET_KEY_RING_FILE")
+    ext["ossrhUsername"] = System.getenv("OSSRH_USERNAME")
+    ext["ossrhPassword"] = System.getenv("OSSRH_PASSWORD")
+}
 
-    project.publishing.publications.withType<MavenPublication>().forEach { publication ->
-        publication.pom.withXml {
-            asNode().apply {
-                appendNode("name", project.name)
-                appendNode("description", "Kotlin multiplatform RocksDB interface")
-                appendNode("url", "https://github.com/marykdb/rocksdb-multiplatform")
-                appendNode("licenses").apply {
-                    appendNode("license").apply {
-                        appendNode("name", "The Apache Software License, Version 2.0")
-                        appendNode("url", "http://www.apache.org/licenses/LICENSE-2.0.txt")
-                        appendNode("distribution", "repo")
-                    }
-                }
-                appendNode("developers").apply {
-                    appendNode("developer").apply {
-                        appendNode("id", "jurmous")
-                        appendNode("name", "Jurriaan Mous")
-                    }
-                }
-                appendNode("scm").apply {
-                    appendNode("url", "https://github.com/marykdb/rocksdb-multiplatform")
+fun getExtraString(name: String) = ext[name]?.toString()
+
+afterEvaluate {
+    publishing {
+        repositories {
+            maven {
+                name = "sonatype"
+                setUrl("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+                credentials {
+                    username = getExtraString("ossrhUsername")
+                    password = getExtraString("ossrhPassword")
                 }
             }
         }
+
+        publications.withType<MavenPublication> {
+            pom {
+                name.set(project.name)
+                description.set("Kotlin multiplatform RocksDB interface")
+                url.set("https://github.com/marykdb/rocksdb-multiplatform")
+
+                licenses {
+                    license {
+                        name.set("The Apache Software License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        distribution.set("repo")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("jurmous")
+                        name.set("Jurriaan Mous")
+                    }
+                }
+                scm {
+                    url.set("https://github.com/marykdb/rocksdb-multiplatform")
+                }
+            }
+        }
+    }
+}
+
+tasks {
+    "wrapper"(Wrapper::class) {
+        distributionType = Wrapper.DistributionType.ALL
     }
 }
