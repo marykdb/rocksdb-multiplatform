@@ -1,8 +1,9 @@
-[ ![Download](https://api.bintray.com/packages/maryk/maven/rocksdb-multiplatform/images/download.svg) ](https://bintray.com/maryk/maven/rocksdb-multiplatform/_latestVersion)
+[![GitHub license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
+[![Download](https://img.shields.io/maven-central/v/io.maryk.rocksdb/rocksdb-android)](https://search.maven.org/artifact/io.maryk.rocksdb/rocksdb-multiplatform)
 
 # Kotlin Multi-platform RocksDB implementation
 
-This projects provides a multi-platform Kotlin implemententation for RocksDB. 
+This project provides a multi-platform Kotlin implementation for RocksDB. 
 It supports the JVM, Android and native macOS/iOS.
 
 ## RocksDB API Support
@@ -28,8 +29,10 @@ be created to support more platforms.
 
 ## Gradle Dependency
 
+The dependency is published in Maven Central.
+
 ```kotlin
-implementation("io.maryk.rocksdb:rocksdb-multiplatform:0.6.2")
+implementation("io.maryk.rocksdb:rocksdb-multiplatform:6.20.4")
 ```
 
 ## Usage Example
