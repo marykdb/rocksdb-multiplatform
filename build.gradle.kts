@@ -11,6 +11,7 @@ repositories {
 
 plugins {
     id("maven-publish")
+    id("signing")
     id("com.android.library") version "4.1.0"
     kotlin("multiplatform") version "1.5.10"
 }
@@ -205,6 +206,10 @@ if (secretPropsFile.exists()) {
 
 fun getExtraString(name: String) = ext[name]?.toString()
 
+val emptyJavadocJar by tasks.registering(Jar::class) {
+    archiveClassifier.set("javadoc")
+}
+
 afterEvaluate {
     publishing {
         repositories {
@@ -219,6 +224,8 @@ afterEvaluate {
         }
 
         publications.withType<MavenPublication> {
+            artifact(emptyJavadocJar.get())
+
             pom {
                 name.set(project.name)
                 description.set("Kotlin multiplatform RocksDB interface")
@@ -242,6 +249,10 @@ afterEvaluate {
                 }
             }
         }
+    }
+
+    signing {
+        sign(publishing.publications)
     }
 }
 
