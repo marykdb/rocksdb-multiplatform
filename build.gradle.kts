@@ -13,14 +13,14 @@ plugins {
     id("maven-publish")
     id("signing")
     id("com.android.library") version "4.2.2"
-    kotlin("multiplatform") version "1.5.31"
+    kotlin("multiplatform") version "1.6.0-RC2"
 }
 
 group = "io.maryk.rocksdb"
-version = "6.20.4"
+version = "6.20.4-2"
 
 val rocksDBVersion = "6.20.3"
-val rocksDBAndroidVersion = "6.20.4"
+val rocksDBAndroidVersion = "6.20.4-2"
 
 val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
     ?: File(System.getProperty("user.home")).resolve(".konan")
@@ -102,7 +102,7 @@ kotlin {
             kotlinOptions {
                 allWarningsAsErrors = true
                 if (this is KotlinJvmOptions) {
-                    jvmTarget = "15"
+                    jvmTarget = "1.8"
                 }
             }
         }
@@ -119,8 +119,8 @@ kotlin {
     sourceSets {
         all {
             languageSettings.apply {
-                languageVersion = "1.5"
-                apiVersion = "1.5"
+                languageVersion = "1.6"
+                apiVersion = "1.6"
                 progressiveMode = true
             }
         }
