@@ -17,10 +17,10 @@ plugins {
 }
 
 group = "io.maryk.rocksdb"
-version = "6.20.4-2"
+version = "6.25.3"
 
-val rocksDBVersion = "6.20.3"
-val rocksDBAndroidVersion = "6.20.4-2"
+val rocksDBVersion = "6.25.3"
+val rocksDBAndroidVersion = "6.25.3"
 
 val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
     ?: File(System.getProperty("user.home")).resolve(".konan")
@@ -97,6 +97,10 @@ kotlin {
         setupAppleTarget("macOS", buildMacOS)
     }
 
+    macosArm64 {
+        setupAppleTarget("macOS", buildMacOS)
+    }
+
     fun KotlinTarget.setupJvmTarget() {
         compilations.all {
             kotlinOptions {
@@ -132,7 +136,7 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                api("org.rocksdb:rocksdbjni:$rocksDBVersion")
+                api("io.maryk.rocksdb:rocksdbjni:$rocksDBVersion")
             }
         }
         val jvmTest by getting {
