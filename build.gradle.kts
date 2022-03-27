@@ -43,7 +43,7 @@ val buildIOSSimulator by tasks.creating(Exec::class) {
 }
 
 android {
-    buildToolsVersion = "30.0.3"
+    buildToolsVersion = "32.0.0"
     compileSdk = 31
     defaultConfig {
         minSdk = 21
