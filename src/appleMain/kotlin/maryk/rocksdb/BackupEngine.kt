@@ -100,7 +100,7 @@ actual class BackupEngine
 
 actual fun openBackupEngine(
     env: Env,
-    options: BackupableDBOptions
+    options: BackupEngineOptions
 ) = Unit.wrapWithErrorThrower { error ->
     BackupEngine(
         RocksDBBackupEngine(options.backupDir(), env.native, error)

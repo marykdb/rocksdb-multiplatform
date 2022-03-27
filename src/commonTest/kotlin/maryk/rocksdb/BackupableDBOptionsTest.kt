@@ -15,7 +15,7 @@ class BackupableDBOptionsTest {
 
     @Test
     fun backupDir() {
-        BackupableDBOptions(arbitraryPath).use { backupableDBOptions ->
+        BackupEngineOptions(arbitraryPath).use { backupableDBOptions ->
             assertEquals(arbitraryPath, backupableDBOptions.backupDir())
         }
     }

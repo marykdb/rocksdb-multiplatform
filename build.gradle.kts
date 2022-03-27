@@ -12,15 +12,15 @@ repositories {
 plugins {
     id("maven-publish")
     id("signing")
-    id("com.android.library") version "4.2.2"
-    kotlin("multiplatform") version "1.6.0"
+    id("com.android.library") version "7.0.4"
+    kotlin("multiplatform") version "1.6.10"
 }
 
 group = "io.maryk.rocksdb"
-version = "6.25.3"
+version = "7.0.3"
 
-val rocksDBVersion = "6.25.3"
-val rocksDBAndroidVersion = "6.25.3"
+val rocksDBJVMVersion = "7.0.3"
+val rocksDBAndroidVersion = "7.0.3"
 
 val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
     ?: File(System.getProperty("user.home")).resolve(".konan")
@@ -44,12 +44,11 @@ val buildIOSSimulator by tasks.creating(Exec::class) {
 
 android {
     buildToolsVersion = "30.0.3"
-    compileSdkVersion(30)
+    compileSdk = 31
     defaultConfig {
-        minSdkVersion(21)
-        targetSdkVersion(30)
+        minSdk = 21
+        targetSdk = 31
         multiDexEnabled = true
-        versionCode = 1
         testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
     }
 }
@@ -136,7 +135,7 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                api("io.maryk.rocksdb:rocksdbjni:$rocksDBVersion")
+                api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion")
             }
         }
         val jvmTest by getting {

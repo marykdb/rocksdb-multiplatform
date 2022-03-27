@@ -690,16 +690,6 @@ class RocksDBTest {
     }
 
     @Test
-    fun setPreserveDeletesSequenceNumber() {
-        Options().setCreateIfMissing(true).use { options ->
-            val dbPath = createTestFolder()
-            openRocksDB(options, dbPath).use { db ->
-                assertFalse(db.setPreserveDeletesSequenceNumber(db.getLatestSequenceNumber()))
-            }
-        }
-    }
-
-    @Test
     fun deleteFile() {
         Options().setCreateIfMissing(true).use { options ->
             openRocksDB(options, createTestFolder()).use { db ->

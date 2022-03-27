@@ -2,7 +2,7 @@ package maryk.rocksdb
 
 import platform.Foundation.NSFileManager
 
-actual class BackupableDBOptions
+actual class BackupEngineOptions
     actual constructor(private val path: String)
 : RocksObject() {
     init {

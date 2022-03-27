@@ -1157,9 +1157,6 @@ actual open class RocksDB
         return native.latestSequenceNumber.toLong()
     }
 
-    actual fun setPreserveDeletesSequenceNumber(sequenceNumber: Long) =
-        native.setPreserveDeletesSequenceNumber(sequenceNumber.toULong())
-
     actual fun disableFileDeletions() {
         wrapWithErrorThrower { error ->
             native.disableFileDeletions(error)

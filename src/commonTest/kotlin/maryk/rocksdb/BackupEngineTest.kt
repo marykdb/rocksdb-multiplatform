@@ -30,7 +30,7 @@ class BackupEngineTest {
                 prepareDatabase(db)
 
                 // Create two backups
-                BackupableDBOptions(
+                BackupEngineOptions(
                     createBackupFolder()
                 ).use { bopt ->
                     openBackupEngine(opt.getEnv(), bopt).use { be ->
@@ -54,7 +54,7 @@ class BackupEngineTest {
                 // Fill database with some test values
                 prepareDatabase(db)
                 // Create two backups
-                BackupableDBOptions(
+                BackupEngineOptions(
                     createBackupFolder()
                 ).use { bopt ->
                     openBackupEngine(opt.getEnv(), bopt).use { be ->
@@ -84,7 +84,7 @@ class BackupEngineTest {
                 // Fill database with some test values
                 prepareDatabase(db)
                 // Create four backups
-                BackupableDBOptions(
+                BackupEngineOptions(
                     createBackupFolder()
                 ).use { bopt ->
                     openBackupEngine(opt.getEnv(), bopt).use { be ->
@@ -118,7 +118,7 @@ class BackupEngineTest {
                 // Fill database with some test values
                 prepareDatabase(db)
 
-                BackupableDBOptions(
+                BackupEngineOptions(
                     createBackupFolder()
                 ).use { bopt ->
                     openBackupEngine(opt.getEnv(), bopt).use { be ->
@@ -174,7 +174,7 @@ class BackupEngineTest {
                 )
                 // Fill database with some test values
                 prepareDatabase(db)
-                BackupableDBOptions(
+                BackupEngineOptions(
                     createBackupFolder()
                 ).use { bopt ->
                     openBackupEngine(opt.getEnv(), bopt).use { be ->
@@ -230,7 +230,7 @@ class BackupEngineTest {
                 prepareDatabase(db)
 
                 // Create two backups
-                BackupableDBOptions(
+                BackupEngineOptions(
                     createBackupFolder()
                 ).use { bopt ->
                     openBackupEngine(opt.getEnv(), bopt).use { be ->

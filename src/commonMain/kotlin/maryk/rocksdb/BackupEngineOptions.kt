@@ -9,7 +9,7 @@ package maryk.rocksdb
  *
  * @see org.rocksdb.BackupEngine
  */
-expect class BackupableDBOptions
+expect class BackupEngineOptions
     /**
      * BackupableDBOptions constructor.
      *

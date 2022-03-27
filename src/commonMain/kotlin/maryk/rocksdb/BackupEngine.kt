@@ -188,5 +188,5 @@ expect class BackupEngine : RocksObject, AutoCloseable {
  */
 expect fun openBackupEngine(
     env: Env,
-    options: BackupableDBOptions
+    options: BackupEngineOptions,
 ): BackupEngine

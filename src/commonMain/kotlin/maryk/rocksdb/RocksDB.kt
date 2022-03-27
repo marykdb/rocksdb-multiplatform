@@ -1755,23 +1755,6 @@ expect open class RocksDB : RocksObject {
     fun getLatestSequenceNumber(): Long
 
     /**
-     * Instructs DB to preserve deletes with sequence numbers &gt;= sequenceNumber.
-     *
-     * Has no effect if DBOptions#preserveDeletes() is set to false.
-     *
-     * This function assumes that user calls this function with monotonically
-     * increasing seqnums (otherwise we can't guarantee that a particular delete
-     * hasn't been already processed).
-     *
-     * @param sequenceNumber the minimum sequence number to preserve
-     *
-     * @return true if the value was successfully updated,
-     * false if user attempted to call if with
-     * sequenceNumber &lt;= current value.
-     */
-    fun setPreserveDeletesSequenceNumber(sequenceNumber: Long): Boolean
-
-    /**
      * Prevent file deletions. Compactions will continue to occur,
      * but no obsolete files will be deleted. Calling this multiple
      * times have the same effect as calling it once.
