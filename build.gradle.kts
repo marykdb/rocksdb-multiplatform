@@ -1,3 +1,5 @@
+@file:Suppress("UNUSED_VARIABLE")
+
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
 import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
@@ -13,7 +15,7 @@ plugins {
     id("maven-publish")
     id("signing")
     id("com.android.library") version "7.0.4"
-    kotlin("multiplatform") version "1.6.10"
+    kotlin("multiplatform") version "1.6.20"
 }
 
 group = "io.maryk.rocksdb"
@@ -54,52 +56,6 @@ android {
 }
 
 kotlin {
-    fun KotlinNativeTarget.setupAppleTarget(definitionName: String, buildTask: Exec, folderExtension: String = "") {
-        binaries {
-            getTest("DEBUG").linkerOpts = mutableListOf(
-                "-L$objectiveRocksHome${folderExtension}", "-lobjectiveRocks-$definitionName"
-            )
-        }
-
-        compilations["main"].apply {
-            cinterops {
-                this.create("rocksdb${definitionName.capitalize()}$folderExtension") {
-                    tasks[interopProcessingTaskName].dependsOn(buildTask)
-                    includeDirs("./xcodeBuild/Build/Products/Release/usr/local/include")
-                }
-            }
-            defaultSourceSet {
-                kotlin.apply {
-                    srcDirs("src/appleMain/kotlin")
-                }
-            }
-        }
-
-        compilations["test"].apply {
-            defaultSourceSet {
-                kotlin.apply {
-                    srcDirs("src/appleTest/kotlin")
-                }
-            }
-        }
-    }
-
-    ios {
-        if (this.name == "iosX64") {
-            setupAppleTarget("iOS", buildIOSSimulator, "-iphonesimulator")
-        } else {
-            setupAppleTarget("iOS", buildIOS, "-iphoneos")
-        }
-    }
-
-    macosX64 {
-        setupAppleTarget("macOS", buildMacOS)
-    }
-
-    macosArm64 {
-        setupAppleTarget("macOS", buildMacOS)
-    }
-
     fun KotlinTarget.setupJvmTarget() {
         compilations.all {
             kotlinOptions {
@@ -127,6 +83,7 @@ kotlin {
                 progressiveMode = true
             }
         }
+        val commonMain by getting {}
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test-common"))
@@ -145,14 +102,67 @@ kotlin {
             }
         }
         val androidMain by getting {
-            kotlin.apply {
-                setSrcDirs(jvmMain.kotlin.srcDirs)
-            }
             dependencies {
                 implementation(kotlin("stdlib"))
                 api("io.maryk.rocksdb:rocksdb-android:$rocksDBAndroidVersion")
             }
         }
+        val darwinMain by creating {
+            kotlin.apply {
+                srcDir("src/appleMain/kotlin")
+            }
+            dependsOn(commonMain)
+        }
+        val darwinTest by creating {
+            kotlin.apply {
+                srcDir("src/appleTest/kotlin")
+            }
+            dependsOn(commonTest)
+        }
+    }
+
+    fun KotlinNativeTarget.setupAppleTarget(definitionName: String, buildTask: Exec, folderExtension: String = "") {
+        binaries {
+            getTest("DEBUG").linkerOpts = mutableListOf(
+                "-L$objectiveRocksHome${folderExtension}", "-lobjectiveRocks-$definitionName"
+            )
+        }
+
+        compilations["main"].apply {
+            defaultSourceSet {
+                val darwinMain by sourceSets.getting {}
+                dependsOn(darwinMain)
+            }
+            cinterops {
+                this.create("rocksdb${definitionName.capitalize()}$folderExtension") {
+                    tasks[interopProcessingTaskName].dependsOn(buildTask)
+                    includeDirs("./xcodeBuild/Build/Products/Release/usr/local/include")
+                }
+            }
+        }
+
+        compilations["test"].apply {
+            defaultSourceSet {
+                val darwinTest by sourceSets.getting {}
+                dependsOn(darwinTest)
+            }
+        }
+    }
+
+    ios {
+        if (this.name == "iosX64") {
+            setupAppleTarget("iOS", buildIOSSimulator, "-iphonesimulator")
+        } else {
+            setupAppleTarget("iOS", buildIOS, "-iphoneos")
+        }
+    }
+
+    macosX64 {
+        setupAppleTarget("macOS", buildMacOS)
+    }
+
+    macosArm64 {
+        setupAppleTarget("macOS", buildMacOS)
     }
 }
 
