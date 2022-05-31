@@ -37,5 +37,6 @@ internal fun getWriteTypeByValue(value: RocksDBWriteBatchEntryType): WriteType {
         RocksDBWriteBatchEntryTypeDeleteRangeRecord -> DELETE_RANGE
         RocksDBWriteBatchEntryTypeLogDataRecord -> LOG
         RocksDBWriteBatchEntryTypeXIDRecord -> XID
+        else -> throw NotImplementedError()
     }
 }

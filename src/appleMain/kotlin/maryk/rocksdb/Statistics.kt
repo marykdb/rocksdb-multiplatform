@@ -30,6 +30,7 @@ actual class Statistics internal constructor(
         RocksDBStatsLevelExceptDetailedTimers -> EXCEPT_DETAILED_TIMERS
         RocksDBStatsLevelExceptTimeForMutex -> EXCEPT_TIME_FOR_MUTEX
         RocksDBStatsLevelAll -> ALL
+        else -> throw NotImplementedError()
     }
 
     actual fun setStatsLevel(statsLevel: StatsLevel) {

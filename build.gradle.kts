@@ -15,7 +15,7 @@ plugins {
     id("maven-publish")
     id("signing")
     id("com.android.library") version "7.0.4"
-    kotlin("multiplatform") version "1.6.20"
+    kotlin("multiplatform") version "1.6.21"
 }
 
 group = "io.maryk.rocksdb"
@@ -134,7 +134,8 @@ kotlin {
                 dependsOn(darwinMain)
             }
             cinterops {
-                this.create("rocksdb${definitionName.capitalize()}$folderExtension") {
+                this.create("rocksdb") {
+                    defFile = project.projectDir.resolve("src/nativeInterop/cinterop/rocksdb${definitionName.capitalize()}$folderExtension.def")
                     tasks[interopProcessingTaskName].dependsOn(buildTask)
                     includeDirs("./xcodeBuild/Build/Products/Release/usr/local/include")
                 }
