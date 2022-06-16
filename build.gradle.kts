@@ -14,8 +14,8 @@ repositories {
 plugins {
     id("maven-publish")
     id("signing")
-    id("com.android.library") version "7.0.4"
-    kotlin("multiplatform") version "1.6.21"
+    id("com.android.library") version "7.2.1"
+    kotlin("multiplatform") version "1.7.0"
 }
 
 group = "io.maryk.rocksdb"
@@ -46,10 +46,10 @@ val buildIOSSimulator by tasks.creating(Exec::class) {
 
 android {
     buildToolsVersion = "32.0.0"
-    compileSdk = 31
+    compileSdk = 32
     defaultConfig {
         minSdk = 21
-        targetSdk = 31
+        targetSdk = 32
         multiDexEnabled = true
         testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
     }
@@ -78,8 +78,8 @@ kotlin {
     sourceSets {
         all {
             languageSettings.apply {
-                languageVersion = "1.6"
-                apiVersion = "1.6"
+                languageVersion = "1.7"
+                apiVersion = "1.7"
                 progressiveMode = true
             }
         }
