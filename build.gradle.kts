@@ -9,7 +9,6 @@ import java.util.*
 repositories {
     google()
     mavenCentral()
-    mavenLocal()
 }
 
 plugins {
