@@ -9,6 +9,7 @@ import java.util.*
 repositories {
     google()
     mavenCentral()
+    mavenLocal()
 }
 
 plugins {
@@ -19,10 +20,10 @@ plugins {
 }
 
 group = "io.maryk.rocksdb"
-version = "7.0.3"
+version = "7.3.1"
 
-val rocksDBJVMVersion = "7.0.3"
-val rocksDBAndroidVersion = "7.0.3"
+val rocksDBJVMVersion = "7.3.1"
+val rocksDBAndroidVersion = "7.3.1"
 
 val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
     ?: File(System.getProperty("user.home")).resolve(".konan")
