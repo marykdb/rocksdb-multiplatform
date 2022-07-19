@@ -15,7 +15,7 @@ plugins {
     id("maven-publish")
     id("signing")
     id("com.android.library") version "7.2.1"
-    kotlin("multiplatform") version "1.7.0"
+    kotlin("multiplatform") version "1.7.10"
 }
 
 group = "io.maryk.rocksdb"
