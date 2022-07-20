@@ -1,10 +1,14 @@
 package maryk.rocksdb
 
+import kotlinx.cinterop.Arena
+import kotlinx.cinterop.AutofreeScope
 import rocksdb.RocksDBSlice
 
 actual abstract class AbstractSlice<T> protected constructor(
-    val native: RocksDBSlice
+    nativeCreator: (scope: AutofreeScope) -> RocksDBSlice
 ) : RocksMutableObject() {
+    internal val arena = Arena()
+    val native = nativeCreator(arena)
 
     actual fun data(): T {
         return this.getData()
@@ -49,5 +53,10 @@ actual abstract class AbstractSlice<T> protected constructor(
 
     actual fun startsWith(prefix: AbstractSlice<*>): Boolean {
         return native.startsWith(prefix.native)
+    }
+
+    override fun close() {
+        arena.clear()
+        super.close()
     }
 }

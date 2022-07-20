@@ -1,22 +1,23 @@
 package maryk.rocksdb
 
+import kotlinx.cinterop.AutofreeScope
 import maryk.ByteBuffer
 import maryk.DirectByteBuffer
 import maryk.WrappedByteBuffer
 import rocksdb.RocksDBSlice
 
 actual class DirectSlice internal constructor(
-    native: RocksDBSlice = RocksDBSlice()
+    native: (scope: AutofreeScope) -> RocksDBSlice = { RocksDBSlice() }
 ) : AbstractSlice<ByteBuffer>(native) {
-    actual constructor(str: String) : this(RocksDBSlice(str))
+    actual constructor(str: String) : this({ RocksDBSlice(str) })
 
-    actual constructor(data: ByteBuffer, length: Int) : this(RocksDBSlice(data.nativePointer, length.toULong())) {
+    actual constructor(data: ByteBuffer, length: Int) : this({ RocksDBSlice(data.nativePointer, length.toULong()) }) {
         if (data is WrappedByteBuffer) {
             throw IllegalArgumentException("Cannot use non direct byte buffer with DirectSlice")
         }
     }
 
-    actual constructor(data: ByteBuffer) : this(RocksDBSlice(data.nativePointer)) {
+    actual constructor(data: ByteBuffer) : this({ RocksDBSlice(data.nativePointer) }) {
         if (data is WrappedByteBuffer) {
             throw IllegalArgumentException("Cannot use non direct byte buffer with DirectSlice")
         }
@@ -39,4 +40,4 @@ actual class DirectSlice internal constructor(
     }
 }
 
-actual val DirectSliceNone = DirectSlice();
+actual val DirectSliceNone = DirectSlice()
