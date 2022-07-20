@@ -1,7 +1,6 @@
 package maryk.rocksdb.util
 
 import maryk.ByteBuffer
-import maryk.duplicateByteBuffer
 import maryk.rocksdb.AbstractComparator
 import maryk.rocksdb.ComparatorOptions
 import kotlin.math.min
@@ -69,7 +68,7 @@ class BytewiseComparator(copt: ComparatorOptions?) : AbstractComparator(copt) {
                     diffIndex++
                 }
             }
-            require(compare(duplicateByteBuffer(start), duplicateByteBuffer(limit)) < 0)
+            require(compare(start, limit) < 0)
         }
     }
 

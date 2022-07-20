@@ -56,7 +56,9 @@ class WriteBatchThreadedTest {
                 WriteBatch().use { wb ->
                     WriteOptions().use { w_opt ->
                         for (j in offset until offset + 100) {
-                            wb.put(allocateByteBuffer(4).putInt(j).array(), "parallel rocks test".encodeToByteArray())
+                            allocateByteBuffer(4) { buffer ->
+                                wb.put(buffer.putInt(j).array(), "parallel rocks test".encodeToByteArray())
+                            }
                         }
                         db!!.write(w_opt, wb)
                     }

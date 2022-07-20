@@ -10,10 +10,10 @@ expect abstract class ByteBuffer : Buffer {
     abstract fun getInt(): Int
 }
 
-expect fun duplicateByteBuffer(byteBuffer: ByteBuffer): ByteBuffer
+internal expect fun duplicateByteBuffer(byteBuffer: ByteBuffer, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit)
 
-expect fun allocateByteBuffer(capacity: Int): ByteBuffer
+internal expect fun allocateByteBuffer(capacity: Int, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit)
 
-expect fun allocateDirectByteBuffer(capacity: Int): ByteBuffer
+internal expect fun allocateDirectByteBuffer(capacity: Int, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit)
 
-expect fun wrapByteBuffer(bytes: ByteArray): ByteBuffer
+internal expect fun wrapByteBuffer(bytes: ByteArray, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit)

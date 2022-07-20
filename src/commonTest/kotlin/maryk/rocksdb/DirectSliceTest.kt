@@ -33,32 +33,35 @@ class DirectSliceTest {
     @Test
     fun directSliceWithByteBuffer() {
         val data = "Some text".encodeToByteArray()
-        val buffer = allocateDirectByteBuffer(data.size + 1)
-        buffer.put(data)
-        buffer.put(data.size, 0.toByte())
+        allocateDirectByteBuffer(data.size + 1) { buffer ->
+            buffer.put(data)
+            buffer.put(data.size, 0.toByte())
 
-        DirectSlice(buffer).use { directSlice ->
-            assertEquals("Some text", directSlice.toString())
+            DirectSlice(buffer).use { directSlice ->
+                assertEquals("Some text", directSlice.toString())
+            }
         }
     }
 
     @Test
     fun directSliceWithByteBufferAndLength() {
         val data = "Some text".encodeToByteArray()
-        val buffer = allocateDirectByteBuffer(data.size)
-        buffer.put(data)
-        DirectSlice(buffer, 4).use { directSlice ->
-            assertEquals("Some", directSlice.toString())
+        allocateDirectByteBuffer(data.size) { buffer ->
+            buffer.put(data)
+            DirectSlice(buffer, 4).use { directSlice ->
+                assertEquals("Some", directSlice.toString())
+            }
         }
     }
 
     @Test
     fun directSliceInitWithoutDirectAllocation() {
         val data = "Some text".encodeToByteArray()
-        val buffer = wrapByteBuffer(data)
-        assertFailsWith<IllegalArgumentException> {
-            DirectSlice(buffer).use{
-                //no-op
+        wrapByteBuffer(data) { buffer ->
+            assertFailsWith<IllegalArgumentException> {
+                DirectSlice(buffer).use{
+                    //no-op
+                }
             }
         }
     }
@@ -66,10 +69,11 @@ class DirectSliceTest {
     @Test
     fun directSlicePrefixInitWithoutDirectAllocation() {
         val data = "Some text".encodeToByteArray()
-        val buffer = wrapByteBuffer(data)
-        assertFailsWith<IllegalArgumentException> {
-            DirectSlice(buffer, 4).use {
-                //no-op
+        wrapByteBuffer(data) { buffer ->
+            assertFailsWith<IllegalArgumentException> {
+                DirectSlice(buffer, 4).use {
+                    //no-op
+                }
             }
         }
     }

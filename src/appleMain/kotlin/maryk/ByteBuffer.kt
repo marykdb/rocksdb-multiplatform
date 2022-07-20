@@ -4,9 +4,10 @@ import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.get
-import kotlinx.cinterop.nativeHeap
+import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.readBytes
 import kotlinx.cinterop.set
+import kotlinx.cinterop.toCValues
 
 private val MAX_BYTE = 0b1111_1111.toUByte()
 
@@ -98,26 +99,34 @@ class WrappedByteBuffer internal constructor(
     override fun getInt() = readInt()
 }
 
-actual fun duplicateByteBuffer(byteBuffer: ByteBuffer): ByteBuffer {
-    val newPointer = nativeHeap.allocArray<ByteVar>(byteBuffer.capacity)
-    for (i in 0..byteBuffer.capacity) {
-        newPointer[i] = byteBuffer.nativePointer[i]
+actual fun duplicateByteBuffer(byteBuffer: ByteBuffer, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit) {
+    memScoped {
+        val pointer = allocArray<ByteVar>(byteBuffer.capacity) { i ->
+            byteBuffer.nativePointer[i]
+        }
+
+        if (byteBuffer is WrappedByteBuffer) {
+            memSafeByteBuffer(WrappedByteBuffer(pointer, byteBuffer.capacity))
+        } else {
+            memSafeByteBuffer(DirectByteBuffer(pointer, byteBuffer.capacity))
+        }
     }
-    if (byteBuffer is WrappedByteBuffer) {
-        return WrappedByteBuffer(newPointer, byteBuffer.capacity)
-    } else {
-        return DirectByteBuffer(newPointer, byteBuffer.capacity)
+}
+
+actual fun allocateByteBuffer(capacity: Int, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit) {
+    memScoped {
+        memSafeByteBuffer(WrappedByteBuffer(allocArray(capacity), capacity))
     }
 }
 
-actual fun allocateByteBuffer(capacity: Int): ByteBuffer {
-    return WrappedByteBuffer(nativeHeap.allocArray(capacity), capacity)
+actual fun allocateDirectByteBuffer(capacity: Int, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit) {
+    memScoped {
+        memSafeByteBuffer(DirectByteBuffer(allocArray(capacity), capacity))
+    }
 }
 
-actual fun allocateDirectByteBuffer(capacity: Int): ByteBuffer {
-    return DirectByteBuffer(nativeHeap.allocArray(capacity), capacity)
-}
-
-actual fun wrapByteBuffer(bytes: ByteArray): ByteBuffer {
-    return WrappedByteBuffer(bytes.toCPointer(), bytes.size)
+actual fun wrapByteBuffer(bytes: ByteArray, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit) {
+    memScoped {
+        WrappedByteBuffer(bytes.toCValues().getPointer(this), bytes.size)
+    }
 }
