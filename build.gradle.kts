@@ -19,7 +19,7 @@ plugins {
 }
 
 group = "io.maryk.rocksdb"
-version = "7.3.1"
+version = "7.3.1-1"
 
 val rocksDBJVMVersion = "7.3.1"
 val rocksDBAndroidVersion = "7.3.1"

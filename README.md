@@ -32,7 +32,7 @@ be created to support more platforms.
 The dependency is published in Maven Central.
 
 ```kotlin
-implementation("io.maryk.rocksdb:rocksdb-multiplatform:7.3.1")
+implementation("io.maryk.rocksdb:rocksdb-multiplatform:7.3.1-1")
 ```
 
 ## Usage Example
