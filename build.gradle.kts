@@ -107,17 +107,23 @@ kotlin {
                 api("io.maryk.rocksdb:rocksdb-android:$rocksDBAndroidVersion")
             }
         }
+        val nativeMain by creating {
+            dependsOn(commonMain)
+        }
+        val nativeTest by creating {
+            dependsOn(commonTest)
+        }
         val darwinMain by creating {
             kotlin.apply {
                 srcDir("src/appleMain/kotlin")
             }
-            dependsOn(commonMain)
+            dependsOn(nativeMain)
         }
         val darwinTest by creating {
             kotlin.apply {
                 srcDir("src/appleTest/kotlin")
             }
-            dependsOn(commonTest)
+            dependsOn(nativeTest)
         }
     }
 
