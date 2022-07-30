@@ -1,9 +1,7 @@
 package maryk.rocksdb
 
 import maryk.createFolder
-import maryk.decodeToString
 import maryk.deleteFolder
-import maryk.encodeToByteArray
 import maryk.rocksdb.util.createTestDBFolder
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest

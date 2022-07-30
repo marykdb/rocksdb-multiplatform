@@ -1,7 +1,6 @@
 package maryk.rocksdb
 
 import maryk.assertContentEquals
-import maryk.encodeToByteArray
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

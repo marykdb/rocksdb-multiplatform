@@ -1,7 +1,6 @@
 package maryk.rocksdb
 
 import maryk.allocateDirectByteBuffer
-import maryk.encodeToByteArray
 import maryk.wrapByteBuffer
 import kotlin.test.Test
 import kotlin.test.assertEquals

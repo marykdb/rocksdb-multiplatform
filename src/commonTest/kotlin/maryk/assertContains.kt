@@ -1,6 +1,5 @@
 package maryk
 
-import kotlin.test.assertTrue
 import kotlin.test.fail
 
 fun assertContains(results: Collection<ByteArray?>, toMatch: ByteArray?) {
@@ -23,11 +22,4 @@ fun assertContains(results: Collection<ByteArray?>, vararg toMatch: ByteArray?) 
 fun assertContainsExactly(results: Collection<ByteArray?>, vararg toMatch: ByteArray?) {
     if (results.size != toMatch.size) fail("Results do not match exactly $toMatch")
     assertContains(results, *toMatch)
-}
-
-fun <T> assertContainsExactly(results: Collection<T?>, vararg toMatch: T?) {
-    if (results.size != toMatch.size) fail("Results do not match exactly: $results and $toMatch")
-    assertTrue("Results do not match exactly: $results and $toMatch") {
-        results.containsAll(toMatch.toSet())
-    }
 }

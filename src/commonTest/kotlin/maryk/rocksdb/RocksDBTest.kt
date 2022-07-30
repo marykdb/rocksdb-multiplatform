@@ -4,7 +4,6 @@ import maryk.assertContains
 import maryk.assertContainsExactly
 import maryk.assertContentEquals
 import maryk.doesFolderExist
-import maryk.encodeToByteArray
 import maryk.rocksdb.StatusCode.NotSupported
 import maryk.rocksdb.util.createTestDBFolder
 import kotlin.random.Random

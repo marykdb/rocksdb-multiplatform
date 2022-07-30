@@ -2,8 +2,6 @@ package maryk.rocksdb
 
 import maryk.assertContains
 import maryk.assertContentEquals
-import maryk.decodeToString
-import maryk.encodeToByteArray
 import maryk.rocksdb.CompressionType.BZLIB2_COMPRESSION
 import maryk.rocksdb.util.createTestDBFolder
 import kotlin.test.Test

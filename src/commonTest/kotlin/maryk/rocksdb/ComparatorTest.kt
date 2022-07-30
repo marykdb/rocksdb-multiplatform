@@ -1,8 +1,6 @@
 package maryk.rocksdb
 
-import maryk.ByteBuffer
 import maryk.assertContentEquals
-import maryk.encodeToByteArray
 import maryk.rocksdb.BuiltinComparator.BYTEWISE_COMPARATOR
 import maryk.rocksdb.BuiltinComparator.REVERSE_BYTEWISE_COMPARATOR
 import maryk.rocksdb.util.createTestDBFolder

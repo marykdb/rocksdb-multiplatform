@@ -5,7 +5,6 @@
 
 package maryk.rocksdb
 
-import maryk.encodeToByteArray
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

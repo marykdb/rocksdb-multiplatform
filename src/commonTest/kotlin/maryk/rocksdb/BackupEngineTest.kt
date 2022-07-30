@@ -1,8 +1,6 @@
 package maryk.rocksdb
 
 import maryk.createFolder
-import maryk.decodeToString
-import maryk.encodeToByteArray
 import maryk.rocksdb.util.createTestDBFolder
 import kotlin.random.Random
 import kotlin.test.Test

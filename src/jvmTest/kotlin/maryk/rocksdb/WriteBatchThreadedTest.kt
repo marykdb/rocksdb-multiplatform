@@ -1,7 +1,6 @@
 package maryk.rocksdb
 
 import maryk.allocateByteBuffer
-import maryk.encodeToByteArray
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
