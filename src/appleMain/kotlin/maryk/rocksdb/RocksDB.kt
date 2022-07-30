@@ -1,10 +1,5 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.ObjCObjectVar
-import kotlinx.cinterop.alloc
-import kotlinx.cinterop.nativeHeap
-import kotlinx.cinterop.ptr
-import kotlinx.cinterop.value
 import maryk.intoByteArray
 import maryk.toByteArray
 import maryk.toNSData
@@ -55,7 +50,6 @@ import rocksdb.pauseBackgroundWork
 import rocksdb.promoteL0
 import rocksdb.resetStats
 import rocksdb.setData
-import rocksdb.setPreserveDeletesSequenceNumber
 import rocksdb.snapshot
 import rocksdb.syncWal
 import rocksdb.valueForIntProperty
