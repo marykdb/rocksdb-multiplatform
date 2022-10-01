@@ -3,7 +3,6 @@
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
 import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-import org.gradle.api.publish.maven.MavenPublication
 import java.util.*
 
 repositories {
@@ -15,11 +14,11 @@ plugins {
     id("maven-publish")
     id("signing")
     id("com.android.library") version "7.2.1"
-    kotlin("multiplatform") version "1.7.10"
+    kotlin("multiplatform") version "1.7.20"
 }
 
 group = "io.maryk.rocksdb"
-version = "7.3.1-1"
+version = "7.3.1-2"
 
 val rocksDBJVMVersion = "7.3.1"
 val rocksDBAndroidVersion = "7.3.1"
@@ -158,7 +157,7 @@ kotlin {
 
     ios {
         if (this.name == "iosX64") {
-            setupAppleTarget("iOS", buildIOSSimulator, "-iphonesimulator")
+            setupAppleTarget("iOS", buildIOSSimulator, "-iphoneos")
         } else {
             setupAppleTarget("iOS", buildIOS, "-iphoneos")
         }
