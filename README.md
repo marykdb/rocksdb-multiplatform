@@ -1,43 +1,49 @@
 [![GitHub license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Download](https://img.shields.io/maven-central/v/io.maryk.rocksdb/rocksdb-android)](https://search.maven.org/artifact/io.maryk.rocksdb/rocksdb-multiplatform)
+[![Download](https://img.shields.io/maven-central/v/io.maryk.rocksdb/rocksdb-android)](https://central.sonatype.com/artifact/io.maryk.rocksdb/rocksdb-multiplatform)
 
 # Kotlin Multi-platform RocksDB implementation
 
-This project provides a multi-platform Kotlin implementation for RocksDB. 
-It supports the JVM, Android and native macOS/iOS.
+This project provides a multi-platform Kotlin implementation for RocksDB, a high-performance embedded key-value store for 
+storage of data on disk. RocksDB is widely used in many industries for various applications, including database management 
+systems, big data systems, and storage engines for other distributed systems.
+
+The aim of this project is to provide a multi-platform RocksDB implementation that can be used across different platforms,
+including JVM, Android, and native macOS/iOS. This allows developers to write applications that can run on different platforms 
+without having to rewrite the codebase.
+
+This project is useful for developers who want to build multi-platform applications that require high-performance disk-based
+storage. By using this implementation of RocksDB in their codebase, developers can ensure that their application is portable 
+across different platforms while maintaining a high level of performance and reliability.
 
 ## RocksDB API Support
 
-While the JVM and Android platforms support the full RocksDB Java interfaces
-the iOS/macOS native platforms are not yet fully covered. The common library is
-thus limited to what is supported on iOS and Mac. It contains most common operations 
-and additions can always be requested in an issue or added with an MR.
+The project supports the full RocksDB Java interfaces on the JVM and Android platforms. However, on iOS 
+and macOS native platforms, the implementation is limited to what is supported by ObjectiveRocks. 
+This common library includes most common operations, but if you need additional features, you can request 
+them by creating an issue or submitting a merge request.
 
 ## Native platforms
 
-Currently, only Apple platforms are supported for Native compilations. This is
-because the implementation depends on [ObjectiveRocks](https://github.com/marykdb/ObjectiveRocks)
-which is an Objective-C implementation. Kotlin currently only supports 
-Objective-C and C interop but the C API of RocksDB is too limited for
-current use case. When a C++ interop is introduced a more native interop can
-be created to support more platforms. 
+Currently, only Apple platforms are supported for native compilations, as
+the implementation relies on [ObjectiveRocks](https://github.com/marykdb/ObjectiveRocks), which is an Objective-C implementation.
+Kotlin currently only supports Objective-C and C interop, and the C API of RocksDB is too limited for the current use case. 
+Once a C++ interop is introduced for Kotlin, a more native interop can be created to support more platforms.
 
 ## Reference
 
-- [API reference](src/commonMain/kotlin/maryk/rocksdb)
-- [RocksDB](https://rocksdb.org)
+You can refer to the [API reference](src/commonMain/kotlin/maryk/rocksdb) or the official [RocksDB website](https://rocksdb.org) for more information.
 
 ## Gradle Dependency
 
-The dependency is published in Maven Central.
+The dependency is published in Maven Central, so you can easily add it to your project:
 
 ```kotlin
-implementation("io.maryk.rocksdb:rocksdb-multiplatform:7.3.1-1")
+implementation("io.maryk.rocksdb:rocksdb-multiplatform:8.0.0")
 ```
 
 ## Usage Example
 
-Opening a RocksDB, writing a key and value pair and getting a value by that key.
+Here's an example of how to open a RocksDB database, write a key-value pair and retrieve the value by key:
 ```kotlin
 openRocksDB("path_to_store_on_disk").use { db ->
     val key = "test".encodeToByteArray()
@@ -49,4 +55,13 @@ openRocksDB("path_to_store_on_disk").use { db ->
 }
 ```
 
-Check for more usage examples the [tests](src/commonTest/kotlin/maryk/rocksdb). 
+Check out the [tests](src/commonTest/kotlin/maryk/rocksdb) for more examples on how to use this library.
+
+## Contributing
+
+We welcome contributions to the project! If you find a bug or want to suggest a new feature, please submit an issue or 
+submit a pull request.
+
+## License
+
+This project is licensed under the Apache License, Version 2.0. See the [LICENSE file](LICENSE) for details.
