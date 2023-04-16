@@ -17,11 +17,6 @@ expect enum class HistogramType {
     READ_BLOCK_COMPACTION_MICROS,
     READ_BLOCK_GET_MICROS,
     WRITE_RAW_BLOCK_MICROS,
-    STALL_L0_SLOWDOWN_COUNT,
-    STALL_MEMTABLE_COMPACTION_COUNT,
-    STALL_L0_NUM_FILES_COUNT,
-    HARD_RATE_LIMIT_DELAY_COUNT,
-    SOFT_RATE_LIMIT_DELAY_COUNT,
     NUM_FILES_IN_SINGLE_COMPACTION,
     DB_SEEK,
     WRITE_STALL,
@@ -83,14 +78,22 @@ expect enum class HistogramType {
     /** Blob file sync latency. */
     BLOB_DB_BLOB_FILE_SYNC_MICROS,
 
-    /** BlobDB garbage collection time. */
-    BLOB_DB_GC_MICROS,
-
     /** BlobDB compression time. */
     BLOB_DB_COMPRESSION_MICROS,
 
     /** BlobDB decompression time. */
     BLOB_DB_DECOMPRESSION_MICROS,
+
+    /** Num of Index and Filter blocks read from file system per level in MultiGet request */
+    NUM_INDEX_AND_FILTER_BLOCKS_READ_PER_LEVEL,
+
+    /** Num of SST files read from file system per level in MultiGet request.*/
+    NUM_SST_READ_PER_LEVEL,
+
+    /** The number of retry in auto resume */
+     ERROR_HANDLER_AUTORESUME_RETRY_COUNT,
+
+    ASYNC_READ_BYTES,
 
     // 0x1F for backwards compatibility on current minor version.
     HISTOGRAM_ENUM_MAX

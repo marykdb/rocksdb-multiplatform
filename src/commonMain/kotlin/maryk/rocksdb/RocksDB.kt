@@ -1,7 +1,5 @@
 package maryk.rocksdb
 
-import maryk.ByteBuffer
-
 expect val defaultColumnFamily: ByteArray
 expect val rocksDBNotFound: Int
 
@@ -476,7 +474,7 @@ expect open class RocksDB : RocksObject {
      * non-OK status on error. It is not an error if "key" did not exist in the
      * database.
      *
-     * @param columnFamilyHandle [org.rocksdb.ColumnFamilyHandle] instance
+     * @param columnFamilyHandle [ColumnFamilyHandle] instance
      * @param writeOpt WriteOptions to be used with delete operation
      * @param beginKey First key to delete within database (included)
      * @param endKey Last key to delete within database (excluded)
@@ -1347,9 +1345,9 @@ expect open class RocksDB : RocksObject {
      * column families. Iterators are heap allocated and need to be deleted
      * before the db is deleted
      *
-     * @param columnFamilyHandleList [java.util.List] containing
-     * [org.rocksdb.ColumnFamilyHandle] instances.
-     * @return [java.util.List] containing [org.rocksdb.RocksIterator]
+     * @param columnFamilyHandleList [List] containing
+     * [ColumnFamilyHandle] instances.
+     * @return [List] containing [RocksIterator]
      * instances
      *
      * @throws RocksDBException thrown if error happens in underlying
@@ -1364,10 +1362,10 @@ expect open class RocksDB : RocksObject {
      * column families. Iterators are heap allocated and need to be deleted
      * before the db is deleted
      *
-     * @param columnFamilyHandleList [java.util.List] containing
-     * [org.rocksdb.ColumnFamilyHandle] instances.
+     * @param columnFamilyHandleList [List] containing
+     * [ColumnFamilyHandle] instances.
      * @param readOptions [ReadOptions] instance.
-     * @return [java.util.List] containing [org.rocksdb.RocksIterator]
+     * @return [List] containing [RocksIterator]
      * instances
      *
      * @throws RocksDBException thrown if error happens in underlying
@@ -1418,7 +1416,7 @@ expect open class RocksDB : RocksObject {
      *  - "rocksdb.sstables" - returns a multi-line string that describes all
      *    of the sstables that make up the db contents.
      *
-     * @param columnFamilyHandle [org.rocksdb.ColumnFamilyHandle]
+     * @param columnFamilyHandle [ColumnFamilyHandle]
      * instance, or null for the default column family.
      * @param property to be fetched. See above for examples
      * @return property value
@@ -1589,7 +1587,7 @@ expect open class RocksDB : RocksObject {
      * **See also**
      * [.compactRange]
      *
-     * @param columnFamilyHandle [org.rocksdb.ColumnFamilyHandle]
+     * @param columnFamilyHandle [ColumnFamilyHandle]
      * instance, or null for the default column family.
      * @param begin start of key range (included in range)
      * @param end end of key range (excluded from range)
@@ -1610,7 +1608,7 @@ expect open class RocksDB : RocksObject {
      * all data will have been pushed down to the last level containing
      * any data.
      *
-     * @param columnFamilyHandle [org.rocksdb.ColumnFamilyHandle] instance.
+     * @param columnFamilyHandle [ColumnFamilyHandle] instance.
      * @param begin start of key range (included in range)
      * @param end end of key range (excluded from range)
      * @param compactRangeOptions options for the compaction
@@ -1742,7 +1740,7 @@ expect open class RocksDB : RocksObject {
      * [WriteOptions.sync] set to true; In the latter case the changes
      * won't be visible until the sync is done.
      *
-     * Currently only works if [Options.allowMmapWrites] is set to false.
+     * Currently only works if Options.allowMmapWrites is set to false.
      */
     fun syncWal()
 
@@ -1846,7 +1844,7 @@ expect open class RocksDB : RocksObject {
  * Be very careful using this method.
  *
  * @param path the path to the Rocksdb database.
- * @param options [org.rocksdb.Options] instance.
+ * @param options [Options] instance.
  *
  * @throws RocksDBException thrown if error happens in underlying
  * native library.

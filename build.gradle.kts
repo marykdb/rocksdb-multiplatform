@@ -1,9 +1,9 @@
-@file:Suppress("UNUSED_VARIABLE")
+@file:Suppress("UNUSED_VARIABLE", "UnstableApiUsage")
 
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
 import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-import java.util.*
+import java.util.Properties
 
 repositories {
     google()
@@ -13,15 +13,15 @@ repositories {
 plugins {
     id("maven-publish")
     id("signing")
-    id("com.android.library") version "7.2.1"
-    kotlin("multiplatform") version "1.7.20"
+    id("com.android.library") version "7.2.2"
+    kotlin("multiplatform") version "1.8.20"
 }
 
 group = "io.maryk.rocksdb"
-version = "7.3.1-2"
+version = "8.0.0"
 
-val rocksDBJVMVersion = "7.3.1"
-val rocksDBAndroidVersion = "7.3.1"
+val rocksDBJVMVersion = "8.0.0"
+val rocksDBAndroidVersion = "8.0.0"
 
 val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
     ?: File(System.getProperty("user.home")).resolve(".konan")
@@ -44,11 +44,11 @@ val buildIOSSimulator by tasks.creating(Exec::class) {
 }
 
 android {
-    buildToolsVersion = "32.0.0"
-    compileSdk = 32
+    buildToolsVersion = "33.0.0"
+    compileSdk = 33
     defaultConfig {
         minSdk = 21
-        targetSdk = 32
+        targetSdk = 33
         multiDexEnabled = true
         testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
     }
@@ -77,8 +77,8 @@ kotlin {
     sourceSets {
         all {
             languageSettings.apply {
-                languageVersion = "1.7"
-                apiVersion = "1.7"
+                languageVersion = "1.8"
+                apiVersion = "1.8"
                 progressiveMode = true
             }
         }
@@ -157,7 +157,7 @@ kotlin {
 
     ios {
         if (this.name == "iosX64") {
-            setupAppleTarget("iOS", buildIOSSimulator, "-iphoneos")
+            setupAppleTarget("iOS", buildIOSSimulator, "-iphonesimulator")
         } else {
             setupAppleTarget("iOS", buildIOS, "-iphoneos")
         }

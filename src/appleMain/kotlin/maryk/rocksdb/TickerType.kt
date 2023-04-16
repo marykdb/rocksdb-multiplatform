@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package maryk.rocksdb
 
 import rocksdb.RocksDBTicker
@@ -13,13 +15,9 @@ import rocksdb.RocksDBTickerBlobDBBytesWritten
 import rocksdb.RocksDBTickerBlobDBFifoBytesEvicted
 import rocksdb.RocksDBTickerBlobDBFifoNumFilesEvicted
 import rocksdb.RocksDBTickerBlobDBFifoNumKeysEvicted
-import rocksdb.RocksDBTickerBlobDBGCBytesExpired
-import rocksdb.RocksDBTickerBlobDBGCBytesOverwritten
 import rocksdb.RocksDBTickerBlobDBGCBytesRelocated
 import rocksdb.RocksDBTickerBlobDBGCFailures
 import rocksdb.RocksDBTickerBlobDBGCNumFiles
-import rocksdb.RocksDBTickerBlobDBGCNumKeysExpired
-import rocksdb.RocksDBTickerBlobDBGCNumKeysOverwritten
 import rocksdb.RocksDBTickerBlobDBGCNumKeysRelocated
 import rocksdb.RocksDBTickerBlobDBGCNumNewFiles
 import rocksdb.RocksDBTickerBlobDBNumGet
@@ -39,28 +37,22 @@ import rocksdb.RocksDBTickerBlockCacheAdd
 import rocksdb.RocksDBTickerBlockCacheAddFailures
 import rocksdb.RocksDBTickerBlockCacheBytesRead
 import rocksdb.RocksDBTickerBlockCacheBytesWrite
-import rocksdb.RocksDBTickerBlockCacheCompressedAdd
-import rocksdb.RocksDBTickerBlockCacheCompressedHit
-import rocksdb.RocksDBTickerBlockCacheCompressedMiss
 import rocksdb.RocksDBTickerBlockCacheDataAdd
 import rocksdb.RocksDBTickerBlockCacheDataBytesInsert
 import rocksdb.RocksDBTickerBlockCacheDataHit
 import rocksdb.RocksDBTickerBlockCacheDataMiss
 import rocksdb.RocksDBTickerBlockCacheFilterAdd
-import rocksdb.RocksDBTickerBlockCacheFilterBytesEvict
 import rocksdb.RocksDBTickerBlockCacheFilterBytesInsert
 import rocksdb.RocksDBTickerBlockCacheFilterHit
 import rocksdb.RocksDBTickerBlockCacheFilterMiss
 import rocksdb.RocksDBTickerBlockCacheHit
 import rocksdb.RocksDBTickerBlockCacheIndexAdd
-import rocksdb.RocksDBTickerBlockCacheIndexBytesEvict
 import rocksdb.RocksDBTickerBlockCacheIndexBytesInsert
 import rocksdb.RocksDBTickerBlockCacheIndexHit
 import rocksdb.RocksDBTickerBlockCacheIndexMiss
 import rocksdb.RocksDBTickerBlockCacheMiss
 import rocksdb.RocksDBTickerBloomFilterFullPositive
 import rocksdb.RocksDBTickerBloomFilterFullTruePositive
-import rocksdb.RocksDBTickerBloomFilterMicros
 import rocksdb.RocksDBTickerBloomFilterPrefixChecked
 import rocksdb.RocksDBTickerBloomFilterUseful
 import rocksdb.RocksDBTickerBytesRead
@@ -86,12 +78,10 @@ import rocksdb.RocksDBTickerIterBytesRead
 import rocksdb.RocksDBTickerMemtableHit
 import rocksdb.RocksDBTickerMemtableMiss
 import rocksdb.RocksDBTickerMergeOprationTotalTime
-import rocksdb.RocksDBTickerNoFileCloses
 import rocksdb.RocksDBTickerNoFileErrors
 import rocksdb.RocksDBTickerNoFileOpens
 import rocksdb.RocksDBTickerNoIteratorCreated
 import rocksdb.RocksDBTickerNoIteratorDeleted
-import rocksdb.RocksDBTickerNoIterators
 import rocksdb.RocksDBTickerNumberBlockCompressed
 import rocksdb.RocksDBTickerNumberBlockDecompressed
 import rocksdb.RocksDBTickerNumberBlockNotCompressed
@@ -102,7 +92,6 @@ import rocksdb.RocksDBTickerNumberDBPreviousFound
 import rocksdb.RocksDBTickerNumberDBSeek
 import rocksdb.RocksDBTickerNumberDBSeekFound
 import rocksdb.RocksDBTickerNumberDirectLoadTableProperties
-import rocksdb.RocksDBTickerNumberFilteredDeletes
 import rocksdb.RocksDBTickerNumberIterSkip
 import rocksdb.RocksDBTickerNumberKeysRead
 import rocksdb.RocksDBTickerNumberKeysUpdated
@@ -118,7 +107,6 @@ import rocksdb.RocksDBTickerNumberSuperversionCleanups
 import rocksdb.RocksDBTickerNumberSuperversionReleases
 import rocksdb.RocksDBTickerPersistentCacheHit
 import rocksdb.RocksDBTickerPersistentCacheMiss
-import rocksdb.RocksDBTickerRateLimitDelayMillis
 import rocksdb.RocksDBTickerReadAmpEstimateUsefulBytes
 import rocksdb.RocksDBTickerReadAmpTotalReadBytes
 import rocksdb.RocksDBTickerRowCacheHit
@@ -134,7 +122,6 @@ import rocksdb.RocksDBTickerWalFileBytes
 import rocksdb.RocksDBTickerWalFileSynced
 import rocksdb.RocksDBTickerWriteDoneByOther
 import rocksdb.RocksDBTickerWriteDoneBySelf
-import rocksdb.RocksDBTickerWriteTimedout
 import rocksdb.RocksDBTickerWriteWithWal
 
 actual enum class TickerType(
@@ -148,12 +135,10 @@ actual enum class TickerType(
     BLOCK_CACHE_INDEX_HIT(RocksDBTickerBlockCacheIndexHit),
     BLOCK_CACHE_INDEX_ADD(RocksDBTickerBlockCacheIndexAdd),
     BLOCK_CACHE_INDEX_BYTES_INSERT(RocksDBTickerBlockCacheIndexBytesInsert),
-    BLOCK_CACHE_INDEX_BYTES_EVICT(RocksDBTickerBlockCacheIndexBytesEvict),
     BLOCK_CACHE_FILTER_MISS(RocksDBTickerBlockCacheFilterMiss),
     BLOCK_CACHE_FILTER_HIT(RocksDBTickerBlockCacheFilterHit),
     BLOCK_CACHE_FILTER_ADD(RocksDBTickerBlockCacheFilterAdd),
     BLOCK_CACHE_FILTER_BYTES_INSERT(RocksDBTickerBlockCacheFilterBytesInsert),
-    BLOCK_CACHE_FILTER_BYTES_EVICT(RocksDBTickerBlockCacheFilterBytesEvict),
     BLOCK_CACHE_DATA_MISS(RocksDBTickerBlockCacheDataMiss),
     BLOCK_CACHE_DATA_HIT(RocksDBTickerBlockCacheDataHit),
     BLOCK_CACHE_DATA_ADD(RocksDBTickerBlockCacheDataAdd),
@@ -163,7 +148,6 @@ actual enum class TickerType(
     BLOOM_FILTER_USEFUL(RocksDBTickerBloomFilterUseful),
     BLOOM_FILTER_FULL_POSITIVE(RocksDBTickerBloomFilterFullPositive),
     BLOOM_FILTER_FULL_TRUE_POSITIVE(RocksDBTickerBloomFilterFullTruePositive),
-    BLOOM_FILTER_MICROS(RocksDBTickerBloomFilterMicros),
     PERSISTENT_CACHE_HIT(RocksDBTickerPersistentCacheHit),
     PERSISTENT_CACHE_MISS(RocksDBTickerPersistentCacheMiss),
     SIM_BLOCK_CACHE_HIT(RocksDBTickerSimBlockCacheHit),
@@ -192,31 +176,22 @@ actual enum class TickerType(
     NUMBER_DB_NEXT_FOUND(RocksDBTickerNumberDBNextFound),
     NUMBER_DB_PREV_FOUND(RocksDBTickerNumberDBPreviousFound),
     ITER_BYTES_READ(RocksDBTickerIterBytesRead),
-    NO_FILE_CLOSES(RocksDBTickerNoFileCloses),
     NO_FILE_OPENS(RocksDBTickerNoFileOpens),
     NO_FILE_ERRORS(RocksDBTickerNoFileErrors),
     STALL_MICROS(RocksDBTickerStallMicros),
     DB_MUTEX_WAIT_MICROS(RocksDBTickerDBMutexWaitMicros),
-    RATE_LIMIT_DELAY_MILLIS(RocksDBTickerRateLimitDelayMillis),
-    NO_ITERATORS(RocksDBTickerNoIterators),
     NUMBER_MULTIGET_CALLS(RocksDBTickerNumberMultigetCalls),
     NUMBER_MULTIGET_KEYS_READ(RocksDBTickerNumberMultigetKeysRead),
     NUMBER_MULTIGET_BYTES_READ(RocksDBTickerNumberMultigetBytesRead),
-    NUMBER_FILTERED_DELETES(RocksDBTickerNumberFilteredDeletes),
     NUMBER_MERGE_FAILURES(RocksDBTickerNumberMergeFailures),
     BLOOM_FILTER_PREFIX_CHECKED(RocksDBTickerBloomFilterPrefixChecked),
     BLOOM_FILTER_PREFIX_USEFUL(RocksDBTickerBloomFilterUseful),
     NUMBER_OF_RESEEKS_IN_ITERATION(RocksDBTickerNumberOfReseeksInIteration),
     GET_UPDATES_SINCE_CALLS(RocksDBTickerGetUpdatesSinceCalls),
-    BLOCK_CACHE_COMPRESSED_MISS(RocksDBTickerBlockCacheCompressedMiss),
-    BLOCK_CACHE_COMPRESSED_HIT(RocksDBTickerBlockCacheCompressedHit),
-    BLOCK_CACHE_COMPRESSED_ADD(RocksDBTickerBlockCacheCompressedAdd),
-    BLOCK_CACHE_COMPRESSED_ADD_FAILURES(RocksDBTickerBlockCacheAddFailures),
     WAL_FILE_SYNCED(RocksDBTickerWalFileSynced),
     WAL_FILE_BYTES(RocksDBTickerWalFileBytes),
     WRITE_DONE_BY_SELF(RocksDBTickerWriteDoneBySelf),
     WRITE_DONE_BY_OTHER(RocksDBTickerWriteDoneByOther),
-    WRITE_TIMEDOUT(RocksDBTickerWriteTimedout),
     WRITE_WITH_WAL(RocksDBTickerWriteWithWal),
     COMPACT_READ_BYTES(RocksDBTickerCompactReadBytes),
     COMPACT_WRITE_BYTES(RocksDBTickerCompactWriteBytes),
@@ -265,11 +240,7 @@ actual enum class TickerType(
     BLOB_DB_GC_NUM_FILES(RocksDBTickerBlobDBGCNumFiles),
     BLOB_DB_GC_NUM_NEW_FILES(RocksDBTickerBlobDBGCNumNewFiles),
     BLOB_DB_GC_FAILURES(RocksDBTickerBlobDBGCFailures),
-    BLOB_DB_GC_NUM_KEYS_OVERWRITTEN(RocksDBTickerBlobDBGCNumKeysOverwritten),
-    BLOB_DB_GC_NUM_KEYS_EXPIRED(RocksDBTickerBlobDBGCNumKeysExpired),
     BLOB_DB_GC_NUM_KEYS_RELOCATED(RocksDBTickerBlobDBGCNumKeysRelocated),
-    BLOB_DB_GC_BYTES_OVERWRITTEN(RocksDBTickerBlobDBGCBytesOverwritten),
-    BLOB_DB_GC_BYTES_EXPIRED(RocksDBTickerBlobDBGCBytesExpired),
     BLOB_DB_GC_BYTES_RELOCATED(RocksDBTickerBlobDBGCBytesRelocated),
     BLOB_DB_FIFO_NUM_FILES_EVICTED(RocksDBTickerBlobDBFifoNumFilesEvicted),
     BLOB_DB_FIFO_NUM_KEYS_EVICTED(RocksDBTickerBlobDBFifoNumKeysEvicted),
@@ -278,5 +249,106 @@ actual enum class TickerType(
     TXN_OLD_COMMIT_MAP_MUTEX_OVERHEAD(RocksDBTickerTxnOldCommitMapMutexOverhead),
     TXN_DUPLICATE_KEY_OVERHEAD(RocksDBTickerTxnDuplicateKeyOverhead),
     TXN_SNAPSHOT_MUTEX_OVERHEAD(RocksDBTickerTxnSnapshotMutexOverhead),
-    TICKER_ENUM_MAX(RocksDBTickerEnumMax)
+
+    TXN_GET_TRY_AGAIN((-0x0D).toUInt()),
+    FILES_MARKED_TRASH((-0x0E).toUInt()),
+    FILES_DELETED_IMMEDIATELY((-0x0f).toUInt()),
+
+    /**
+     * Compaction read and write statistics broken down by CompactionReason
+     */
+    COMPACT_READ_BYTES_MARKED((-0x10).toUInt()),
+    COMPACT_READ_BYTES_PERIODIC((-0x11).toUInt()),
+    COMPACT_READ_BYTES_TTL((-0x12).toUInt()),
+    COMPACT_WRITE_BYTES_MARKED((-0x13).toUInt()),
+    COMPACT_WRITE_BYTES_PERIODIC((-0x14).toUInt()),
+    COMPACT_WRITE_BYTES_TTL((-0x15).toUInt()),
+
+    /**
+     * DB error handler statistics
+     */
+    ERROR_HANDLER_BG_ERROR_COUNT((-0x16).toUInt()),
+    ERROR_HANDLER_BG_IO_ERROR_COUNT((-0x17).toUInt()),
+    ERROR_HANDLER_BG_RETRYABLE_IO_ERROR_COUNT((-0x18).toUInt()),
+    ERROR_HANDLER_AUTORESUME_COUNT((-0x19).toUInt()),
+    ERROR_HANDLER_AUTORESUME_RETRY_TOTAL_COUNT((-0x1A).toUInt()),
+    ERROR_HANDLER_AUTORESUME_SUCCESS_COUNT((-0x1B).toUInt()),
+
+    /**
+     * Bytes of raw data (payload) found on memtable at flush time.
+     * Contains the sum of garbage payload (bytes that are discarded
+     * at flush time) and useful payload (bytes of data that will
+     * eventually be written to SSTable).
+     */
+    MEMTABLE_PAYLOAD_BYTES_AT_FLUSH((-0x1C).toUInt()),
+    /**
+     * Outdated bytes of data present on memtable at flush time.
+     */
+    MEMTABLE_GARBAGE_BYTES_AT_FLUSH((-0x1D).toUInt()),
+
+    /**
+     * Number of secondary cache hits
+     */
+    SECONDARY_CACHE_HITS((-0x1E).toUInt()),
+
+    /**
+     * Bytes read by `VerifyChecksum()` and `VerifyFileChecksums()` APIs.
+     */
+    VERIFY_CHECKSUM_READ_BYTES((-0x1F).toUInt()),
+
+    /**
+     * Bytes read/written while creating backups
+     */
+    BACKUP_READ_BYTES((-0x20).toUInt()),
+    BACKUP_WRITE_BYTES((-0x21).toUInt()),
+
+    /**
+     * Remote compaction read/write statistics
+     */
+    REMOTE_COMPACT_READ_BYTES((-0x22).toUInt()),
+    REMOTE_COMPACT_WRITE_BYTES((-0x23).toUInt()),
+
+    /**
+     * Tiered storage related statistics
+     */
+    HOT_FILE_READ_BYTES((-0x24).toUInt()),
+    WARM_FILE_READ_BYTES((-0x25).toUInt()),
+    COLD_FILE_READ_BYTES((-0x26).toUInt()),
+    HOT_FILE_READ_COUNT((-0x27).toUInt()),
+    WARM_FILE_READ_COUNT((-0x28).toUInt()),
+    COLD_FILE_READ_COUNT((-0x29).toUInt()),
+
+    /**
+     * (non-)last level read statistics
+     */
+    LAST_LEVEL_READ_BYTES((-0x2A).toUInt()),
+    LAST_LEVEL_READ_COUNT((-0x2B).toUInt()),
+    NON_LAST_LEVEL_READ_BYTES((-0x2C).toUInt()),
+    NON_LAST_LEVEL_READ_COUNT((-0x2D).toUInt()),
+
+    BLOCK_CHECKSUM_COMPUTE_COUNT((-0x2E).toUInt()),
+
+    /**
+     * # of times cache miss when accessing blob from blob cache.
+     */
+    BLOB_DB_CACHE_MISS((-0x2F).toUInt()),
+
+    /**
+     * # of times cache hit when accessing blob from blob cache.
+     */
+    BLOB_DB_CACHE_HIT((-0x30).toUInt()),
+
+    /**
+     * # of data blocks added to blob cache.
+     */
+    BLOB_DB_CACHE_ADD((-0x31).toUInt()),
+
+    /**
+     * # # of failures when adding blobs to blob cache.
+     */
+    BLOB_DB_CACHE_ADD_FAILURES((-0x32).toUInt()),
+    BLOB_DB_CACHE_BYTES_READ((-0x33).toUInt()),
+    BLOB_DB_CACHE_BYTES_WRITE((-0x34).toUInt()),
+
+    TICKER_ENUM_MAX(RocksDBTickerEnumMax),
 }
