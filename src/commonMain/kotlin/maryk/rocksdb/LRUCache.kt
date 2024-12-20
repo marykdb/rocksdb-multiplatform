@@ -52,7 +52,7 @@ expect class LRUCache : Cache {
      * entries
      */
     constructor(
-        capacity: Long, numShardBits: Int = -1,
-        strictCapacityLimit: Boolean = false, highPriPoolRatio: Double = 0.0
+        capacity: Long, numShardBits: Int,
+        strictCapacityLimit: Boolean, highPriPoolRatio: Double
     )
 }

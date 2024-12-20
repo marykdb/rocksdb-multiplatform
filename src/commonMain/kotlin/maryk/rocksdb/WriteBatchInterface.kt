@@ -76,7 +76,6 @@ expect interface WriteBatchInterface {
      */
     fun delete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray)
 
-
     /**
      * Remove the database entry for `key`. Requires that the key exists
      * and was not overwritten. It is not an error if the key did not exist

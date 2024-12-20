@@ -4,7 +4,6 @@ import maryk.assertContains
 import maryk.assertContainsExactly
 import maryk.assertContentEquals
 import maryk.doesFolderExist
-import maryk.rocksdb.StatusCode.NotSupported
 import maryk.rocksdb.util.createTestDBFolder
 import kotlin.random.Random
 import kotlin.test.Test
@@ -576,9 +575,7 @@ class RocksDBTest {
                 createTestFolder()
             ).use { db ->
                 db.disableFileDeletions()
-                db.enableFileDeletions(false)
-                db.disableFileDeletions()
-                db.enableFileDeletions(true)
+                db.enableFileDeletions()
             }
         }
     }
@@ -696,7 +693,7 @@ class RocksDBTest {
                     db.deleteFile("/000003.log")
                 } catch (e: RocksDBException) {
                     // Will throw an exception on Native because log is not archived
-                    assertEquals(NotSupported, e.getStatus()?.getCode())
+                    assertEquals(StatusCode.NotSupported, e.getStatus()?.getCode())
                 }
             }
         }

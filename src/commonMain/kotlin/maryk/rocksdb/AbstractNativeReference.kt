@@ -17,4 +17,6 @@ package maryk.rocksdb
  * suggested that you manually dispose of objects when you are finished with
  * them.
  */
-expect abstract class AbstractNativeReference : AutoCloseable
+expect abstract class AbstractNativeReference : AutoCloseable {
+    override abstract fun close()
+}

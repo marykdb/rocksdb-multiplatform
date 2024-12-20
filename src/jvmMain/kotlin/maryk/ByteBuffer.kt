@@ -9,3 +9,11 @@ actual fun wrapByteBuffer(bytes: ByteArray, memSafeByteBuffer: (buffer: ByteBuff
 // Separate function because Java 9 changes bytebuffer signature since it was added to Buffer
 // If Android supports proper duplicate it could be added back to ByteBuffer
 actual fun duplicateByteBuffer(byteBuffer: ByteBuffer, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit) = memSafeByteBuffer(byteBuffer.duplicate())
+
+actual fun ByteBuffer.flip() {
+    this.flip()
+}
+
+actual fun ByteBuffer.limit(newLimit: Int) {
+    this.limit(newLimit)
+}

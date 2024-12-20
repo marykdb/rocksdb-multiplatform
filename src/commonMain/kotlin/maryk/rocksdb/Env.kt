@@ -22,7 +22,7 @@ expect abstract class Env : RocksObject {
      * Default number: 1
      * @return current [RocksEnv] instance.
      */
-    fun setBackgroundThreads(number: Int, priority: Priority = Priority.LOW): Env
+    fun setBackgroundThreads(number: Int, priority: Priority): Env
 
     /**
      * Returns the length of the queue associated with the specified

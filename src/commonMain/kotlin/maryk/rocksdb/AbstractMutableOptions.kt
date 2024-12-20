@@ -1,6 +1,6 @@
 package maryk.rocksdb
 
-expect abstract class AbstractMutableOptions
+expect open class AbstractMutableOptions
 
 expect fun AbstractMutableOptions.getKeys(): Array<String>
 

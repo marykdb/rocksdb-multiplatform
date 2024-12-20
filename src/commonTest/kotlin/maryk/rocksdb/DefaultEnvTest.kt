@@ -1,8 +1,5 @@
 package maryk.rocksdb
 
-import maryk.rocksdb.Priority.BOTTOM
-import maryk.rocksdb.Priority.HIGH
-import maryk.rocksdb.Priority.LOW
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -15,62 +12,59 @@ class DefaultEnvTest {
     @Test
     fun backgroundThreads() {
         getDefaultEnv().use { defaultEnv ->
-            defaultEnv.setBackgroundThreads(5, BOTTOM)
-            assertEquals(5, defaultEnv.getBackgroundThreads(BOTTOM))
+            defaultEnv.setBackgroundThreads(5, Priority.BOTTOM)
+            assertEquals(5, defaultEnv.getBackgroundThreads(Priority.BOTTOM))
 
-            defaultEnv.setBackgroundThreads(5)
-            assertEquals(5, defaultEnv.getBackgroundThreads(LOW))
+            defaultEnv.setBackgroundThreads(5, Priority.LOW)
+            assertEquals(5, defaultEnv.getBackgroundThreads(Priority.LOW))
 
-            defaultEnv.setBackgroundThreads(5, LOW)
-            assertEquals(5, defaultEnv.getBackgroundThreads(LOW))
-
-            defaultEnv.setBackgroundThreads(5, HIGH)
-            assertEquals(5, defaultEnv.getBackgroundThreads(HIGH))
+            defaultEnv.setBackgroundThreads(5, Priority.HIGH)
+            assertEquals(5, defaultEnv.getBackgroundThreads(Priority.HIGH))
         }
     }
 
     @Test
     fun threadPoolQueueLen() {
         getDefaultEnv().use { defaultEnv ->
-            assertEquals(0, defaultEnv.getThreadPoolQueueLen(BOTTOM))
-            assertEquals(0, defaultEnv.getThreadPoolQueueLen(LOW))
-            assertEquals(0, defaultEnv.getThreadPoolQueueLen(HIGH))
+            assertEquals(0, defaultEnv.getThreadPoolQueueLen(Priority.BOTTOM))
+            assertEquals(0, defaultEnv.getThreadPoolQueueLen(Priority.LOW))
+            assertEquals(0, defaultEnv.getThreadPoolQueueLen(Priority.HIGH))
         }
     }
 
     @Test
     fun incBackgroundThreadsIfNeeded() {
         getDefaultEnv().use { defaultEnv ->
-            defaultEnv.incBackgroundThreadsIfNeeded(20, BOTTOM)
-            assertTrue(20 <= defaultEnv.getBackgroundThreads(BOTTOM))
+            defaultEnv.incBackgroundThreadsIfNeeded(20, Priority.BOTTOM)
+            assertTrue(20 <= defaultEnv.getBackgroundThreads(Priority.BOTTOM))
 
-            defaultEnv.incBackgroundThreadsIfNeeded(20, LOW)
-            assertTrue(20 <= defaultEnv.getBackgroundThreads(LOW))
+            defaultEnv.incBackgroundThreadsIfNeeded(20, Priority.LOW)
+            assertTrue(20 <= defaultEnv.getBackgroundThreads(Priority.LOW))
 
-            defaultEnv.incBackgroundThreadsIfNeeded(20, HIGH)
-            assertTrue(20 <= defaultEnv.getBackgroundThreads(HIGH))
+            defaultEnv.incBackgroundThreadsIfNeeded(20, Priority.HIGH)
+            assertTrue(20 <= defaultEnv.getBackgroundThreads(Priority.HIGH))
         }
     }
 
     @Test
     fun lowerThreadPoolIOPriority() {
         getDefaultEnv().use { defaultEnv ->
-            defaultEnv.lowerThreadPoolIOPriority(BOTTOM)
+            defaultEnv.lowerThreadPoolIOPriority(Priority.BOTTOM)
 
-            defaultEnv.lowerThreadPoolIOPriority(LOW)
+            defaultEnv.lowerThreadPoolIOPriority(Priority.LOW)
 
-            defaultEnv.lowerThreadPoolIOPriority(HIGH)
+            defaultEnv.lowerThreadPoolIOPriority(Priority.HIGH)
         }
     }
 
     @Test
     fun lowerThreadPoolCPUPriority() {
         getDefaultEnv().use { defaultEnv ->
-            defaultEnv.lowerThreadPoolCPUPriority(BOTTOM)
+            defaultEnv.lowerThreadPoolCPUPriority(Priority.BOTTOM)
 
-            defaultEnv.lowerThreadPoolCPUPriority(LOW)
+            defaultEnv.lowerThreadPoolCPUPriority(Priority.LOW)
 
-            defaultEnv.lowerThreadPoolCPUPriority(HIGH)
+            defaultEnv.lowerThreadPoolCPUPriority(Priority.HIGH)
         }
     }
 }

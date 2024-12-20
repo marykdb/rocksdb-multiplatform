@@ -1,9 +1,9 @@
-@file:Suppress("UNUSED_VARIABLE", "UnstableApiUsage")
+@file:Suppress("UnstableApiUsage")
 
-import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
-import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-import java.util.Properties
+import org.gradle.kotlin.dsl.withType
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
+import java.util.*
 
 repositories {
     google()
@@ -13,15 +13,16 @@ repositories {
 plugins {
     id("maven-publish")
     id("signing")
-    id("com.android.library") version "7.2.2"
-    kotlin("multiplatform") version "1.8.20"
+    id("com.android.library") version "8.7.0"
+    kotlin("multiplatform") version "2.1.0"
 }
 
 group = "io.maryk.rocksdb"
-version = "8.0.0"
+version = "9.6.1"
 
-val rocksDBJVMVersion = "8.0.0"
-val rocksDBAndroidVersion = "8.0.0"
+val rocksDBJVMVersion = "9.6.1"
+val rocksDBAndroidVersion = "9.6.1"
+
 
 val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
     ?: File(System.getProperty("user.home")).resolve(".konan")
@@ -44,52 +45,61 @@ val buildIOSSimulator by tasks.creating(Exec::class) {
 }
 
 android {
-    buildToolsVersion = "33.0.0"
-    compileSdk = 33
+    namespace = "io.maryk.rocksdb"
+    buildToolsVersion = "34.0.0"
+    compileSdk = 34
+
     defaultConfig {
         minSdk = 21
-        targetSdk = 33
         multiDexEnabled = true
         testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
     }
 }
 
 kotlin {
-    fun KotlinTarget.setupJvmTarget() {
-        compilations.all {
-            kotlinOptions {
-                allWarningsAsErrors = true
-                if (this is KotlinJvmOptions) {
-                    jvmTarget = "1.8"
-                }
+    jvmToolchain(17)
+
+    // configure all Kotlin/JVM Tests to use JUnit Jupiter
+    targets.withType<KotlinJvmTarget>().configureEach {
+        testRuns.configureEach {
+            executionTask.configure {
+                useJUnitPlatform()
             }
         }
     }
-    jvm {
-        setupJvmTarget()
-    }
-    android {
-        setupJvmTarget()
+    jvm()
+    androidTarget {
         publishAllLibraryVariants()
         publishLibraryVariantsGroupedByFlavor = true
+    }
+
+    targets.configureEach {
+        compilations.configureEach {
+            compileTaskProvider.get().compilerOptions {
+                freeCompilerArgs.add("-Xexpect-actual-classes")
+            }
+        }
+    }
+
+    compilerOptions {
+        allWarningsAsErrors = true
     }
 
     sourceSets {
         all {
             languageSettings.apply {
-                languageVersion = "1.8"
-                apiVersion = "1.8"
+                languageVersion = "2.1"
+                apiVersion = "2.1"
                 progressiveMode = true
             }
         }
         val commonMain by getting {}
         val commonTest by getting {
             dependencies {
-                implementation(kotlin("test-common"))
-                implementation(kotlin("test-annotations-common"))
+                implementation(kotlin("test"))
             }
         }
-        val jvmMain by getting {
+        jvmMain {
             dependencies {
                 api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion")
             }
@@ -97,78 +107,26 @@ kotlin {
         val jvmTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation(kotlin("test-junit"))
             }
         }
-        val androidMain by getting {
+        androidMain {
             dependencies {
-                implementation(kotlin("stdlib"))
                 api("io.maryk.rocksdb:rocksdb-android:$rocksDBAndroidVersion")
             }
         }
-        val nativeMain by creating {
-            dependsOn(commonMain)
-        }
-        val nativeTest by creating {
-            dependsOn(commonTest)
+        val androidUnitTest by getting {
+            kotlin.srcDir("src/jvmTest/kotlin")
         }
         val darwinMain by creating {
             kotlin.apply {
                 srcDir("src/appleMain/kotlin")
             }
-            dependsOn(nativeMain)
         }
         val darwinTest by creating {
             kotlin.apply {
                 srcDir("src/appleTest/kotlin")
             }
-            dependsOn(nativeTest)
         }
-    }
-
-    fun KotlinNativeTarget.setupAppleTarget(definitionName: String, buildTask: Exec, folderExtension: String = "") {
-        binaries {
-            getTest("DEBUG").linkerOpts = mutableListOf(
-                "-L$objectiveRocksHome${folderExtension}", "-lobjectiveRocks-$definitionName"
-            )
-        }
-
-        compilations["main"].apply {
-            defaultSourceSet {
-                val darwinMain by sourceSets.getting {}
-                dependsOn(darwinMain)
-            }
-            cinterops {
-                this.create("rocksdb") {
-                    defFile = project.projectDir.resolve("src/nativeInterop/cinterop/rocksdb${definitionName.capitalize()}$folderExtension.def")
-                    tasks[interopProcessingTaskName].dependsOn(buildTask)
-                    includeDirs("./xcodeBuild/Build/Products/Release/usr/local/include")
-                }
-            }
-        }
-
-        compilations["test"].apply {
-            defaultSourceSet {
-                val darwinTest by sourceSets.getting {}
-                dependsOn(darwinTest)
-            }
-        }
-    }
-
-    ios {
-        if (this.name == "iosX64") {
-            setupAppleTarget("iOS", buildIOSSimulator, "-iphonesimulator")
-        } else {
-            setupAppleTarget("iOS", buildIOS, "-iphoneos")
-        }
-    }
-
-    macosX64 {
-        setupAppleTarget("macOS", buildMacOS)
-    }
-
-    macosArm64 {
-        setupAppleTarget("macOS", buildMacOS)
     }
 }
 
@@ -176,7 +134,7 @@ kotlin {
 val createOrEraseDBFolders = task("createOrEraseDBFolders") {
     group = "verification"
 
-    val subdir = File(project.buildDir, "test-database")
+    val subdir = project.layout.buildDirectory.dir("test-database").get().asFile
 
     if (!subdir.exists()) {
         subdir.deleteOnExit()
@@ -194,36 +152,31 @@ tasks.getByName("clean", Delete::class) {
 tasks.withType<Test> {
     this.dependsOn(createOrEraseDBFolders)
     this.doLast {
-        File(project.buildDir, "test-database").deleteRecursively()
+        project.layout.buildDirectory.dir("test-database").get().asFile.deleteRecursively()
     }
 }
 
-// Stub secrets to let the project sync and build without the publication values set up
-ext["signing.keyId"] = null
-ext["signing.password"] = null
-ext["signing.secretKeyRingFile"] = null
-ext["ossrhUsername"] = null
-ext["ossrhPassword"] = null
+// Placeholder secrets to allow project sync and build without publication setup
+ext["signing.keyId"] = System.getenv("SIGNING_KEY_ID")
+ext["signing.password"] = System.getenv("SIGNING_PASSWORD")
+ext["signing.secretKeyRingFile"] = System.getenv("SIGNING_SECRET_KEY_RING_FILE")
+ext["ossrhUsername"] = System.getenv("OSSRH_USERNAME")
+ext["ossrhPassword"] = System.getenv("OSSRH_PASSWORD")
 
-// Grabbing secrets from local.properties file or from environment variables, which could be used on CI
+// Load secrets from local.properties if available, otherwise fallback to environment variables (useful for CI/CD)
 val secretPropsFile = project.rootProject.file("local.properties")
 if (secretPropsFile.exists()) {
-    secretPropsFile.reader().use {
+    secretPropsFile.reader().use { reader ->
         Properties().apply {
-            load(it)
+            load(reader)
+            forEach { name, value ->
+                ext[name.toString()] = value.toString()
+            }
         }
-    }.onEach { (name, value) ->
-        ext[name.toString()] = value
     }
-} else {
-    ext["signing.keyId"] = System.getenv("SIGNING_KEY_ID")
-    ext["signing.password"] = System.getenv("SIGNING_PASSWORD")
-    ext["signing.secretKeyRingFile"] = System.getenv("SIGNING_SECRET_KEY_RING_FILE")
-    ext["ossrhUsername"] = System.getenv("OSSRH_USERNAME")
-    ext["ossrhPassword"] = System.getenv("OSSRH_PASSWORD")
 }
 
-fun getExtraString(name: String) = ext[name]?.toString()
+fun getExtraString(name: String): String? = ext[name]?.toString()
 
 val emptyJavadocJar by tasks.registering(Jar::class) {
     archiveClassifier.set("javadoc")
@@ -234,7 +187,7 @@ afterEvaluate {
         repositories {
             maven {
                 name = "sonatype"
-                setUrl("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+                url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
                 credentials {
                     username = getExtraString("ossrhUsername")
                     password = getExtraString("ossrhPassword")
@@ -244,7 +197,6 @@ afterEvaluate {
 
         publications.withType<MavenPublication> {
             artifact(emptyJavadocJar.get())
-
             pom {
                 name.set(project.name)
                 description.set("Kotlin multiplatform RocksDB interface")

@@ -17,8 +17,8 @@ expect enum class TickerType {
      * total block cache misses
      *
      * REQUIRES: BLOCK_CACHE_MISS == BLOCK_CACHE_INDEX_MISS +
-     * BLOCK_CACHE_FILTER_MISS +
-     * BLOCK_CACHE_DATA_MISS;
+     *     BLOCK_CACHE_FILTER_MISS +
+     *     BLOCK_CACHE_DATA_MISS;
      */
     BLOCK_CACHE_MISS,
 
@@ -26,135 +26,185 @@ expect enum class TickerType {
      * total block cache hit
      *
      * REQUIRES: BLOCK_CACHE_HIT == BLOCK_CACHE_INDEX_HIT +
-     * BLOCK_CACHE_FILTER_HIT +
-     * BLOCK_CACHE_DATA_HIT;
+     *     BLOCK_CACHE_FILTER_HIT +
+     *     BLOCK_CACHE_DATA_HIT;
      */
     BLOCK_CACHE_HIT,
 
     BLOCK_CACHE_ADD,
 
     /**
-     * Number of failures when adding blocks to block cache.
+     * # of failures when adding blocks to block cache.
      */
     BLOCK_CACHE_ADD_FAILURES,
 
     /**
-     * Number of times cache miss when accessing index block from block cache.
+     * # of times cache miss when accessing index block from block cache.
      */
     BLOCK_CACHE_INDEX_MISS,
 
     /**
-     * Number of times cache hit when accessing index block from block cache.
+     * # of times cache hit when accessing index block from block cache.
      */
     BLOCK_CACHE_INDEX_HIT,
 
     /**
-     * Number of index blocks added to block cache.
+     * # of index blocks added to block cache.
      */
     BLOCK_CACHE_INDEX_ADD,
 
     /**
-     * Number of bytes of index blocks inserted into cache
+     * # of bytes of index blocks inserted into cache
      */
     BLOCK_CACHE_INDEX_BYTES_INSERT,
 
     /**
-     * Number of times cache miss when accessing filter block from block cache.
+     * # of times cache miss when accessing filter block from block cache.
      */
     BLOCK_CACHE_FILTER_MISS,
 
     /**
-     * Number of times cache hit when accessing filter block from block cache.
+     * # of times cache hit when accessing filter block from block cache.
      */
     BLOCK_CACHE_FILTER_HIT,
 
     /**
-     * Number of filter blocks added to block cache.
+     * # of filter blocks added to block cache.
      */
     BLOCK_CACHE_FILTER_ADD,
 
     /**
-     * Number of bytes of bloom filter blocks inserted into cache
+     * # of bytes of bloom filter blocks inserted into cache
      */
     BLOCK_CACHE_FILTER_BYTES_INSERT,
 
     /**
-     * Number of times cache miss when accessing data block from block cache.
+     * # of times cache miss when accessing data block from block cache.
      */
     BLOCK_CACHE_DATA_MISS,
 
     /**
-     * Number of times cache hit when accessing data block from block cache.
+     * # of times cache hit when accessing data block from block cache.
      */
     BLOCK_CACHE_DATA_HIT,
 
     /**
-     * Number of data blocks added to block cache.
+     * # of data blocks added to block cache.
      */
     BLOCK_CACHE_DATA_ADD,
 
     /**
-     * Number of bytes of data blocks inserted into cache
+     * # of bytes of data blocks inserted into cache
      */
     BLOCK_CACHE_DATA_BYTES_INSERT,
 
     /**
-     * Number of bytes read from cache.
+     * # of bytes read from cache.
      */
     BLOCK_CACHE_BYTES_READ,
 
     /**
-     * Number of bytes written into cache.
+     * # of bytes written into cache.
      */
     BLOCK_CACHE_BYTES_WRITE,
 
     /**
-     * Number of times bloom filter has avoided file reads.
+     * Block cache related stats for Compression dictionaries
+     */
+    BLOCK_CACHE_COMPRESSION_DICT_MISS,
+    BLOCK_CACHE_COMPRESSION_DICT_HIT,
+    BLOCK_CACHE_COMPRESSION_DICT_ADD,
+    BLOCK_CACHE_COMPRESSION_DICT_BYTES_INSERT,
+
+    /**
+     * Redundant additions to block cache
+     */
+    BLOCK_CACHE_ADD_REDUNDANT,
+    BLOCK_CACHE_INDEX_ADD_REDUNDANT,
+    BLOCK_CACHE_FILTER_ADD_REDUNDANT,
+    BLOCK_CACHE_DATA_ADD_REDUNDANT,
+    BLOCK_CACHE_COMPRESSION_DICT_ADD_REDUNDANT,
+
+    /**
+     * Number of secondary cache hits
+     */
+    SECONDARY_CACHE_HITS,
+    SECONDARY_CACHE_FILTER_HITS,
+    SECONDARY_CACHE_INDEX_HITS,
+    SECONDARY_CACHE_DATA_HITS,
+
+    COMPRESSED_SECONDARY_CACHE_DUMMY_HITS,
+    COMPRESSED_SECONDARY_CACHE_HITS,
+    COMPRESSED_SECONDARY_CACHE_PROMOTIONS,
+    COMPRESSED_SECONDARY_CACHE_PROMOTION_SKIPS,
+
+    /**
+     * # of times bloom filter has avoided file reads.
      */
     BLOOM_FILTER_USEFUL,
 
     /**
-     * Number persistent cache hit
+     * # of times bloom FullFilter has not avoided the reads.
+     */
+    BLOOM_FILTER_FULL_POSITIVE,
+
+    /**
+     * # of times bloom FullFilter has not avoided the reads and data actually
+     * exist.
+     */
+    BLOOM_FILTER_FULL_TRUE_POSITIVE,
+
+    /**
+     * Number of times bloom was checked before creating iterator on a
+     * file, and the number of times the check was useful in avoiding
+     * iterator creation (and thus likely IOPs).
+     */
+    BLOOM_FILTER_PREFIX_CHECKED,
+    BLOOM_FILTER_PREFIX_USEFUL,
+    BLOOM_FILTER_PREFIX_TRUE_POSITIVE,
+
+    /**
+     * # persistent cache hit
      */
     PERSISTENT_CACHE_HIT,
 
     /**
-     * Number persistent cache miss
+     * # persistent cache miss
      */
     PERSISTENT_CACHE_MISS,
 
     /**
-     * Number total simulation block cache hits
+     * # total simulation block cache hits
      */
     SIM_BLOCK_CACHE_HIT,
 
     /**
-     * Number total simulation block cache misses
+     * # total simulation block cache misses
      */
     SIM_BLOCK_CACHE_MISS,
 
     /**
-     * Number of memtable hits.
+     * # of memtable hits.
      */
     MEMTABLE_HIT,
 
     /**
-     * Number of memtable misses.
+     * # of memtable misses.
      */
     MEMTABLE_MISS,
 
     /**
-     * Number of Get() queries served by L0
+     * # of Get() queries served by L0
      */
     GET_HIT_L0,
 
     /**
-     * Number of Get() queries served by L1
+     * # of Get() queries served by L1
      */
     GET_HIT_L1,
 
     /**
-     * Number of Get() queries served by L2 and up
+     * # of Get() queries served by L2 and up
      */
     GET_HIT_L2_AND_UP,
 
@@ -190,6 +240,16 @@ expect enum class TickerType {
     COMPACTION_RANGE_DEL_DROP_OBSOLETE,
 
     /**
+     * Deletions obsoleted before bottom level due to file gap optimization.
+     */
+    COMPACTION_OPTIMIZED_DEL_DROP_OBSOLETE,
+
+    /**
+     * Compactions cancelled to prevent ENOSPC
+     */
+    COMPACTION_CANCELLED,
+
+    /**
      * Number of keys written to the database via the Put and Write call's.
      */
     NUMBER_KEYS_WRITTEN,
@@ -206,7 +266,7 @@ expect enum class TickerType {
 
     /**
      * The number of uncompressed bytes issued by DB::Put(), DB::Delete(),\
-     * DB::Merge.
+     * DB::Merge(), and DB::Write().
      */
     BYTES_WRITTEN,
 
@@ -215,7 +275,7 @@ expect enum class TickerType {
      * either from memtables, cache, or table files.
      *
      * For the number of logical bytes read from DB::MultiGet(),
-     * please use [.NUMBER_MULTIGET_BYTES_READ].
+     * please use {@link #NUMBER_MULTIGET_BYTES_READ}.
      */
     BYTES_READ,
 
@@ -255,6 +315,27 @@ expect enum class TickerType {
      */
     ITER_BYTES_READ,
 
+    /**
+     * Number of internal skipped during iteration
+     */
+    NUMBER_ITER_SKIP,
+
+    /**
+     * Number of times we had to reseek inside an iteration to skip
+     * over large number of keys with same userkey.
+     */
+    NUMBER_OF_RESEEKS_IN_ITERATION,
+
+    /**
+     * Number of iterators created.
+     */
+    NO_ITERATOR_CREATED,
+
+    /**
+     * Number of iterators deleted.
+     */
+    NO_ITERATOR_DELETED,
+
     NO_FILE_OPENS,
 
     NO_FILE_ERRORS,
@@ -267,7 +348,7 @@ expect enum class TickerType {
     /**
      * The wait time for db mutex.
      *
-     * Disabled by default. To enable it set stats level to [StatsLevel.ALL]
+     * Disabled by default. To enable it set stats level to {@link StatsLevel#ALL}
      */
     DB_MUTEX_WAIT_MICROS,
 
@@ -286,24 +367,15 @@ expect enum class TickerType {
      */
     NUMBER_MULTIGET_BYTES_READ,
 
+    /**
+     * Number of MultiGet keys found (vs number requested)
+     */
+    NUMBER_MULTIGET_KEYS_FOUND,
+
     NUMBER_MERGE_FAILURES,
 
     /**
-     * Number of times bloom was checked before creating iterator on a
-     * file, and the number of times the check was useful in avoiding
-     * iterator creation (and thus likely IOPs).
-     */
-    BLOOM_FILTER_PREFIX_CHECKED,
-    BLOOM_FILTER_PREFIX_USEFUL,
-
-    /**
-     * Number of times we had to reseek inside an iteration to skip
-     * over large number of keys with same userkey.
-     */
-    NUMBER_OF_RESEEKS_IN_ITERATION,
-
-    /**
-     * Record the number of calls to `RocksDB.getUpdatesSince`. Useful to keep track of
+     * Record the number of calls to {@link RocksDB#getUpdatesSince(long)}. Useful to keep track of
      * transaction log iterator refreshes.
      */
     GET_UPDATES_SINCE_CALLS,
@@ -350,6 +422,16 @@ expect enum class TickerType {
     FLUSH_WRITE_BYTES,
 
     /**
+     * Compaction read and write statistics broken down by CompactionReason
+     */
+    COMPACT_READ_BYTES_MARKED,
+    COMPACT_READ_BYTES_PERIODIC,
+    COMPACT_READ_BYTES_TTL,
+    COMPACT_WRITE_BYTES_MARKED,
+    COMPACT_WRITE_BYTES_PERIODIC,
+    COMPACT_WRITE_BYTES_TTL,
+
+    /**
      * Number of table's properties loaded directly from file, without creating
      * table reader object.
      */
@@ -359,14 +441,23 @@ expect enum class TickerType {
     NUMBER_SUPERVERSION_CLEANUPS,
 
     /**
-     * Number of compressions/decompressions executed
+     * # of compressions/decompressions executed
      */
     NUMBER_BLOCK_COMPRESSED,
     NUMBER_BLOCK_DECOMPRESSED,
 
-    NUMBER_BLOCK_NOT_COMPRESSED,
+    BYTES_COMPRESSED_FROM,
+    BYTES_COMPRESSED_TO,
+    BYTES_COMPRESSION_BYPASSED,
+    BYTES_COMPRESSION_REJECTED,
+    NUMBER_BLOCK_COMPRESSION_BYPASSED,
+    NUMBER_BLOCK_COMPRESSION_REJECTED,
+    BYTES_DECOMPRESSED_FROM,
+    BYTES_DECOMPRESSED_TO,
+
     MERGE_OPERATION_TOTAL_TIME,
     FILTER_OPERATION_TOTAL_TIME,
+    COMPACTION_CPU_TOTAL_TIME,
 
     /**
      * Row cache.
@@ -399,140 +490,98 @@ expect enum class TickerType {
     NUMBER_RATE_LIMITER_DRAINS,
 
     /**
-     * Number of internal skipped during iteration
-     */
-    NUMBER_ITER_SKIP,
-
-    /**
-     * Number of MultiGet keys found (vs number requested)
-     */
-    NUMBER_MULTIGET_KEYS_FOUND,
-
-    // -0x01 to fixate the new value that incorrectly changed TICKER_ENUM_MAX
-    /**
-     * Number of iterators created.
-     */
-    NO_ITERATOR_CREATED,
-
-    /**
-     * Number of iterators deleted.
-     */
-    NO_ITERATOR_DELETED,
-
-    /**
-     * Deletions obsoleted before bottom level due to file gap optimization.
-     */
-    COMPACTION_OPTIMIZED_DEL_DROP_OBSOLETE,
-
-    /**
-     * If a compaction was cancelled in sfm to prevent ENOSPC
-     */
-    COMPACTION_CANCELLED,
-
-    /**
-     * Number of times bloom FullFilter has not avoided the reads.
-     */
-    BLOOM_FILTER_FULL_POSITIVE,
-
-    /**
-     * Number of times bloom FullFilter has not avoided the reads and data actually
-     * exist.
-     */
-    BLOOM_FILTER_FULL_TRUE_POSITIVE,
-
-    /**
      * BlobDB specific stats
-     * Number of Put/PutTTL/PutUntil to BlobDB.
+     * # of Put/PutTTL/PutUntil to BlobDB.
      */
     BLOB_DB_NUM_PUT,
 
     /**
-     * Number of Write to BlobDB.
+     * # of Write to BlobDB.
      */
     BLOB_DB_NUM_WRITE,
 
     /**
-     * Number of Get to BlobDB.
+     * # of Get to BlobDB.
      */
     BLOB_DB_NUM_GET,
 
     /**
-     * Number of MultiGet to BlobDB.
+     * # of MultiGet to BlobDB.
      */
     BLOB_DB_NUM_MULTIGET,
 
     /**
-     * Number of Seek/SeekToFirst/SeekToLast/SeekForPrev to BlobDB iterator.
+     * # of Seek/SeekToFirst/SeekToLast/SeekForPrev to BlobDB iterator.
      */
     BLOB_DB_NUM_SEEK,
 
     /**
-     * Number of Next to BlobDB iterator.
+     * # of Next to BlobDB iterator.
      */
     BLOB_DB_NUM_NEXT,
 
     /**
-     * Number of Prev to BlobDB iterator.
+     * # of Prev to BlobDB iterator.
      */
     BLOB_DB_NUM_PREV,
 
     /**
-     * Number of keys written to BlobDB.
+     * # of keys written to BlobDB.
      */
     BLOB_DB_NUM_KEYS_WRITTEN,
 
     /**
-     * Number of keys read from BlobDB.
+     * # of keys read from BlobDB.
      */
     BLOB_DB_NUM_KEYS_READ,
 
     /**
-     * Number of bytes (key + value) written to BlobDB.
+     * # of bytes (key + value) written to BlobDB.
      */
     BLOB_DB_BYTES_WRITTEN,
 
     /**
-     * Number of bytes (keys + value) read from BlobDB.
+     * # of bytes (keys + value) read from BlobDB.
      */
     BLOB_DB_BYTES_READ,
 
     /**
-     * Number of keys written by BlobDB as non-TTL inlined value.
+     * # of keys written by BlobDB as non-TTL inlined value.
      */
     BLOB_DB_WRITE_INLINED,
 
     /**
-     * Number of keys written by BlobDB as TTL inlined value.
+     * # of keys written by BlobDB as TTL inlined value.
      */
     BLOB_DB_WRITE_INLINED_TTL,
 
     /**
-     * Number of keys written by BlobDB as non-TTL blob value.
+     * # of keys written by BlobDB as non-TTL blob value.
      */
     BLOB_DB_WRITE_BLOB,
 
     /**
-     * Number of keys written by BlobDB as TTL blob value.
+     * # of keys written by BlobDB as TTL blob value.
      */
     BLOB_DB_WRITE_BLOB_TTL,
 
     /**
-     * Number of bytes written to blob file.
+     * # of bytes written to blob file.
      */
     BLOB_DB_BLOB_FILE_BYTES_WRITTEN,
 
     /**
-     * Number of bytes read from blob file.
+     * # of bytes read from blob file.
      */
     BLOB_DB_BLOB_FILE_BYTES_READ,
 
     /**
-     * Number of times a blob files being synced.
+     * # of times a blob files being synced.
      */
     BLOB_DB_BLOB_FILE_SYNCED,
 
     /**
-     * Number of blob index evicted from base DB by BlobDB compaction filter because
+     * # of blob index evicted from base DB by BlobDB compaction filter because
      * of expiration.
      */
     BLOB_DB_BLOB_INDEX_EXPIRED_COUNT,
@@ -544,7 +593,7 @@ expect enum class TickerType {
     BLOB_DB_BLOB_INDEX_EXPIRED_SIZE,
 
     /**
-     * Number of blob index evicted from base DB by BlobDB compaction filter because
+     * # of blob index evicted from base DB by BlobDB compaction filter because
      * of corresponding file deleted.
      */
     BLOB_DB_BLOB_INDEX_EVICTED_COUNT,
@@ -556,64 +605,94 @@ expect enum class TickerType {
     BLOB_DB_BLOB_INDEX_EVICTED_SIZE,
 
     /**
-     * Number of blob files being garbage collected.
+     * # of blob files being garbage collected.
      */
     BLOB_DB_GC_NUM_FILES,
 
     /**
-     * Number of blob files generated by garbage collection.
+     * # of blob files generated by garbage collection.
      */
     BLOB_DB_GC_NUM_NEW_FILES,
 
     /**
-     * Number of BlobDB garbage collection failures.
+     * # of BlobDB garbage collection failures.
      */
     BLOB_DB_GC_FAILURES,
 
     /**
-     * Number of keys relocated to new blob file by garbage collection.
+     * # of keys relocated to new blob file by garbage collection.
      */
     BLOB_DB_GC_NUM_KEYS_RELOCATED,
 
     /**
-     * Number of bytes relocated to new blob file by garbage collection.
+     * # of bytes relocated to new blob file by garbage collection.
      */
     BLOB_DB_GC_BYTES_RELOCATED,
 
     /**
-     * Number of blob files evicted because of BlobDB is full.
+     * # of blob files evicted because of BlobDB is full.
      */
     BLOB_DB_FIFO_NUM_FILES_EVICTED,
 
     /**
-     * Number of keys in the blob files evicted because of BlobDB is full.
+     * # of keys in the blob files evicted because of BlobDB is full.
      */
     BLOB_DB_FIFO_NUM_KEYS_EVICTED,
 
     /**
-     * Number of bytes in the blob files evicted because of BlobDB is full.
+     * # of bytes in the blob files evicted because of BlobDB is full.
      */
     BLOB_DB_FIFO_BYTES_EVICTED,
 
     /**
+     * # of times cache miss when accessing blob from blob cache.
+     */
+    BLOB_DB_CACHE_MISS,
+
+    /**
+     * # of times cache hit when accessing blob from blob cache.
+     */
+    BLOB_DB_CACHE_HIT,
+
+    /**
+     * # of data blocks added to blob cache.
+     */
+    BLOB_DB_CACHE_ADD,
+
+    /**
+     * # # of failures when adding blobs to blob cache.
+     */
+    BLOB_DB_CACHE_ADD_FAILURES,
+
+    /**
+     * # of bytes read from blob cache.
+     */
+    BLOB_DB_CACHE_BYTES_READ,
+
+    /**
+     * # of bytes written into blob cache.
+     */
+    BLOB_DB_CACHE_BYTES_WRITE,
+
+    /**
      * These counters indicate a performance issue in WritePrepared transactions.
      * We should not seem them ticking them much.
-     * Number of times prepare_mutex_ is acquired in the fast path.
+     * # of times prepare_mutex_ is acquired in the fast path.
      */
     TXN_PREPARE_MUTEX_OVERHEAD,
 
     /**
-     * Number of times old_commit_map_mutex_ is acquired in the fast path.
+     * # of times old_commit_map_mutex_ is acquired in the fast path.
      */
     TXN_OLD_COMMIT_MAP_MUTEX_OVERHEAD,
 
     /**
-     * Number of times we checked a batch for duplicate keys.
+     * # of times we checked a batch for duplicate keys.
      */
     TXN_DUPLICATE_KEY_OVERHEAD,
 
     /**
-     * Number of times snapshot_mutex_ is acquired in the fast path.
+     * # of times snapshot_mutex_ is acquired in the fast path.
      */
     TXN_SNAPSHOT_MUTEX_OVERHEAD,
 
@@ -628,19 +707,14 @@ expect enum class TickerType {
     FILES_MARKED_TRASH,
 
     /**
+     * # of trash files deleted by the background thread from the trash queue
+     */
+    FILES_DELETED_FROM_TRASH_QUEUE,
+
+    /**
      * # of files deleted immediately by delete scheduler
      */
     FILES_DELETED_IMMEDIATELY,
-
-    /**
-     * Compaction read and write statistics broken down by CompactionReason
-     */
-    COMPACT_READ_BYTES_MARKED,
-    COMPACT_READ_BYTES_PERIODIC,
-    COMPACT_READ_BYTES_TTL,
-    COMPACT_WRITE_BYTES_MARKED,
-    COMPACT_WRITE_BYTES_PERIODIC,
-    COMPACT_WRITE_BYTES_TTL,
 
     /**
      * DB error handler statistics
@@ -659,16 +733,10 @@ expect enum class TickerType {
      * eventually be written to SSTable).
      */
     MEMTABLE_PAYLOAD_BYTES_AT_FLUSH,
-
     /**
      * Outdated bytes of data present on memtable at flush time.
      */
     MEMTABLE_GARBAGE_BYTES_AT_FLUSH,
-
-    /**
-     * Number of secondary cache hits
-     */
-    SECONDARY_CACHE_HITS,
 
     /**
      * Bytes read by `VerifyChecksum()` and `VerifyFileChecksums()` APIs.
@@ -705,37 +773,110 @@ expect enum class TickerType {
     NON_LAST_LEVEL_READ_BYTES,
     NON_LAST_LEVEL_READ_COUNT,
 
+    /**
+     * Statistics on iterator Seek() (and variants) for each sorted run.
+     * i.e a  single user Seek() can result in many sorted run Seek()s.
+     * The stats are split between last level and non-last level.
+     * Filtered: a filter such as prefix Bloom filter indicate the Seek() would
+     * not find anything relevant, so avoided a likely access to data+index
+     * blocks.
+     */
+    LAST_LEVEL_SEEK_FILTERED,
+    /**
+     * Filter match: a filter such as prefix Bloom filter was queried but did
+     * not filter out the seek.
+     */
+    LAST_LEVEL_SEEK_FILTER_MATCH,
+    /**
+     * At least one data block was accessed for a Seek() (or variant) on a
+     * sorted run.
+     */
+    LAST_LEVEL_SEEK_DATA,
+    /**
+     * At least one value() was accessed for the seek (suggesting it was useful),
+     * and no filter such as prefix Bloom was queried.
+     */
+    LAST_LEVEL_SEEK_DATA_USEFUL_NO_FILTER,
+    /**
+     * At least one value() was accessed for the seek (suggesting it was useful),
+     * after querying a filter such as prefix Bloom.
+     */
+    LAST_LEVEL_SEEK_DATA_USEFUL_FILTER_MATCH,
+
+    /**
+     * The same set of stats, but for non-last level seeks.
+     */
+    NON_LAST_LEVEL_SEEK_FILTERED,
+    NON_LAST_LEVEL_SEEK_FILTER_MATCH,
+    NON_LAST_LEVEL_SEEK_DATA,
+    NON_LAST_LEVEL_SEEK_DATA_USEFUL_NO_FILTER,
+    NON_LAST_LEVEL_SEEK_DATA_USEFUL_FILTER_MATCH,
+
+    /**
+     * Number of block checksum verifications
+     */
     BLOCK_CHECKSUM_COMPUTE_COUNT,
 
     /**
-     * # of times cache miss when accessing blob from blob cache.
+     * Number of times RocksDB detected a corruption while verifying a block
+     * checksum. RocksDB does not remember corruptions that happened during user
+     * reads so the same block corruption may be detected multiple times.
      */
-    BLOB_DB_CACHE_MISS,
+    BLOCK_CHECKSUM_MISMATCH_COUNT,
+
+    MULTIGET_COROUTINE_COUNT,
 
     /**
-     * # of times cache hit when accessing blob from blob cache.
+     * Time spent in the ReadAsync file system call
      */
-    BLOB_DB_CACHE_HIT,
+    READ_ASYNC_MICROS,
 
     /**
-     * # of data blocks added to blob cache.
+     * Number of errors returned to the async read callback
      */
-    BLOB_DB_CACHE_ADD,
+    ASYNC_READ_ERROR_COUNT,
 
     /**
-     * # # of failures when adding blobs to blob cache.
+     * Number of lookup into the prefetched tail (see
+     * `TABLE_OPEN_PREFETCH_TAIL_READ_BYTES`)
+     * that can't find its data for table open
      */
-    BLOB_DB_CACHE_ADD_FAILURES,
+    TABLE_OPEN_PREFETCH_TAIL_MISS,
 
     /**
-     * # of bytes read from blob cache.
+     * Number of lookup into the prefetched tail (see
+     * `TABLE_OPEN_PREFETCH_TAIL_READ_BYTES`)
+     * that finds its data for table open
      */
-    BLOB_DB_CACHE_BYTES_READ,
+    TABLE_OPEN_PREFETCH_TAIL_HIT,
 
     /**
-     * # of bytes written into blob cache.
+     * # of times timestamps are checked on accessing the table
      */
-    BLOB_DB_CACHE_BYTES_WRITE,
+    TIMESTAMP_FILTER_TABLE_CHECKED,
+
+    /**
+     * # of times timestamps can successfully help skip the table access
+     */
+    TIMESTAMP_FILTER_TABLE_FILTERED,
+
+    READAHEAD_TRIMMED,
+
+    FIFO_MAX_SIZE_COMPACTIONS,
+
+    FIFO_TTL_COMPACTIONS,
+
+    PREFETCH_BYTES,
+
+    PREFETCH_BYTES_USEFUL,
+
+    PREFETCH_HITS,
+
+    SST_FOOTER_CORRUPTION_COUNT,
+
+    FILE_READ_CORRUPTION_RETRY_COUNT,
+
+    FILE_READ_CORRUPTION_RETRY_SUCCESS_COUNT,
 
     TICKER_ENUM_MAX
 }

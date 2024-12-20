@@ -4,6 +4,7 @@ import maryk.ByteBuffer
 import maryk.rocksdb.AbstractComparator
 import maryk.rocksdb.ComparatorOptions
 import kotlin.math.min
+import maryk.limit
 
 /**
  * This is a Common implementation of the C++

@@ -1,8 +1,6 @@
 package maryk.rocksdb
 
 import maryk.assertContentEquals
-import maryk.rocksdb.BuiltinComparator.BYTEWISE_COMPARATOR
-import maryk.rocksdb.BuiltinComparator.REVERSE_BYTEWISE_COMPARATOR
 import maryk.rocksdb.util.createTestDBFolder
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -20,7 +18,7 @@ class ComparatorTest {
     fun builtinForwardComparator() {
         Options().apply {
             setCreateIfMissing(true)
-            setComparator(BYTEWISE_COMPARATOR)
+            setComparator(BuiltinComparator.BYTEWISE_COMPARATOR)
         }.use { options ->
             openRocksDB(
                 options,
@@ -65,7 +63,7 @@ class ComparatorTest {
     fun builtinReverseComparator() {
         Options().apply {
             setCreateIfMissing(true)
-            setComparator(REVERSE_BYTEWISE_COMPARATOR)
+            setComparator(BuiltinComparator.REVERSE_BYTEWISE_COMPARATOR)
         }.use { options ->
             openRocksDB(
                 options,
@@ -111,9 +109,9 @@ class ComparatorTest {
 
     @Test
     fun builtinComparatorEnum() {
-        assertEquals(0, BYTEWISE_COMPARATOR.ordinal)
-        assertEquals(1, REVERSE_BYTEWISE_COMPARATOR.ordinal)
-        assertEquals(2, BuiltinComparator.values().size)
-        assertEquals(BYTEWISE_COMPARATOR, BuiltinComparator.valueOf("BYTEWISE_COMPARATOR"))
+        assertEquals(0, BuiltinComparator.BYTEWISE_COMPARATOR.ordinal)
+        assertEquals(1, BuiltinComparator.REVERSE_BYTEWISE_COMPARATOR.ordinal)
+        assertEquals(2, BuiltinComparator.entries.size)
+        assertEquals(BuiltinComparator.BYTEWISE_COMPARATOR, BuiltinComparator.valueOf("BYTEWISE_COMPARATOR"))
     }
 }

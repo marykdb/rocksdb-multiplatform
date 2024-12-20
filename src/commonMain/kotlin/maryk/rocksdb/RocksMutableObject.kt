@@ -8,4 +8,6 @@ package maryk.rocksdb
  * has synchronization overheads and introduces complexity. Instead it is
  * recommended to use [RocksObject] where possible.
  */
-expect abstract class RocksMutableObject : AbstractNativeReference
+expect abstract class RocksMutableObject : AbstractNativeReference {
+    override final fun close()
+}
