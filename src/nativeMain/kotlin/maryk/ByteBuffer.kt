@@ -1,3 +1,4 @@
+
 package maryk
 
 import kotlinx.cinterop.ByteVar
@@ -129,4 +130,12 @@ actual fun wrapByteBuffer(bytes: ByteArray, memSafeByteBuffer: (buffer: ByteBuff
     memScoped {
         WrappedByteBuffer(bytes.toCValues().getPointer(this), bytes.size)
     }
+}
+
+actual fun ByteBuffer.flip() {
+    this.flip()
+}
+
+actual fun ByteBuffer.limit(newLimit: Int) {
+    this.limit(newLimit)
 }

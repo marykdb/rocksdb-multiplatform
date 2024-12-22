@@ -1,9 +1,12 @@
+@file:OptIn(ExperimentalNativeApi::class)
+
 package maryk.rocksdb
 
 import rocksdb.RocksDBColumnFamilyOptions
 import rocksdb.RocksDBComparator
 import rocksdb.RocksDBPrefixExtractor
 import rocksdb.RocksDBPrefixType.RocksDBPrefixFixedLength
+import kotlin.experimental.ExperimentalNativeApi
 
 actual class ColumnFamilyOptions private constructor(
     internal val native: RocksDBColumnFamilyOptions

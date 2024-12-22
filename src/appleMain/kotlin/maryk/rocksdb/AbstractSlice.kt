@@ -55,8 +55,7 @@ actual abstract class AbstractSlice<T> protected constructor(
         return native.startsWith(prefix.native)
     }
 
-    override fun close() {
+    override fun disposeInternal() {
         arena.clear()
-        super.close()
     }
 }

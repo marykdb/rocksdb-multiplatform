@@ -2,7 +2,6 @@ package maryk.rocksdb
 
 /**
  * For level based compaction, we can configure if we want to skip/force bottommost level compaction.
- * The order of this enum MUST follow the C++ layer. See BottommostLevelCompaction in db/options.h
  */
 expect enum class BottommostLevelCompaction {
     /** Skip bottommost level compaction */
@@ -11,4 +10,9 @@ expect enum class BottommostLevelCompaction {
     kIfHaveCompactionFilter,
     /** Always compact bottommost level */
     kForce,
+    /**
+     * Always compact bottommost level but in bottommost level avoid
+     * double-compacting files created in the same compaction.
+     */
+    kForceOptimized,
 }

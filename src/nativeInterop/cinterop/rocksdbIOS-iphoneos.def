@@ -1,5 +1,5 @@
 language = Objective-C
 headers = ObjectiveRocks.h
 package = rocksdb
-staticLibraries = libobjectiveRocks-iOS.a
+staticLibraries = libobjectiveRocks.a
 libraryPaths = xcodeBuild/Build/Products/Release-iphoneos/

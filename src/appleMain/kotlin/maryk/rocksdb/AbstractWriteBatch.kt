@@ -9,59 +9,59 @@ import rocksdb.getWriteBatch
 actual abstract class AbstractWriteBatch internal constructor(
     private val nativeBase: RocksDBWriteBatchBase
 ) : RocksObject(), WriteBatchInterface {
-    override fun singleDelete(key: ByteArray) {
+    actual override fun singleDelete(key: ByteArray) {
         wrapWithErrorThrower { error ->
             nativeBase.singleDelete(key.toNSData(), error)
         }
     }
 
-    override fun singleDelete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray) {
+    actual override fun singleDelete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray) {
         wrapWithErrorThrower { error ->
             nativeBase.singleDelete(key.toNSData(), columnFamilyHandle.native, error)
         }
     }
 
-    override fun count(): Int {
+    actual override fun count(): Int {
         return nativeBase.count()
     }
 
-    override fun put(key: ByteArray, value: ByteArray) {
+    actual override fun put(key: ByteArray, value: ByteArray) {
         wrapWithErrorThrower { error ->
             nativeBase.setData(value.toNSData(), key.toNSData(), error)
         }
     }
 
-    override fun put(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, value: ByteArray) {
+    actual override fun put(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, value: ByteArray) {
         wrapWithErrorThrower { error ->
             nativeBase.setData(value.toNSData(), key.toNSData(), columnFamilyHandle.native, error)
         }
     }
 
-    override fun merge(key: ByteArray, value: ByteArray) {
+    actual override fun merge(key: ByteArray, value: ByteArray) {
         wrapWithErrorThrower { error ->
             nativeBase.mergeData(value.toNSData(), key.toNSData(), error)
         }
     }
 
-    override fun merge(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, value: ByteArray) {
+    actual override fun merge(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, value: ByteArray) {
         wrapWithErrorThrower { error ->
             nativeBase.mergeData(value.toNSData(), key.toNSData(), columnFamilyHandle.native, error)
         }
     }
 
-    override fun delete(key: ByteArray) {
+    actual override fun delete(key: ByteArray) {
         wrapWithErrorThrower { error ->
             nativeBase.deleteDataForKey(key.toNSData(), error)
         }
     }
 
-    override fun delete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray) {
+    actual override fun delete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray) {
         wrapWithErrorThrower { error ->
             nativeBase.deleteDataForKey(key.toNSData(), columnFamilyHandle.native, error)
         }
     }
 
-    override fun deleteRange(beginKey: ByteArray, endKey: ByteArray) {
+    actual override fun deleteRange(beginKey: ByteArray, endKey: ByteArray) {
         wrapWithErrorThrower { error ->
             val range = RocksDBKeyRange()
             range.start = beginKey.toNSData()
@@ -70,7 +70,7 @@ actual abstract class AbstractWriteBatch internal constructor(
         }
     }
 
-    override fun deleteRange(columnFamilyHandle: ColumnFamilyHandle, beginKey: ByteArray, endKey: ByteArray) {
+    actual override fun deleteRange(columnFamilyHandle: ColumnFamilyHandle, beginKey: ByteArray, endKey: ByteArray) {
         wrapWithErrorThrower { error ->
             val range = RocksDBKeyRange()
             range.start = beginKey.toNSData()
@@ -79,37 +79,37 @@ actual abstract class AbstractWriteBatch internal constructor(
         }
     }
 
-    override fun putLogData(blob: ByteArray) {
+    actual override fun putLogData(blob: ByteArray) {
         wrapWithErrorThrower { error ->
             nativeBase.putLogData(blob.toNSData(), error)
         }
     }
 
-    override fun clear() {
+    actual override fun clear() {
         nativeBase.clear()
     }
 
-    override fun setSavePoint() {
+    actual override fun setSavePoint() {
         nativeBase.setSavePoint()
     }
 
-    override fun rollbackToSavePoint() {
+    actual override fun rollbackToSavePoint() {
         wrapWithErrorThrower { error ->
             nativeBase.rollbackToSavePoint(error)
         }
     }
 
-    override fun popSavePoint() {
+    actual override fun popSavePoint() {
         wrapWithErrorThrower { error ->
             nativeBase.popSavePoint(error)
         }
     }
 
-    override fun setMaxBytes(maxBytes: Long) {
+    actual override fun setMaxBytes(maxBytes: Long) {
         nativeBase.setMaxBytes(maxBytes.toULong())
     }
 
-    override fun getWriteBatch(): WriteBatch {
+    actual override fun getWriteBatch(): WriteBatch {
         return WriteBatch(nativeBase.getWriteBatch()!!)
     }
 }

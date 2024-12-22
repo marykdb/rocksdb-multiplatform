@@ -8,7 +8,7 @@ actual abstract class Buffer(
 
     actual abstract fun array(): Any
 
-    actual open fun flip(): Buffer {
+    open fun flip(): Buffer {
         limit = position
         position = 0
         return this
@@ -16,7 +16,7 @@ actual abstract class Buffer(
 
     actual fun remaining() = limit - position
 
-    actual fun limit(newLimit: Int): Buffer {
+    fun limit(newLimit: Int): Buffer {
         if (newLimit > capacity || newLimit < 0) throw IllegalArgumentException()
         limit = newLimit
         if (position > limit) position = limit

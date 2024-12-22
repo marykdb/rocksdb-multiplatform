@@ -1,6 +1,9 @@
+@file:OptIn(ExperimentalNativeApi::class)
+
 package maryk.rocksdb
 
 import rocksdb.RocksDBReadOptions
+import kotlin.experimental.ExperimentalNativeApi
 
 actual class ReadOptions private constructor(val native: RocksDBReadOptions) : RocksObject() {
     actual constructor() : this(RocksDBReadOptions())

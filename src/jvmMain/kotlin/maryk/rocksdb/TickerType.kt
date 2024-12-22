@@ -1,3 +1,5 @@
 package maryk.rocksdb
 
-actual typealias TickerType = org.rocksdb.TickerType
+import org.rocksdb.TickerType
+
+actual typealias TickerType = TickerType

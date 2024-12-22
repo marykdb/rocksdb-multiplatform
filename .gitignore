@@ -3,3 +3,4 @@ build
 
 xcodeBuild
 local.properties
+/.kotlin/

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalNativeApi::class)
+
 package maryk.rocksdb
 
 import maryk.intoByteArray
@@ -26,7 +28,7 @@ import rocksdb.disableFileDeletions
 import rocksdb.dropColumnFamilies
 import rocksdb.dropColumnFamily
 import rocksdb.enableAutoCompaction
-import rocksdb.enableFileDelections
+import rocksdb.enableFileDeletions
 import rocksdb.env
 import rocksdb.flushWal
 import rocksdb.iterator
@@ -56,8 +58,8 @@ import rocksdb.valueForIntProperty
 import rocksdb.valueForMapProperty
 import rocksdb.valueForProperty
 import rocksdb.verifyChecksum
+import kotlin.experimental.ExperimentalNativeApi
 
-@SharedImmutable
 actual val defaultColumnFamily = RocksDBDefaultColumnFamilyName.encodeToByteArray()
 actual val rocksDBNotFound = -1
 
@@ -1157,9 +1159,9 @@ actual open class RocksDB
         }
     }
 
-    actual fun enableFileDeletions(force: Boolean) {
+    actual fun enableFileDeletions() {
         wrapWithErrorThrower { error ->
-            native.enableFileDelections(force, error)
+            native.enableFileDeletions(error)
         }
     }
 

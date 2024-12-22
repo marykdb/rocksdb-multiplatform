@@ -1,7 +1,9 @@
 @file:Suppress("UnstableApiUsage")
 
+import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 import java.util.*
 
@@ -81,16 +83,14 @@ kotlin {
         }
     }
 
-    compilerOptions {
-        allWarningsAsErrors = true
-    }
-
     sourceSets {
         all {
             languageSettings.apply {
                 languageVersion = "2.1"
                 apiVersion = "2.1"
                 progressiveMode = true
+                optIn("kotlinx.cinterop.ExperimentalForeignApi")
+                optIn("kotlinx.cinterop.BetaInteropApi")
             }
         }
         val commonMain by getting {}
@@ -117,16 +117,41 @@ kotlin {
         val androidUnitTest by getting {
             kotlin.srcDir("src/jvmTest/kotlin")
         }
-        val darwinMain by creating {
-            kotlin.apply {
-                srcDir("src/appleMain/kotlin")
+    }
+
+    fun KotlinNativeTarget.setupAppleTarget(definitionName: String, buildTask: Exec, folderExtension: String = "") {
+        binaries {
+            getTest("DEBUG").linkerOpts = mutableListOf(
+                "-L$objectiveRocksHome${folderExtension}", "-lobjectiveRocks"
+            )
+        }
+
+        compilations["main"].apply {
+            cinterops {
+                this.create("rocksdb") {
+                    definitionFile = project.projectDir.resolve("src/nativeInterop/cinterop/rocksdb${definitionName.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }}$folderExtension.def")
+                    tasks[interopProcessingTaskName].dependsOn(buildTask)
+                    includeDirs("./xcodeBuild/Build/Products/Release/usr/local/include")
+                }
             }
         }
-        val darwinTest by creating {
-            kotlin.apply {
-                srcDir("src/appleTest/kotlin")
-            }
-        }
+    }
+
+    iosX64 {
+        setupAppleTarget("iOS", buildIOSSimulator, "-iphonesimulator")
+    }
+    iosArm64 {
+        setupAppleTarget("iOS", buildIOS, "-iphoneos")
+    }
+    iosSimulatorArm64 {
+        setupAppleTarget("iOS", buildIOSSimulator, "-iphonesimulator")
+    }
+
+    macosX64 {
+        setupAppleTarget("macOS", buildMacOS)
+    }
+    macosArm64 {
+        setupAppleTarget("macOS", buildMacOS)
     }
 }
 

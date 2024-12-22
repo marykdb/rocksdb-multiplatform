@@ -4,7 +4,7 @@ import platform.posix.S_IRWXU
 import platform.posix.mkdir
 
 actual fun createFolder(path: String) =
-    when (mkdir(path, S_IRWXU)) {
+    when (mkdir(path, S_IRWXU.toUShort())) {
         0 -> true
         else -> false
     }
