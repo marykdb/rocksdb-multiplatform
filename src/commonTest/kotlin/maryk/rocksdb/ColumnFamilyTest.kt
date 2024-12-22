@@ -603,7 +603,7 @@ class ColumnFamilyTest {
     }
 
     @Test
-    fun testByteCreateFolumnFamily() {
+    fun testByteCreateColumnFamily() {
         val testFolder = createTestFolder()
         Options().setCreateIfMissing(true).use { options ->
             openRocksDB(
@@ -688,7 +688,7 @@ class ColumnFamilyTest {
                     )
                 } finally {
                     if (columnFamilyHandle != null) {
-                        columnFamilyHandle!!.close()
+                        columnFamilyHandle.close()
                     }
                 }
             }
