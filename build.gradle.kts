@@ -2,7 +2,6 @@
 
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.withType
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 import java.util.*
@@ -128,8 +127,9 @@ kotlin {
 
         compilations["main"].apply {
             cinterops {
-                this.create("rocksdb") {
-                    definitionFile = project.projectDir.resolve("src/nativeInterop/cinterop/rocksdb${definitionName.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }}$folderExtension.def")
+                create("rocksdb") {
+                    defFile("src/nativeInterop/cinterop/rocksdbC.def")
+                    defFile("src/nativeInterop/cinterop/rocksdb${definitionName.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }}$folderExtension.def")
                     tasks[interopProcessingTaskName].dependsOn(buildTask)
                     includeDirs("./xcodeBuild/Build/Products/Release/usr/local/include")
                 }
@@ -153,6 +153,15 @@ kotlin {
     macosArm64 {
         setupAppleTarget("macOS", buildMacOS)
     }
+//    linuxArm64 {
+//        compilations["main"].apply {
+//            cinterops {
+//                create("rocksdb") {
+//                    defFile("src/nativeInterop/cinterop/rocksdbC.def")
+//                }
+//            }
+//        }
+//    }
 }
 
 // Creates the folders for the database
