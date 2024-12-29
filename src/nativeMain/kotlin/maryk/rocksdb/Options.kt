@@ -178,7 +178,6 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
         val comparator = when (builtinComparator) {
             BuiltinComparator.BYTEWISE_COMPARATOR -> BytewiseComparator(null)
             BuiltinComparator.REVERSE_BYTEWISE_COMPARATOR -> ReverseBytewiseComparator(null)
-            else -> throw Exception("Unknown comparator")
         }
         rocksdb_options_set_comparator(native, comparator.native)
         return this
@@ -340,6 +339,9 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
     }
 
     actual fun getEnv(): Env {
+        if (this.env == null) {
+            this.env = getDefaultEnv()
+        }
         return this.env!!
     }
 }

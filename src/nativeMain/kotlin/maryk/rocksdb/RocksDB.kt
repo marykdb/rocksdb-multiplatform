@@ -1284,8 +1284,7 @@ internal constructor(
     }
 
     actual fun getEnv(): Env {
-        throw NotImplementedError("DO SOMETHING")
-//        return RocksEnv(native.env)
+        return getDefaultEnv()
     }
 
     actual fun flushWal(sync: Boolean) {

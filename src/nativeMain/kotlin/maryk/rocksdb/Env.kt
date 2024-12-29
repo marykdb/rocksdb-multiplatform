@@ -63,6 +63,13 @@ protected constructor(internal val native: CPointer<rocksdb_env_t>?)
         }
         return this
     }
+
+    override fun close() {
+        if (isOwningHandle()) {
+            rocksdb.rocksdb_env_destroy(native)
+        }
+        super.close()
+    }
 }
 
 actual fun getDefaultEnv(): Env = RocksEnv(rocksdb_create_default_env())
