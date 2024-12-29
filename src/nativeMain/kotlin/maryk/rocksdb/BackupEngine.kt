@@ -2,7 +2,7 @@ package maryk.rocksdb
 
 import kotlinx.cinterop.CPointer
 import maryk.toUByte
-import maryk.wrapWithErrorThrower2
+import maryk.wrapWithErrorThrower
 import cnames.structs.rocksdb_backup_engine_t
 import rocksdb.rocksdb_backup_engine_close
 import rocksdb.rocksdb_backup_engine_create_new_backup
@@ -25,13 +25,13 @@ internal constructor(
 )
     : RocksObject(), AutoCloseable {
     actual fun createNewBackup(db: RocksDB) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_backup_engine_create_new_backup(native, db.native, error)
         }
     }
 
     actual fun createNewBackup(db: RocksDB, flushBeforeBackup: Boolean) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_backup_engine_create_new_backup_flush(native, db.native, flushBeforeBackup.toUByte(), error)
         }
     }
@@ -72,7 +72,7 @@ internal constructor(
     }
 
     actual fun purgeOldBackups(numBackupsToKeep: Int) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_backup_engine_purge_old_backups(native, numBackupsToKeep.toUInt(), error)
         }
     }
@@ -87,7 +87,7 @@ internal constructor(
         walDir: String,
         restoreOptions: RestoreOptions
     ) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_backup_engine_restore_db_from_backup(
                 native,
                 dbDir,
@@ -104,7 +104,7 @@ internal constructor(
         walDir: String,
         restoreOptions: RestoreOptions
     ) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_backup_engine_restore_db_from_latest_backup(
                 native,
                 dbDir,
@@ -126,7 +126,7 @@ internal constructor(
 actual fun openBackupEngine(
     env: Env,
     options: BackupEngineOptions
-) = Unit.wrapWithErrorThrower2 { error ->
+) = Unit.wrapWithErrorThrower { error ->
     BackupEngine(
         rocksdb_backup_engine_open_opts(options.native, env.native, error)!!
     )

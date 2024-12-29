@@ -22,7 +22,7 @@ import maryk.byteArrayToCPointer
 import maryk.toBoolean
 import maryk.toByteArray
 import maryk.toUByte
-import maryk.wrapWithErrorThrower2
+import maryk.wrapWithErrorThrower
 import maryk.wrapWithMultiErrorThrower
 import maryk.wrapWithNullErrorThrower2
 import platform.posix.size_tVar
@@ -109,7 +109,7 @@ internal constructor(
     }
 
     actual fun createColumnFamily(columnFamilyDescriptor: ColumnFamilyDescriptor): ColumnFamilyHandle =
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             ColumnFamilyHandle(
                 rocksdb_create_column_family(native, columnFamilyDescriptor.getOptions().native, columnFamilyDescriptor.getName().toCValues(), error)!!,
             )
@@ -118,7 +118,7 @@ internal constructor(
     actual fun createColumnFamilies(
         columnFamilyOptions: ColumnFamilyOptions,
         columnFamilyNames: List<ByteArray>
-    ): List<ColumnFamilyHandle> = wrapWithErrorThrower2 { error ->
+    ): List<ColumnFamilyHandle> = wrapWithErrorThrower { error ->
         buildList {
             for (name in columnFamilyNames) {
                 this += ColumnFamilyHandle(
@@ -129,7 +129,7 @@ internal constructor(
     }
 
     actual fun createColumnFamilies(columnFamilyDescriptors: List<ColumnFamilyDescriptor>): List<ColumnFamilyHandle> =
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             buildList {
                 for (descriptor in columnFamilyDescriptors) {
                     rocksdb_create_column_family(
@@ -143,7 +143,7 @@ internal constructor(
         }
 
     actual fun dropColumnFamily(columnFamilyHandle: ColumnFamilyHandle) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_drop_column_family(native, columnFamilyHandle.native, error)
         }
     }
@@ -155,7 +155,7 @@ internal constructor(
     }
 
     actual fun put(key: ByteArray, value: ByteArray) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_put(native, defaultWriteOptions.native, key.toCValues(), key.size.toULong(), value.toCValues(), value.size.toULong(), error)
         }
     }
@@ -168,7 +168,7 @@ internal constructor(
         vOffset: Int,
         vLen: Int
     ) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             memScoped {
                 rocksdb_put(
                     native,
@@ -188,7 +188,7 @@ internal constructor(
         key: ByteArray,
         value: ByteArray
     ) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_put_cf(
                 native,
                 defaultWriteOptions.native,
@@ -215,7 +215,7 @@ internal constructor(
     }
 
     actual fun put(writeOpts: WriteOptions, key: ByteArray, value: ByteArray) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_put(
                 native,
                 writeOpts.native,
@@ -237,7 +237,7 @@ internal constructor(
         vOffset: Int,
         vLen: Int
     ) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             memScoped {
                 rocksdb_put(
                     native,
@@ -258,7 +258,7 @@ internal constructor(
         key: ByteArray,
         value: ByteArray
     ) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_put_cf(
                 native,
                 writeOpts.native,
@@ -282,7 +282,7 @@ internal constructor(
         vOffset: Int,
         vLen: Int
     ) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             memScoped {
                 rocksdb_put_cf(
                     native,
@@ -320,7 +320,7 @@ internal constructor(
     }
 
     actual fun delete(writeOpt: WriteOptions, key: ByteArray) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_delete(
                 native,
                 writeOpt.native,
@@ -337,7 +337,7 @@ internal constructor(
         offset: Int,
         len: Int
     ) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             memScoped {
                 rocksdb_delete(
                     native,
@@ -355,7 +355,7 @@ internal constructor(
         writeOpt: WriteOptions,
         key: ByteArray
     ) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_delete_cf(
                 native,
                 writeOpt.native,
@@ -374,7 +374,7 @@ internal constructor(
         offset: Int,
         len: Int
     ) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             memScoped {
                 rocksdb_delete_cf(
                     native,
@@ -401,21 +401,20 @@ internal constructor(
     }
 
     actual fun deleteRange(writeOpt: WriteOptions, beginKey: ByteArray, endKey: ByteArray) {
-        throw NotImplementedError("FILL")
-//        wrapWithErrorThrower2 { error ->
-//            memScoped {
-//                rocksdb_delete_range_cf(
-//                    db = native,
-//                    options = writeOpt.native,
-//                    column_family = null,
-//                    start_key = beginKey.decodeToString(),
-//                    start_key_len = beginKey.size.toULong(),
-//                    end_key = endKey.decodeToString(),
-//                    end_key_len = endKey.size.toULong(),
-//                    errptr = error,
-//                )
-//            }
-//        }
+        wrapWithErrorThrower { error ->
+            val default = rocksdb_get_default_column_family_handle(native)
+            rocksdb_delete_range_cf(
+                db = native,
+                options = writeOpt.native,
+                column_family = default,
+                start_key = beginKey.toCValues(),
+                start_key_len = beginKey.size.toULong(),
+                end_key = endKey.toCValues(),
+                end_key_len = endKey.size.toULong(),
+                errptr = error,
+            )
+            rocksdb.rocksdb_column_family_handle_destroy(default)
+        }
     }
 
     actual fun deleteRange(
@@ -424,7 +423,7 @@ internal constructor(
         beginKey: ByteArray,
         endKey: ByteArray
     ) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_delete_range_cf(
                 db = native,
                 options = writeOpt.native,
@@ -474,7 +473,7 @@ internal constructor(
     }
 
     actual fun merge(writeOpts: WriteOptions, key: ByteArray, value: ByteArray) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_merge(
                 native,
                 writeOpts.native,
@@ -497,7 +496,7 @@ internal constructor(
         vLen: Int
     ) {
         memScoped {
-            wrapWithErrorThrower2 { error ->
+            wrapWithErrorThrower { error ->
                 rocksdb_merge(
                     native,
                     writeOpts.native,
@@ -517,7 +516,7 @@ internal constructor(
         key: ByteArray,
         value: ByteArray
     ) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_merge_cf(
                 native,
                 writeOpts.native,
@@ -542,7 +541,7 @@ internal constructor(
         vLen: Int
     ) {
         memScoped {
-            wrapWithErrorThrower2 { error ->
+            wrapWithErrorThrower { error ->
                 rocksdb_merge_cf(
                     native,
                     defaultWriteOptions.native,
@@ -558,7 +557,7 @@ internal constructor(
     }
 
     actual fun write(writeOpts: WriteOptions, updates: WriteBatch) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_write(native, writeOpts.native, updates.native, error)
         }
     }
@@ -1078,7 +1077,7 @@ internal constructor(
     )
 
     actual fun newIterators(columnFamilyHandleList: List<ColumnFamilyHandle>): List<RocksIterator> {
-        return wrapWithErrorThrower2 { error ->
+        return wrapWithErrorThrower { error ->
             columnFamilyHandleList.map { handle ->
                 this.newIterator(handle)
             }
@@ -1089,7 +1088,7 @@ internal constructor(
         columnFamilyHandleList: List<ColumnFamilyHandle>,
         readOptions: ReadOptions
     ): List<RocksIterator> {
-        return wrapWithErrorThrower2 { error ->
+        return wrapWithErrorThrower { error ->
             columnFamilyHandleList.map { handle ->
                 this.newIterator(handle, readOptions)
             }
@@ -1290,7 +1289,7 @@ internal constructor(
     }
 
     actual fun flushWal(sync: Boolean) {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_flush_wal(native, sync.toUByte(), error)
         }
     }
@@ -1306,13 +1305,13 @@ internal constructor(
         rocksdb_get_latest_sequence_number(native).toLong()
 
     actual fun disableFileDeletions() {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_disable_file_deletions(native, error)
         }
     }
 
     actual fun enableFileDeletions() {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_enable_file_deletions(native, error)
         }
     }
@@ -1420,7 +1419,7 @@ internal constructor(
 }
 
 actual fun destroyRocksDB(path: String, options: Options) {
-    Unit.wrapWithErrorThrower2 { error ->
+    Unit.wrapWithErrorThrower { error ->
         rocksdb_destroy_db(options.native, path, error)
     }
 }
@@ -1429,7 +1428,7 @@ actual fun listColumnFamilies(
     options: Options,
     path: String
 ): List<ByteArray> {
-    return Unit.wrapWithErrorThrower2 { error ->
+    return Unit.wrapWithErrorThrower { error ->
         memScoped {
             val cfCount = alloc<size_tVar>()
             val values = rocksdb_list_column_families(options.native, path, cfCount.ptr, error)!!

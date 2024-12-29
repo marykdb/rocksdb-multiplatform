@@ -2,10 +2,7 @@ package maryk.rocksdb
 
 import cnames.structs.rocksdb_options_t
 import kotlinx.cinterop.CPointer
-import kotlinx.cinterop.alloc
-import kotlinx.cinterop.nativeHeap
-import kotlinx.cinterop.nativeHeap.alloc
-import maryk.wrapWithErrorThrower2
+import maryk.wrapWithErrorThrower
 import rocksdb.rocksdb_options_get_statistics_level
 import rocksdb.rocksdb_options_set_statistics_level
 import rocksdb.rocksdb_options_statistics_get_histogram_data
@@ -59,7 +56,7 @@ actual class Statistics internal constructor(
     }
 
     actual fun reset() {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             throw NotImplementedError("DO SOMETHING")
         }
     }

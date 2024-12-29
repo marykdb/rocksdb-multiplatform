@@ -10,7 +10,7 @@ import kotlinx.cinterop.toKString
 import kotlinx.cinterop.value
 import maryk.rocksdb.RocksDBException
 
-fun <T: Any, R: Any> T.wrapWithErrorThrower2(runnable: T.(CValuesRef<CPointerVar<ByteVar>>) -> R): R {
+fun <T: Any, R: Any> T.wrapWithErrorThrower(runnable: T.(CValuesRef<CPointerVar<ByteVar>>) -> R): R {
     memScoped {
         val errorRef = alloc<CPointerVar<ByteVar>>()
         val result = runnable(errorRef.ptr)

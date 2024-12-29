@@ -9,7 +9,7 @@ import kotlinx.cinterop.toCValues
 import kotlinx.cinterop.value
 import maryk.toBoolean
 import maryk.toByteArray
-import maryk.wrapWithErrorThrower2
+import maryk.wrapWithErrorThrower
 import platform.posix.size_tVar
 import rocksdb.rocksdb_iter_destroy
 import rocksdb.rocksdb_iter_get_error
@@ -71,7 +71,7 @@ actual class RocksIterator internal constructor(
     }
 
     override fun status() {
-        wrapWithErrorThrower2 { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_iter_get_error(native, error)
         }
     }
