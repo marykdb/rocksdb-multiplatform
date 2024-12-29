@@ -8,7 +8,7 @@ actual enum class CompactionStopStyle(
 }
 
 fun getCompactionStopStyle(value: Byte): CompactionStopStyle {
-    for (compactionStopStyle in CompactionStopStyle.values()) {
+    for (compactionStopStyle in CompactionStopStyle.entries) {
         if (compactionStopStyle.value == value) {
             return compactionStopStyle
         }

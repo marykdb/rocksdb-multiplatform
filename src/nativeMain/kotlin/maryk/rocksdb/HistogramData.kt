@@ -4,32 +4,31 @@ import cnames.structs.rocksdb_statistics_histogram_data_t
 import kotlinx.cinterop.CPointer
 
 actual class HistogramData(
-    val native: CPointer<rocksdb_statistics_histogram_data_t>
+    val median: Double,
+    val p95: Double,
+    val p99: Double,
+    val average: Double,
+    val stdDev: Double,
+    val max: Double,
+    val count: ULong,
+    val sum: ULong,
+    val min: Double,
 ) {
-    actual fun getMedian(): Double =
-        rocksdb.rocksdb_statistics_histogram_data_get_median(native)
+    actual fun getMedian(): Double = median
 
-    actual fun getPercentile95(): Double =
-        rocksdb.rocksdb_statistics_histogram_data_get_p95(native)
+    actual fun getPercentile95(): Double = p95
 
-    actual fun getPercentile99(): Double =
-        rocksdb.rocksdb_statistics_histogram_data_get_p99(native)
+    actual fun getPercentile99(): Double = p99
 
-    actual fun getAverage(): Double =
-        rocksdb.rocksdb_statistics_histogram_data_get_average(native)
+    actual fun getAverage(): Double = average
 
-    actual fun getStandardDeviation(): Double =
-        rocksdb.rocksdb_statistics_histogram_data_get_std_dev(native)
+    actual fun getStandardDeviation(): Double = stdDev
 
-    actual fun getMax(): Double =
-        rocksdb.rocksdb_statistics_histogram_data_get_max(native)
+    actual fun getMax(): Double = max
 
-    actual fun getCount(): Long =
-        rocksdb.rocksdb_statistics_histogram_data_get_count(native).toLong()
+    actual fun getCount(): Long = count.toLong()
 
-    actual fun getSum(): Long  =
-        rocksdb.rocksdb_statistics_histogram_data_get_sum(native).toLong()
+    actual fun getSum(): Long = sum.toLong()
 
-    actual fun getMin(): Double  =
-        rocksdb.rocksdb_statistics_histogram_data_get_min(native)
+    actual fun getMin(): Double = min
 }

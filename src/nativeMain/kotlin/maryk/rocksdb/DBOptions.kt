@@ -84,13 +84,11 @@ actual class DBOptions internal constructor(
 
     actual fun setStatistics(statistics: Statistics): DBOptions {
         this.statistics = statistics
+        statistics.connectWithNative(native)
         return this
     }
 
     actual fun statistics(): Statistics? {
-        if (statistics == null) {
-            this.statistics = Statistics(this.native)
-        }
         return this.statistics
     }
 

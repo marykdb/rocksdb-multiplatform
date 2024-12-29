@@ -284,17 +284,12 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
         getInfoLogLevel(rocksdb_options_get_info_log_level(native).toUByte())
 
     actual fun setStatistics(statistics: Statistics): Options {
-        throw NotImplementedError("DO SOMETHING")
-//        this.statistics = statistics
-//        native.statistics = statistics.native
-//        return this
+        this.statistics = statistics
+        statistics.connectWithNative(native)
+        return this
     }
 
-    actual fun statistics(): Statistics? {
-        throw NotImplementedError("DO SOMETHING")
-//        return this.statistics ?:
-//            native.statistics?.let { Statistics(it) }
-    }
+    actual fun statistics(): Statistics? = this.statistics
 
     actual fun setUseFsync(useFsync: Boolean): Options {
         rocksdb_options_set_use_fsync(native, if (useFsync) 1 else 0)

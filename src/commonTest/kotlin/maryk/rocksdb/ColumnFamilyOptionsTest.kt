@@ -187,7 +187,7 @@ class ColumnFamilyOptionsTest {
     @Test
     fun compressionTypes() {
         ColumnFamilyOptions().use { columnFamilyOptions ->
-            for (compressionType in CompressionType.values()) {
+            for (compressionType in CompressionType.entries) {
                 columnFamilyOptions.setCompressionType(compressionType)
                 assertEquals(compressionType, columnFamilyOptions.compressionType())
                 assertEquals(CompressionType.NO_COMPRESSION, CompressionType.valueOf("NO_COMPRESSION"))
@@ -199,7 +199,7 @@ class ColumnFamilyOptionsTest {
     @Test
     fun compactionStyles() {
         ColumnFamilyOptions().use { columnFamilyOptions ->
-            for (compactionStyle in CompactionStyle.values()) {
+            for (compactionStyle in CompactionStyle.entries) {
                 columnFamilyOptions.setCompactionStyle(compactionStyle)
                 assertEquals(compactionStyle, columnFamilyOptions.compactionStyle())
                 assertEquals(CompactionStyle.FIFO, CompactionStyle.valueOf("FIFO"))

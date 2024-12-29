@@ -231,7 +231,7 @@ class OptionsTest {
     @Test
     fun compressionTypes() {
         Options().use { options ->
-            for (compressionType in CompressionType.values()) {
+            for (compressionType in CompressionType.entries) {
                 options.setCompressionType(compressionType)
                 assertEquals(compressionType, options.compressionType())
                 assertEquals(CompressionType.NO_COMPRESSION, CompressionType.valueOf("NO_COMPRESSION"))

@@ -10,5 +10,5 @@ actual enum class CompactionPriority(
 }
 
 fun getCompactionPriority(value: Byte) =
-    CompactionPriority.values().firstOrNull { it.value == value }
+    CompactionPriority.entries.firstOrNull { it.value == value }
         ?: throw IllegalArgumentException("Illegal value provided for CompactionPriority.")
