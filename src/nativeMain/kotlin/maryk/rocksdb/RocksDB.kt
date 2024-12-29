@@ -4,6 +4,7 @@ package maryk.rocksdb
 
 import kotlinx.cinterop.ptr
 import cnames.structs.rocksdb_column_family_handle_t
+import cnames.structs.rocksdb_column_family_metadata_t
 import cnames.structs.rocksdb_t
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointer
@@ -27,6 +28,8 @@ import maryk.wrapWithNullErrorThrower2
 import platform.posix.size_tVar
 import platform.posix.uint64_tVar
 import rocksdb.rocksdb_close
+import rocksdb.rocksdb_column_family_metadata_get_level_count
+import rocksdb.rocksdb_column_family_metadata_get_level_metadata
 import rocksdb.rocksdb_compact_range
 import rocksdb.rocksdb_compact_range_cf
 import rocksdb.rocksdb_compact_range_cf_opt
@@ -44,9 +47,16 @@ import rocksdb.rocksdb_enable_file_deletions
 import rocksdb.rocksdb_flush_wal
 import rocksdb.rocksdb_get
 import rocksdb.rocksdb_get_cf
+import rocksdb.rocksdb_get_column_family_metadata
+import rocksdb.rocksdb_get_default_column_family_handle
 import rocksdb.rocksdb_get_latest_sequence_number
 import rocksdb.rocksdb_key_may_exist
 import rocksdb.rocksdb_key_may_exist_cf
+import rocksdb.rocksdb_level_metadata_destroy
+import rocksdb.rocksdb_level_metadata_get_file_count
+import rocksdb.rocksdb_level_metadata_get_level
+import rocksdb.rocksdb_level_metadata_get_size
+import rocksdb.rocksdb_level_metadata_get_sst_file_metadata
 import rocksdb.rocksdb_list_column_families
 import rocksdb.rocksdb_list_column_families_destroy
 import rocksdb.rocksdb_merge
@@ -57,6 +67,11 @@ import rocksdb.rocksdb_property_int
 import rocksdb.rocksdb_property_int_cf
 import rocksdb.rocksdb_put
 import rocksdb.rocksdb_put_cf
+import rocksdb.rocksdb_sst_file_metadata_destroy
+import rocksdb.rocksdb_sst_file_metadata_get_directory
+import rocksdb.rocksdb_sst_file_metadata_get_relative_filename
+import rocksdb.rocksdb_sst_file_metadata_get_size
+import rocksdb.rocksdb_sst_file_metadata_get_smallestkey
 import rocksdb.rocksdb_write
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.math.min
@@ -1306,15 +1321,76 @@ internal constructor(
         rocksdb_delete_file(native, name)
     }
 
+    internal fun processColumnFamilyMetaData(metaData: CPointer<rocksdb_column_family_metadata_t>?): ColumnFamilyMetaData {
+        val levelCount = rocksdb_column_family_metadata_get_level_count(metaData)
+
+        val levels = memScoped {
+            buildList<LevelMetaData> {
+                for (i in 0uL until levelCount) {
+                    val levelData = rocksdb_column_family_metadata_get_level_metadata(metaData, i)!!
+
+                    val count = rocksdb_level_metadata_get_file_count(levelData)
+
+                    val files =
+                        buildList<SstFileMetaData> {
+                            for (i in 0uL until count) {
+                                val sstMetaData = rocksdb_level_metadata_get_sst_file_metadata(levelData, i)!!
+                                val smallestKeyLength = this@memScoped.alloc<uint64_tVar>()
+                                val largestKeyLength = this@memScoped.alloc<uint64_tVar>()
+                                add(
+                                    SstFileMetaData(
+                                        fileName = rocksdb_sst_file_metadata_get_relative_filename(sstMetaData)!!
+                                            .toKString(),
+                                        path = rocksdb_sst_file_metadata_get_directory(sstMetaData)!!
+                                            .toKString(),
+                                        size = rocksdb_sst_file_metadata_get_size(sstMetaData),
+                                        smallestKey = rocksdb_sst_file_metadata_get_smallestkey(
+                                            sstMetaData,
+                                            smallestKeyLength.ptr
+                                        )!!.toByteArray(smallestKeyLength.value),
+                                        largestKey = rocksdb_sst_file_metadata_get_smallestkey(
+                                            sstMetaData,
+                                            largestKeyLength.ptr
+                                        )!!.toByteArray(largestKeyLength.value),
+                                    )
+                                )
+                                rocksdb_sst_file_metadata_destroy(sstMetaData)
+                            }
+                        }
+
+                    add(
+                        LevelMetaData(
+                            level = rocksdb_level_metadata_get_level(levelData),
+                            size = rocksdb_level_metadata_get_size(levelData),
+                            files = files,
+                        )
+                    )
+
+                    rocksdb_level_metadata_destroy(levelData)
+                }
+            }
+        }
+
+        return ColumnFamilyMetaData(
+            size = rocksdb.rocksdb_column_family_metadata_get_size(metaData),
+            fileCount = rocksdb.rocksdb_column_family_metadata_get_file_count(metaData),
+            name = rocksdb.rocksdb_column_family_metadata_get_name(metaData)!!.toKString(),
+            levels = levels
+        ).also {
+            rocksdb.rocksdb_column_family_metadata_destroy(metaData)
+        }
+    }
+
     actual fun getColumnFamilyMetaData(columnFamilyHandle: ColumnFamilyHandle): ColumnFamilyMetaData {
-        throw NotImplementedError("DO SOMETHING")
-//        return ColumnFamilyMetaData(native.columnFamilyMetaData(columnFamilyHandle.native))
+        val metaData = rocksdb.rocksdb_get_column_family_metadata_cf(native, columnFamilyHandle.native)
+
+        return processColumnFamilyMetaData(metaData)
     }
 
     actual fun getColumnFamilyMetaData(): ColumnFamilyMetaData {
-        return ColumnFamilyMetaData(rocksdb.rocksdb_get_column_family_metadata(native)!!)
-        throw NotImplementedError("DO SOMETHING")
-//        return ColumnFamilyMetaData(native.columnFamilyMetaData())
+        val metaData = rocksdb_get_column_family_metadata(native)
+
+        return processColumnFamilyMetaData(metaData)
     }
 
     actual fun verifyChecksum() {
@@ -1325,7 +1401,7 @@ internal constructor(
     }
 
     actual fun getDefaultColumnFamily() = ColumnFamilyHandle(
-        rocksdb.rocksdb_get_default_column_family_handle(native)!!
+        rocksdb_get_default_column_family_handle(native)!!
     )
 
     actual fun promoteL0(columnFamilyHandle: ColumnFamilyHandle, targetLevel: Int) {

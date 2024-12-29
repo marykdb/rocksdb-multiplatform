@@ -3,6 +3,7 @@ package maryk.rocksdb
 import cnames.structs.rocksdb_writebatch_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
@@ -19,6 +20,7 @@ actual class WriteBatch(
 
     actual fun getWalTerminationPoint(): WriteBatchSavePoint {
         throw NotImplementedError("DO SOMETHING")
+
 //        val terminationPoint = native.getWalTerminationPoint()
 //        return WriteBatchSavePoint(
 //            terminationPoint.size.toLong(),
@@ -28,8 +30,10 @@ actual class WriteBatch(
     }
 
     actual fun data(): ByteArray {
-        val length = nativeHeap.alloc<uint64_tVar>()
-        return rocksdb.rocksdb_writebatch_data(native, length.ptr)!!.toByteArray(length.value)
+        memScoped {
+            val length = alloc<uint64_tVar>()
+            return rocksdb.rocksdb_writebatch_data(native, length.ptr)!!.toByteArray(length.value)
+        }
     }
 
     actual fun hasPut(): Boolean = throw NotImplementedError("DO SOMETHING")
@@ -51,7 +55,7 @@ actual class WriteBatch(
     actual fun hasRollback(): Boolean = throw NotImplementedError("DO SOMETHING")
 
     actual fun markWalTerminationPoint() {
-        throw NotImplementedError("DO SOMETHING")
+        rocksdb.rocksdb_writebatch_set_save_point(native)
     }
 
     override fun getWriteBatch(): WriteBatch {

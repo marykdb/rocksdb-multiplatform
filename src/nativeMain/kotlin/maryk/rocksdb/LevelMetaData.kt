@@ -1,25 +1,13 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.CPointer
-
 actual class LevelMetaData(
-    val native: CPointer<cnames.structs.rocksdb_level_metadata_t>
+    val level: Int,
+    val size: ULong,
+    val files: List<SstFileMetaData>,
 ) {
-    actual fun level() = rocksdb.rocksdb_level_metadata_get_level(native).toInt()
+    actual fun level() = level.toInt()
 
-    actual fun size() = rocksdb.rocksdb_level_metadata_get_size(native).toLong()
+    actual fun size() = size.toLong()
 
-    actual fun files(): List<SstFileMetaData> {
-        val count = rocksdb.rocksdb_level_metadata_get_file_count(native)
-
-        return buildList<SstFileMetaData> {
-            for (i in 0uL until count) {
-                add(
-                    SstFileMetaData(
-                        rocksdb.rocksdb_level_metadata_get_sst_file_metadata(native, i)!!
-                    )
-                )
-            }
-        }
-    }
+    actual fun files() = files
 }
