@@ -120,6 +120,9 @@ kotlin {
 
     fun KotlinNativeTarget.setupAppleTarget(definitionName: String, buildTask: Exec, folderExtension: String = "") {
         binaries {
+            executable {
+                freeCompilerArgs += listOf("-g")
+            }
             getTest("DEBUG").linkerOpts = mutableListOf(
                 "-L$objectiveRocksHome${folderExtension}", "-lobjectiveRocks"
             )

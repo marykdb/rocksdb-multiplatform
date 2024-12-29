@@ -16,6 +16,12 @@ actual abstract class ByteBuffer(
     internal val nativePointer: CPointer<ByteVar>,
     capacity: Int
 ) : Buffer(capacity, capacity) {
+    internal fun checkIndex(index: Int) {
+        if (index < 0 || index >= capacity) {
+            throw IndexOutOfBoundsException("Index $index out of bounds for buffer of capacity $capacity")
+        }
+    }
+
     actual final override fun array(): ByteArray {
         return nativePointer.readBytes(capacity)
     }
@@ -85,38 +91,19 @@ class DirectByteBuffer internal constructor(
         return this
     }
 }
-
-class WrappedByteBuffer internal constructor(
-    nativePointer: CPointer<ByteVar>,
-    capacity: Int
-) : ByteBuffer(nativePointer, capacity) {
-    override fun get(index: Int) = nativePointer[index]
-
-    override fun put(index: Int, byte: Byte): ByteBuffer {
-        nativePointer[index] = byte
-        return this
-    }
-
-    override fun getInt() = readInt()
-}
-
 actual fun duplicateByteBuffer(byteBuffer: ByteBuffer, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit) {
     memScoped {
         val pointer = allocArray<ByteVar>(byteBuffer.capacity) { i ->
             byteBuffer.nativePointer[i]
         }
 
-        if (byteBuffer is WrappedByteBuffer) {
-            memSafeByteBuffer(WrappedByteBuffer(pointer, byteBuffer.capacity))
-        } else {
-            memSafeByteBuffer(DirectByteBuffer(pointer, byteBuffer.capacity))
-        }
+        memSafeByteBuffer(DirectByteBuffer(pointer, byteBuffer.capacity))
     }
 }
 
 actual fun allocateByteBuffer(capacity: Int, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit) {
     memScoped {
-        memSafeByteBuffer(WrappedByteBuffer(allocArray(capacity), capacity))
+        memSafeByteBuffer(DirectByteBuffer(allocArray(capacity), capacity))
     }
 }
 
@@ -128,7 +115,7 @@ actual fun allocateDirectByteBuffer(capacity: Int, memSafeByteBuffer: (buffer: B
 
 actual fun wrapByteBuffer(bytes: ByteArray, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit) {
     memScoped {
-        WrappedByteBuffer(bytes.toCValues().getPointer(this), bytes.size)
+        DirectByteBuffer(bytes.toCValues().getPointer(this), bytes.size)
     }
 }
 

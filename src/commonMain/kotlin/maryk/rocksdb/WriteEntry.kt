@@ -33,4 +33,6 @@ expect class WriteEntry(type: WriteType, key: DirectSlice, value: DirectSlice?) 
      * no value
      */
     fun getValue(): DirectSlice?
+
+    override fun close()
 }

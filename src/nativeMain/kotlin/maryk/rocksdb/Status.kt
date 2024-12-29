@@ -42,7 +42,7 @@ actual enum class StatusCode(
 }
 
 fun getStatusCode(identifier: Byte): StatusCode {
-    for (statusCode in StatusCode.values()) {
+    for (statusCode in StatusCode.entries) {
         if (statusCode.value == identifier) {
             return statusCode
         }
@@ -69,7 +69,7 @@ actual enum class StatusSubCode(
 }
 
 fun getStatusSubCode(identifier: Byte): StatusSubCode {
-    for (statusSubCode in StatusSubCode.values()) {
+    for (statusSubCode in StatusSubCode.entries) {
         if (statusSubCode.value == identifier) {
             return statusSubCode
         }

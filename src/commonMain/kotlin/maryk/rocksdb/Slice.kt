@@ -33,4 +33,7 @@ expect class Slice : AbstractSlice<ByteArray> {
      * @param data byte array.
      */
     constructor(data: ByteArray)
+
+    override fun removePrefix(n: Int)
+    override fun clear()
 }

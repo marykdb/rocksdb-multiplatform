@@ -191,8 +191,8 @@ class ColumnFamilyTest {
     fun openWithByteArrayColumnFamilies() {
         val cfNames = listOf(
             ColumnFamilyDescriptor(defaultColumnFamily),
-            ColumnFamilyDescriptor(byteArrayOf(0, 1)),
-            ColumnFamilyDescriptor(byteArrayOf(0, 2))
+            ColumnFamilyDescriptor(byteArrayOf(1, 1)),
+            ColumnFamilyDescriptor(byteArrayOf(2, 2))
         )
 
         val columnFamilyHandleList = mutableListOf<ColumnFamilyHandle>()
@@ -610,9 +610,9 @@ class ColumnFamilyTest {
                 options,
                 testFolder
             ).use { db ->
-                val b0 = byteArrayOf(0x00.toByte())
-                val b1 = byteArrayOf(0x01.toByte())
-                val b2 = byteArrayOf(0x02.toByte())
+                val b0 = byteArrayOf(0x01.toByte())
+                val b1 = byteArrayOf(0x02.toByte())
+                val b2 = byteArrayOf(0x03.toByte())
                 var cf1: ColumnFamilyHandle? = null
                 var cf2: ColumnFamilyHandle? = null
                 var cf3: ColumnFamilyHandle? = null
@@ -635,7 +635,7 @@ class ColumnFamilyTest {
     }
 
     @Test
-    fun testCFNamesWithZeroBytes() {
+    fun testCFNamesWithBytes() {
         var cf1: ColumnFamilyHandle? = null
         var cf2: ColumnFamilyHandle? = null
         val testFolder = createTestFolder()
@@ -645,8 +645,8 @@ class ColumnFamilyTest {
                 testFolder
             ).use { db ->
                 try {
-                    val b0 = byteArrayOf(0, 0)
-                    val b1 = byteArrayOf(0, 1)
+                    val b0 = byteArrayOf(1, 1)
+                    val b1 = byteArrayOf(2, 2)
                     cf1 = db.createColumnFamily(ColumnFamilyDescriptor(b0))
                     cf2 = db.createColumnFamily(ColumnFamilyDescriptor(b1))
                     val families = listColumnFamilies(

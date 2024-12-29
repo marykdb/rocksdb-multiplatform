@@ -19,7 +19,7 @@ import maryk.limit
 class BytewiseComparator(copt: ComparatorOptions?) : AbstractComparator(copt) {
     override fun name() = "rocksdb.java.BytewiseComparator"
 
-    override fun compare(a: ByteBuffer, b: ByteBuffer): Int = compare(a, b)
+    override fun compare(a: ByteBuffer, b: ByteBuffer): Int = BytewiseComparator.compare(a, b)
 
     override fun findShortestSeparator(
         start: ByteBuffer,
