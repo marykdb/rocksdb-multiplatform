@@ -574,6 +574,8 @@ internal constructor(
                     value[index] = result[index]
                 }
                 length
+            }.also {
+                rocksdb.rocksdb_free(result)
             }
         }
     } ?: rocksDBNotFound
@@ -596,7 +598,9 @@ internal constructor(
                     len.toULong(),
                     valueLength.ptr,
                     error
-                )
+                ).also {
+                    rocksdb.rocksdb_free(it)
+                }
                 valueLength.value.toInt()
             } ?: rocksDBNotFound
         }
@@ -694,6 +698,8 @@ internal constructor(
                         value[index] = retrieved[index]
                     }
 
+                    rocksdb.rocksdb_free(retrieved)
+
                     length
                 } else rocksDBNotFound
             } ?: rocksDBNotFound
@@ -721,7 +727,9 @@ internal constructor(
                     key.size.toULong(),
                     valueLength.ptr,
                     error
-                )
+                ).also {
+                    rocksdb.rocksdb_free(it)
+                }
                 valueLength.value.toInt()
             } ?: rocksDBNotFound
         }
@@ -749,7 +757,9 @@ internal constructor(
                 val valueLength = alloc<size_tVar>()
                 val result = rocksdb_get(native, opt.native, key.toCValues(), key.size.toULong(), valueLength.ptr, error)
 
-                result?.toByteArray(valueLength.value)
+                result?.toByteArray(valueLength.value).also {
+                    rocksdb.rocksdb_free(result)
+                }
             }
         }
 
@@ -770,7 +780,9 @@ internal constructor(
                 error
             )
 
-            result?.toByteArray(valueLength.value)
+            result?.toByteArray(valueLength.value).also {
+                rocksdb.rocksdb_free(result)
+            }
         }
     }
 
@@ -783,7 +795,9 @@ internal constructor(
             val valueLength = alloc<size_tVar>()
             val result = rocksdb_get_cf(native, opt.native, columnFamilyHandle.native, key.toCValues(), key.size.toULong(), valueLength.ptr, error)
 
-            result?.toByteArray(valueLength.value)
+            result?.toByteArray(valueLength.value).also {
+                rocksdb.rocksdb_free(result)
+            }
         }
     }
 
@@ -807,7 +821,9 @@ internal constructor(
                     error
                 )
 
-                result?.toByteArray(valueLength.value)
+                result?.toByteArray(valueLength.value).also {
+                    rocksdb.rocksdb_free(result)
+                }
             }
         }
     }
@@ -1326,7 +1342,6 @@ internal constructor(
             buildList<LevelMetaData> {
                 for (i in 0uL until levelCount) {
                     val levelData = rocksdb_column_family_metadata_get_level_metadata(metaData, i)!!
-
                     val count = rocksdb_level_metadata_get_file_count(levelData)
 
                     val files =
@@ -1335,27 +1350,27 @@ internal constructor(
                                 val sstMetaData = rocksdb_level_metadata_get_sst_file_metadata(levelData, i)!!
                                 val smallestKeyLength = this@memScoped.alloc<uint64_tVar>()
                                 val largestKeyLength = this@memScoped.alloc<uint64_tVar>()
+
+                                val fileName = rocksdb_sst_file_metadata_get_relative_filename(sstMetaData)
+                                val directory = rocksdb_sst_file_metadata_get_directory(sstMetaData)
+                                val smallestKey = rocksdb_sst_file_metadata_get_smallestkey(sstMetaData, smallestKeyLength.ptr)
+                                val largestKey = rocksdb_sst_file_metadata_get_smallestkey(sstMetaData, largestKeyLength.ptr)
                                 add(
                                     SstFileMetaData(
-                                        fileName = rocksdb_sst_file_metadata_get_relative_filename(sstMetaData)!!
-                                            .toKString(),
-                                        path = rocksdb_sst_file_metadata_get_directory(sstMetaData)!!
-                                            .toKString(),
+                                        fileName = fileName!!.toKString(),
+                                        path = directory!!.toKString(),
                                         size = rocksdb_sst_file_metadata_get_size(sstMetaData),
-                                        smallestKey = rocksdb_sst_file_metadata_get_smallestkey(
-                                            sstMetaData,
-                                            smallestKeyLength.ptr
-                                        )!!.toByteArray(smallestKeyLength.value),
-                                        largestKey = rocksdb_sst_file_metadata_get_smallestkey(
-                                            sstMetaData,
-                                            largestKeyLength.ptr
-                                        )!!.toByteArray(largestKeyLength.value),
+                                        smallestKey = smallestKey!!.toByteArray(smallestKeyLength.value),
+                                        largestKey = largestKey!!.toByteArray(largestKeyLength.value),
                                     )
                                 )
+                                rocksdb.rocksdb_free(fileName)
+                                rocksdb.rocksdb_free(directory)
+                                rocksdb.rocksdb_free(smallestKey)
+                                rocksdb.rocksdb_free(largestKey)
                                 rocksdb_sst_file_metadata_destroy(sstMetaData)
                             }
                         }
-
                     add(
                         LevelMetaData(
                             level = rocksdb_level_metadata_get_level(levelData),
@@ -1369,12 +1384,15 @@ internal constructor(
             }
         }
 
+        val name = rocksdb.rocksdb_column_family_metadata_get_name(metaData)
+
         return ColumnFamilyMetaData(
             size = rocksdb.rocksdb_column_family_metadata_get_size(metaData),
             fileCount = rocksdb.rocksdb_column_family_metadata_get_file_count(metaData),
-            name = rocksdb.rocksdb_column_family_metadata_get_name(metaData)!!.toKString(),
+            name = name!!.toKString(),
             levels = levels
         ).also {
+            rocksdb.rocksdb_free(name)
             rocksdb.rocksdb_column_family_metadata_destroy(metaData)
         }
     }
