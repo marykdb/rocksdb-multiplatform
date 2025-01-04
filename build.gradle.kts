@@ -28,21 +28,26 @@ val rocksDBAndroidVersion = "9.6.1"
 val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
     ?: File(System.getProperty("user.home")).resolve(".konan")
 
-val objectiveRocksHome = "./xcodeBuild/Build/Products/Release"
+val rocksdbBuildPath = "./rocksdb/build"
 
 val buildMacOS by tasks.creating(Exec::class) {
     workingDir = projectDir
-    commandLine("./buildObjectiveRocksMac.sh")
+    commandLine("./buildRocksdbMac.sh")
+}
+
+val buildLinux by tasks.creating(Exec::class) {
+    workingDir = projectDir
+    commandLine("./buildRocksdbLinux.sh")
 }
 
 val buildIOS by tasks.creating(Exec::class) {
     workingDir = projectDir
-    commandLine("./buildObjectiveRocksiOS.sh", "iphoneos")
+    commandLine("./buildRocksdbiOS.sh")
 }
 
 val buildIOSSimulator by tasks.creating(Exec::class) {
     workingDir = projectDir
-    commandLine("./buildObjectiveRocksiOS.sh", "iphonesimulator")
+    commandLine("./buildRocksdbiOS.sh")
 }
 
 android {
@@ -118,13 +123,13 @@ kotlin {
         }
     }
 
-    fun KotlinNativeTarget.setupAppleTarget(definitionName: String, buildTask: Exec, folderExtension: String = "") {
+    fun KotlinNativeTarget.setupTarget(buildName: String, buildTask: Exec) {
         binaries {
             executable {
                 freeCompilerArgs += listOf("-g")
             }
             getTest("DEBUG").linkerOpts = mutableListOf(
-                "-L$objectiveRocksHome${folderExtension}", "-lobjectiveRocks"
+                "-L$rocksdbBuildPath/${buildName}", "-lrocksdb"
             )
         }
 
@@ -132,39 +137,36 @@ kotlin {
             cinterops {
                 create("rocksdb") {
                     defFile("src/nativeInterop/cinterop/rocksdbC.def")
-                    defFile("src/nativeInterop/cinterop/rocksdb${definitionName.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }}$folderExtension.def")
+                    includeDirs("./rocksdb/include/rocksdb")
+                    defFile("src/nativeInterop/cinterop/rocksdb_${buildName}.def")
                     tasks[interopProcessingTaskName].dependsOn(buildTask)
-                    includeDirs("./xcodeBuild/Build/Products/Release/usr/local/include")
                 }
             }
         }
     }
 
-    iosX64 {
-        setupAppleTarget("iOS", buildIOSSimulator, "-iphonesimulator")
-    }
+//    iosX64 {
+//        setupAppleTarget("ios_simulator_x86_64", buildIOSSimulator)
+//    }
     iosArm64 {
-        setupAppleTarget("iOS", buildIOS, "-iphoneos")
+        setupTarget("ios_arm64", buildIOS)
     }
     iosSimulatorArm64 {
-        setupAppleTarget("iOS", buildIOSSimulator, "-iphonesimulator")
+        setupTarget("ios_simulator_arm64", buildIOSSimulator)
     }
 
     macosX64 {
-        setupAppleTarget("macOS", buildMacOS)
+        setupTarget("macos_x86_64", buildMacOS)
     }
     macosArm64 {
-        setupAppleTarget("macOS", buildMacOS)
+        setupTarget("macos_arm64", buildMacOS)
     }
-//    linuxArm64 {
-//        compilations["main"].apply {
-//            cinterops {
-//                create("rocksdb") {
-//                    defFile("src/nativeInterop/cinterop/rocksdbC.def")
-//                }
-//            }
-//        }
-//    }
+    linuxArm64 {
+        setupTarget("linux_arm64", buildLinux)
+    }
+    linuxX64 {
+        setupTarget("linux_x86_64", buildLinux)
+    }
 }
 
 // Creates the folders for the database
@@ -233,33 +235,36 @@ afterEvaluate {
         }
 
         publications.withType<MavenPublication> {
-            artifact(emptyJavadocJar.get())
+            if (this.name == "jvm") {
+                artifact(emptyJavadocJar.get())
+            }
             pom {
-                name.set(project.name)
-                description.set("Kotlin multiplatform RocksDB interface")
-                url.set("https://github.com/marykdb/rocksdb-multiplatform")
+                name = project.name
+                description = "Kotlin multiplatform RocksDB interface"
+                url = "https://github.com/marykdb/rocksdb-multiplatform"
 
                 licenses {
                     license {
-                        name.set("The Apache Software License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                        distribution.set("repo")
+                        name = "The Apache Software License, Version 2.0"
+                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                        distribution = "repo"
                     }
                 }
                 developers {
                     developer {
-                        id.set("jurmous")
-                        name.set("Jurriaan Mous")
+                        id = "jurmous"
+                        name = "Jurriaan Mous"
                     }
                 }
                 scm {
-                    url.set("https://github.com/marykdb/rocksdb-multiplatform")
+                    url = "https://github.com/marykdb/rocksdb-multiplatform"
                 }
             }
         }
     }
 
     signing {
+        println(publishing.publications)
         sign(publishing.publications)
     }
 }

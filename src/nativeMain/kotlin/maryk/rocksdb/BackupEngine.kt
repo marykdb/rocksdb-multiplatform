@@ -4,6 +4,16 @@ import kotlinx.cinterop.CPointer
 import maryk.toUByte
 import maryk.wrapWithErrorThrower
 import cnames.structs.rocksdb_backup_engine_t
+import kotlinx.cinterop.ByteVar
+import kotlinx.cinterop.CPointerVar
+import kotlinx.cinterop.UIntVar
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.get
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.toKString
+import kotlinx.cinterop.value
+import platform.posix.size_tVar
 import rocksdb.rocksdb_backup_engine_close
 import rocksdb.rocksdb_backup_engine_create_new_backup
 import rocksdb.rocksdb_backup_engine_create_new_backup_flush
@@ -41,22 +51,32 @@ internal constructor(
         metadata: String,
         flushBeforeBackup: Boolean
     ) {
-        throw NotImplementedError("DO SOMETHING")
+        wrapWithErrorThrower { error ->
+            val options = rocksdb.rocksdb_create_backup_options_create()
+            rocksdb.rocksdb_create_backup_options_set_flush_before_backup(options, flushBeforeBackup)
+            memScoped {
+                var backupId = alloc<UIntVar>()
+                rocksdb.rocksdb_backup_engine_create_new_backup_with_options_with_metadata(native, db.native, options, metadata, backupId.ptr, error)
+            }
+            rocksdb.rocksdb_create_backup_options_destroy(options)
+        }
     }
 
     actual fun getBackupInfo(): List<BackupInfo> {
         return buildList {
             val info = rocksdb_backup_engine_get_backup_info(native)
-            val size = rocksdb_backup_engine_info_count(info)
+            val count = rocksdb_backup_engine_info_count(info)
 
-            for (index in 0 until size) {
+            for (i in 0 until count) {
+                val appMetaData = rocksdb.rocksdb_backup_engine_info_app_metadata(info, i)
                 this += BackupInfo(
-                    backupId = rocksdb_backup_engine_info_backup_id(info, 0).toInt(),
-                    timestamp = rocksdb_backup_engine_info_timestamp(info, 0),
-                    size = rocksdb_backup_engine_info_size(info, 0).toLong(),
-                    numberFiles = rocksdb_backup_engine_info_number_files(info, 0).toInt(),
-                    appMetadata = null, // TODO META DATA
+                    backupId = rocksdb_backup_engine_info_backup_id(info, i).toInt(),
+                    timestamp = rocksdb_backup_engine_info_timestamp(info, i),
+                    size = rocksdb_backup_engine_info_size(info, i).toLong(),
+                    numberFiles = rocksdb_backup_engine_info_number_files(info, i).toInt(),
+                    appMetadata = appMetaData?.toKString(),
                 )
+                rocksdb.rocksdb_free(appMetaData)
             }
 
             rocksdb_backup_engine_info_destroy(info)
@@ -64,11 +84,24 @@ internal constructor(
     }
 
     actual fun getCorruptedBackups(): IntArray {
-        throw NotImplementedError("DO SOMETHING")
+        return memScoped {
+            wrapWithErrorThrower { error ->
+                val size = alloc<size_tVar>()
+                val idsPtr = rocksdb.rocksdb_backup_engine_get_corrupted_backups(native, size.ptr)
+
+                IntArray(size.value.toInt()) { index ->
+                    idsPtr?.get(index)?.toInt()!!
+                }.also {
+                    rocksdb.rocksdb_free(idsPtr)
+                }
+            }
+        }
     }
 
     actual fun garbageCollect() {
-        throw NotImplementedError("DO SOMETHING")
+        wrapWithErrorThrower { error ->
+            rocksdb.rocksdb_backup_engine_garbage_collect(native, error)
+        }
     }
 
     actual fun purgeOldBackups(numBackupsToKeep: Int) {
@@ -78,7 +111,9 @@ internal constructor(
     }
 
     actual fun deleteBackup(backupId: Int) {
-        throw NotImplementedError("DO SOMETHING")
+        wrapWithErrorThrower { error ->
+            rocksdb.rocksdb_backup_engine_delete_backup(native, backupId.toUInt(), error)
+        }
     }
 
     actual fun restoreDbFromBackup(

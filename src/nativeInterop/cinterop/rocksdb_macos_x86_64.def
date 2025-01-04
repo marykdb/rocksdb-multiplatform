@@ -1,7 +1,5 @@
-language = Objective-C
 headers = c.h
 package = rocksdb
-staticLibraries = libobjectiveRocks.a
-libraryPaths = xcodeBuild/Build/Products/Release/
+staticLibraries = librocksdb.a libbz2.a libz.a
+libraryPaths = rocksdb/build/macos_x86_64 /opt/homebrew/opt/bzip2/lib /opt/homebrew/opt/zlib/lib
 noStringConversion = rocksdb_key_may_exist rocksdb_key_may_exist_cf rocksdb_put rocksdb_put_cf rocksdb_get rocksdb_get_cf rocksdb_delete rocksdb_delete_cf rocksdb_merge rocksdb_merge_cf rocksdb_writebatch_delete rocksdb_writebatch_delete_cf rocksdb_writebatch_put rocksdb_writebatch_put_cf rocksdb_writebatch_merge rocksdb_writebatch_merge_cf rocksdb_writebatch_delete_range rocksdb_writebatch_delete_range_cf rocksdb_writebatch_put_log_data rocksdb_create_column_family rocksdb_delete_range_cf rocksdb_iter_seek rocksdb_iter_seek_for_prev rocksdb_compact_range_cf_opt rocksdb_compact_range_cf rocksdb_compact_range_opt rocksdb_compact_range
-
