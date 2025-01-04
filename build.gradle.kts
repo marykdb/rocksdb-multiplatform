@@ -24,10 +24,6 @@ version = "9.6.1"
 val rocksDBJVMVersion = "9.6.1"
 val rocksDBAndroidVersion = "9.6.1"
 
-
-val kotlinNativeDataPath = System.getenv("KONAN_DATA_DIR")?.let { File(it) }
-    ?: File(System.getProperty("user.home")).resolve(".konan")
-
 val rocksdbBuildPath = "./rocksdb/build"
 
 val buildMacOS by tasks.creating(Exec::class) {
@@ -97,8 +93,8 @@ kotlin {
                 optIn("kotlinx.cinterop.BetaInteropApi")
             }
         }
-        val commonMain by getting {}
-        val commonTest by getting {
+        commonMain {}
+        commonTest {
             dependencies {
                 implementation(kotlin("test"))
             }
@@ -108,7 +104,7 @@ kotlin {
                 api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion")
             }
         }
-        val jvmTest by getting {
+        jvmTest {
             dependencies {
                 implementation(kotlin("test"))
             }
@@ -118,19 +114,24 @@ kotlin {
                 api("io.maryk.rocksdb:rocksdb-android:$rocksDBAndroidVersion")
             }
         }
-        val androidUnitTest by getting {
+        androidUnitTest {
             kotlin.srcDir("src/jvmTest/kotlin")
         }
     }
 
-    fun KotlinNativeTarget.setupTarget(buildName: String, buildTask: Exec) {
+    fun KotlinNativeTarget.setupTarget(buildName: String, buildTask: Exec, extraCFlags: String = "") {
         binaries {
             executable {
                 freeCompilerArgs += listOf("-g")
             }
             getTest("DEBUG").linkerOpts = mutableListOf(
-                "-L$rocksdbBuildPath/${buildName}", "-lrocksdb"
+                "-L$rocksdbBuildPath/${buildName}"
             )
+        }
+
+        val task = tasks.create("buildDependencies_$buildName", Exec::class) {
+            workingDir = projectDir
+            commandLine("./buildDependencies.sh", "--extra-cflags", extraCFlags, "--output-dir", "rocksdb/build/$buildName")
         }
 
         compilations["main"].apply {
@@ -140,32 +141,48 @@ kotlin {
                     includeDirs("./rocksdb/include/rocksdb")
                     defFile("src/nativeInterop/cinterop/rocksdb_${buildName}.def")
                     tasks[interopProcessingTaskName].dependsOn(buildTask)
+                    tasks[interopProcessingTaskName].dependsOn(task)
                 }
             }
         }
     }
 
+    val isMacOs = System.getProperty("os.name").contains("Mac", ignoreCase = true)
+
 //    iosX64 {
 //        setupAppleTarget("ios_simulator_x86_64", buildIOSSimulator)
 //    }
+
     iosArm64 {
-        setupTarget("ios_arm64", buildIOS)
+        val sdkPathProvider = providers.exec {
+            commandLine("xcrun", "--sdk", "iphoneos", "--show-sdk-path")
+        }.standardOutput.asText
+        val sdkPath: String by lazy {
+            if (isMacOs) {
+                sdkPathProvider.get().trim()
+            } else ""
+        }
+        setupTarget("ios_arm64", buildIOS, "-arch arm64 -target arm64-apple-ios13.0-simulator -isysroot $sdkPath")
     }
     iosSimulatorArm64 {
-        setupTarget("ios_simulator_arm64", buildIOSSimulator)
+        val sdkPathProvider = providers.exec {
+            commandLine("xcrun", "--sdk", "iphonesimulator", "--show-sdk-path")
+        }.standardOutput.asText
+        val sdkPath: String by lazy {
+            if (isMacOs) {
+                sdkPathProvider.get().trim()
+            } else ""
+        }
+        setupTarget("ios_simulator_arm64", buildIOSSimulator, "-arch arm64 -target arm64-apple-ios13.0-simulator -isysroot $sdkPath")
     }
-
     macosX64 {
-        setupTarget("macos_x86_64", buildMacOS)
+        setupTarget("macos_x86_64", buildMacOS, "-arch arm64 -target arm64-apple-macos11.0")
     }
     macosArm64 {
-        setupTarget("macos_arm64", buildMacOS)
-    }
-    linuxArm64 {
-        setupTarget("linux_arm64", buildLinux)
+        setupTarget("macos_arm64", buildMacOS, "-arch arm64 -target arm64-apple-macos11.0")
     }
     linuxX64 {
-        setupTarget("linux_x86_64", buildLinux)
+        setupTarget("linux_x86_64", buildLinux, "-march=x86-64")
     }
 }
 
