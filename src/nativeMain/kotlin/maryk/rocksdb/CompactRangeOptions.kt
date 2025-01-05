@@ -52,11 +52,12 @@ actual class CompactRangeOptions internal constructor(
     }
 
     actual fun targetPathId(): Int {
-        throw NotImplementedError("DO SOMETHING")
+        return rocksdb.rocksdb_compactoptions_get_target_path_id(native)
     }
 
     actual fun setTargetPathId(targetPathId: Int): CompactRangeOptions {
-        throw NotImplementedError("DO SOMETHING")
+        rocksdb.rocksdb_compactoptions_set_target_path_id(native, targetPathId)
+        return this
     }
 
     actual fun bottommostLevelCompaction(): BottommostLevelCompaction? =
@@ -68,18 +69,20 @@ actual class CompactRangeOptions internal constructor(
     }
 
     actual fun allowWriteStall(): Boolean {
-        throw NotImplementedError("DO SOMETHING")
+        return rocksdb.rocksdb_compactoptions_get_allow_write_stall(native).toBoolean()
     }
 
     actual fun setAllowWriteStall(allowWriteStall: Boolean): CompactRangeOptions {
-        throw NotImplementedError("DO SOMETHING")
+        rocksdb.rocksdb_compactoptions_set_allow_write_stall(native, allowWriteStall.toUByte())
+        return this
     }
 
     actual fun maxSubcompactions(): Int {
-        throw NotImplementedError("DO SOMETHING")
+        return rocksdb.rocksdb_compactoptions_get_max_subcompactions(native)
     }
 
     actual fun setMaxSubcompactions(maxSubcompactions: Int): CompactRangeOptions {
-        throw NotImplementedError("DO SOMETHING")
+        rocksdb.rocksdb_compactoptions_set_max_subcompactions(native, maxSubcompactions)
+        return this
     }
 }
