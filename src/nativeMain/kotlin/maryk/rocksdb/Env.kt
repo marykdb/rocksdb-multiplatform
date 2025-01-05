@@ -3,64 +3,33 @@ package maryk.rocksdb
 import cnames.structs.rocksdb_env_t
 import kotlinx.cinterop.CPointer
 import rocksdb.rocksdb_create_default_env
-import rocksdb.rocksdb_env_get_background_threads
-import rocksdb.rocksdb_env_get_bottom_priority_background_threads
-import rocksdb.rocksdb_env_get_high_priority_background_threads
-import rocksdb.rocksdb_env_get_low_priority_background_threads
-import rocksdb.rocksdb_env_lower_high_priority_thread_pool_cpu_priority
-import rocksdb.rocksdb_env_lower_high_priority_thread_pool_io_priority
-import rocksdb.rocksdb_env_lower_thread_pool_cpu_priority
-import rocksdb.rocksdb_env_lower_thread_pool_io_priority
-import rocksdb.rocksdb_env_set_background_threads
-import rocksdb.rocksdb_env_set_bottom_priority_background_threads
-import rocksdb.rocksdb_env_set_high_priority_background_threads
-import rocksdb.rocksdb_env_set_low_priority_background_threads
 
 actual abstract class Env
 protected constructor(internal val native: CPointer<rocksdb_env_t>?)
     : RocksObject() {
-    actual fun getBackgroundThreads(priority: Priority): Int = when(priority) {
-        Priority.BOTTOM -> rocksdb_env_get_bottom_priority_background_threads(native)
-        Priority.HIGH -> rocksdb_env_get_high_priority_background_threads(native)
-        Priority.LOW -> rocksdb_env_get_low_priority_background_threads(native)
-        Priority.TOTAL -> rocksdb_env_get_background_threads(native)
-        Priority.USER -> throw NotImplementedError("TODO")
-    }
+    actual fun getBackgroundThreads(priority: Priority): Int =
+        rocksdb.rocksdb_env_get_background_threads_with_priority(native, priority.value.toInt())
 
     actual fun setBackgroundThreads(number: Int, priority: Priority): Env {
-        when(priority) {
-            Priority.BOTTOM -> rocksdb_env_set_bottom_priority_background_threads(native, number)
-            Priority.HIGH -> rocksdb_env_set_high_priority_background_threads(native, number)
-            Priority.LOW -> rocksdb_env_set_low_priority_background_threads(native, number)
-            Priority.TOTAL -> rocksdb_env_set_background_threads(native, number)
-            Priority.USER -> throw NotImplementedError("TODO")
-        }
+        rocksdb.rocksdb_env_set_background_threads_with_priority(native, number, priority.value.toInt())
         return this
     }
 
     actual fun getThreadPoolQueueLen(priority: Priority): Int =
-        throw NotImplementedError("DO SOMETHING")
+        rocksdb.rocksdb_env_get_thread_pool_queue_length(native)
 
     actual fun incBackgroundThreadsIfNeeded(number: Int, priority: Priority): Env {
-        throw NotImplementedError("DO SOMETHING")
-//        return this
+        rocksdb.rocksdb_env_inc_background_threads_if_needed(native, number, priority.value.toInt())
+        return this
     }
 
     actual fun lowerThreadPoolIOPriority(priority: Priority): Env {
-        when (priority) {
-            Priority.HIGH -> rocksdb_env_lower_high_priority_thread_pool_io_priority(native)
-            Priority.TOTAL -> rocksdb_env_lower_thread_pool_io_priority(native)
-            else -> throw NotImplementedError("TODO")
-        }
+        rocksdb.rocksdb_env_lower_with_priority_thread_pool_io_priority(native, priority.value.toInt())
         return this
     }
 
     actual fun lowerThreadPoolCPUPriority(priority: Priority): Env {
-        when (priority) {
-            Priority.HIGH -> rocksdb_env_lower_high_priority_thread_pool_cpu_priority(native)
-            Priority.TOTAL -> rocksdb_env_lower_thread_pool_cpu_priority(native)
-            else -> throw NotImplementedError("TODO"+priority)
-        }
+        rocksdb.rocksdb_env_lower_with_priority_thread_pool_cpu_priority(native, priority.value.toInt())
         return this
     }
 

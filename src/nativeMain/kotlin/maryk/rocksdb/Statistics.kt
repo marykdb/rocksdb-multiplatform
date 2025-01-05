@@ -57,7 +57,7 @@ actual class Statistics internal constructor(
 
     actual fun reset() {
         wrapWithErrorThrower { error ->
-            throw NotImplementedError("DO SOMETHING")
+            rocksdb.rocksdb_options_statistics_reset(native, error)
         }
     }
 }

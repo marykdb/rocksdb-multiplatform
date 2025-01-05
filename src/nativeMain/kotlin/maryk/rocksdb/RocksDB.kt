@@ -88,7 +88,7 @@ internal constructor(
     private val defaultWriteOptions = WriteOptions()
 
     actual fun getName(): String {
-        return "IMPLEMENT"
+        return rocksdb.rocksdb_get_name(native)!!.toKString()
     }
 
     actual override fun close() {
@@ -149,9 +149,17 @@ internal constructor(
     }
 
     actual fun dropColumnFamilies(columnFamilies: List<ColumnFamilyHandle>) {
-//        wrapWithErrorThrower { error ->
-//            native.dropColumnFamilies(columnFamilies.map { it.native }, error)
-//        }
+        wrapWithErrorThrower { error ->
+            memScoped {
+                val cfHandles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilies.size)
+
+                columnFamilies.forEachIndexed { index, handle ->
+                    cfHandles[index] = handle.native
+                }
+
+                rocksdb.rocksdb_drop_column_families(native, cfHandles, columnFamilies.size.toULong(), error)
+            }
+        }
     }
 
     actual fun put(key: ByteArray, value: ByteArray) {
@@ -1112,26 +1120,24 @@ internal constructor(
     }
 
     actual fun getSnapshot(): Snapshot? {
-        throw NotImplementedError("DO SOMETHING")
-//        return Snapshot(native.snapshot())
+        return Snapshot(
+            rocksdb.rocksdb_create_snapshot(native)!!
+        )
     }
 
     actual fun releaseSnapshot(snapshot: Snapshot) {
-        throw NotImplementedError("DO SOMETHING")
-//        snapshot.native.close()
+        rocksdb.rocksdb_release_snapshot(native, snapshot.native)
     }
 
     actual fun getProperty(
         columnFamilyHandle: ColumnFamilyHandle,
         property: String
     ): String? {
-        throw NotImplementedError("DO SOMETHING")
-//        return native.valueForProperty(property, columnFamilyHandle.native)
+        return rocksdb.rocksdb_property_value_cf(native, columnFamilyHandle.native, property)?.toKString()
     }
 
     actual fun getProperty(property: String): String? {
-        throw NotImplementedError("DO SOMETHING")
-//        return native.valueForProperty(property)
+        return rocksdb.rocksdb_property_value(native, property)?.toKString()
     }
 
     actual fun getMapProperty(property: String): Map<String, String> {
@@ -1179,10 +1185,9 @@ internal constructor(
     }
 
     actual fun resetStats() {
-        throw NotImplementedError("DO SOMETHING")
-//        wrapWithErrorThrower { error ->
-//            native.resetStats(error)
-//        }
+        wrapWithErrorThrower { error ->
+            rocksdb.rocksdb_reset_stats(native, error)
+        }
     }
 
     actual fun compactRange() {
@@ -1249,54 +1254,58 @@ internal constructor(
     }
 
     actual fun pauseBackgroundWork() {
-        throw NotImplementedError("DO SOMETHING")
-//        wrapWithErrorThrower { error ->
-//            native.pauseBackgroundWork(error)
-//        }
+        wrapWithErrorThrower { error ->
+            rocksdb.rocksdb_pause_background_work(native)
+        }
     }
 
     actual fun continueBackgroundWork() {
-        throw NotImplementedError("DO SOMETHING")
-//        wrapWithErrorThrower { error ->
-//            native.continueBackgroundWork(error)
-//        }
+        wrapWithErrorThrower { error ->
+            rocksdb.rocksdb_continue_background_work(native)
+        }
     }
 
     actual fun enableAutoCompaction(columnFamilyHandles: List<ColumnFamilyHandle>) {
-        throw NotImplementedError("DO SOMETHING")
-//        wrapWithErrorThrower { error ->
-//            native.enableAutoCompaction(columnFamilyHandles.map { it.native }, error)
-//        }
+        wrapWithErrorThrower { error ->
+            memScoped {
+                val columnFamilyHandlePointers = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyHandles.size)
+                columnFamilyHandles.forEachIndexed { index, handle ->
+                    columnFamilyHandlePointers[index] = handle.native
+                }
+
+                // Call the native RocksDB function
+                rocksdb.rocksdb_enable_auto_compaction(
+                    db = native,
+                    column_family_handles = columnFamilyHandlePointers,
+                    num_handles = columnFamilyHandles.size.toULong(),
+                    errptr = error
+                )
+            }
+        }
     }
 
     actual fun numberLevels(): Int {
-        throw NotImplementedError("DO SOMETHING")
-//        return native.numberLevels()
+        return rocksdb.rocksdb_number_levels(native)
     }
 
     actual fun numberLevels(columnFamilyHandle: ColumnFamilyHandle): Int {
-        throw NotImplementedError("DO SOMETHING")
-//        return native.numberLevelsInColumnFamily(columnFamilyHandle.native)
+        return rocksdb.rocksdb_number_levels_cf(native, columnFamilyHandle.native)
     }
 
     actual fun maxMemCompactionLevel(): Int {
-        throw NotImplementedError("DO SOMETHING")
-//        return native.maxMemCompactionLevel()
+        return rocksdb.rocksdb_max_mem_compaction_level(native)
     }
 
     actual fun maxMemCompactionLevel(columnFamilyHandle: ColumnFamilyHandle): Int {
-        throw NotImplementedError("DO SOMETHING")
-//        return native.maxMemCompactionLevelInColumnFamily(columnFamilyHandle.native)
+        return rocksdb.rocksdb_max_mem_compaction_level_cf(native, columnFamilyHandle.native)
     }
 
     actual fun level0StopWriteTrigger(): Int {
-        throw NotImplementedError("DO SOMETHING")
-//        return native.level0StopWriteTrigger()
+        return rocksdb.rocksdb_level0_stop_write_trigger(native)
     }
 
     actual fun level0StopWriteTrigger(columnFamilyHandle: ColumnFamilyHandle): Int {
-        throw NotImplementedError("DO SOMETHING")
-//        return native.level0StopWriteTriggerInColumnFamily(columnFamilyHandle.native)
+        return rocksdb.rocksdb_level0_stop_write_trigger_cf(native, columnFamilyHandle.native)
     }
 
     actual fun getEnv(): Env {
@@ -1310,10 +1319,9 @@ internal constructor(
     }
 
     actual fun syncWal() {
-        throw NotImplementedError("DO SOMETHING")
-//        wrapWithErrorThrower { error ->
-//            native.syncWal(error)
-//        }
+        wrapWithErrorThrower { error ->
+            rocksdb.rocksdb_sync_wal(native, error)
+        }
     }
 
     actual fun getLatestSequenceNumber(): Long =
@@ -1410,10 +1418,9 @@ internal constructor(
     }
 
     actual fun verifyChecksum() {
-        throw NotImplementedError("DO SOMETHING")
-//        wrapWithErrorThrower { error ->
-//            native.verifyChecksum(error)
-//        }
+        wrapWithErrorThrower { error ->
+            rocksdb.rocksdb_verify_checksum(native, error)
+        }
     }
 
     actual fun getDefaultColumnFamily() = ColumnFamilyHandle(
@@ -1421,17 +1428,15 @@ internal constructor(
     )
 
     actual fun promoteL0(columnFamilyHandle: ColumnFamilyHandle, targetLevel: Int) {
-        throw NotImplementedError("DO SOMETHING")
-//        wrapWithErrorThrower { error ->
-//            native.promoteL0(targetLevel, columnFamilyHandle.native, error)
-//        }
+        wrapWithErrorThrower { error ->
+            rocksdb.rocksdb_promote_l0(native, columnFamilyHandle.native, targetLevel, error)
+        }
     }
 
     actual fun promoteL0(targetLevel: Int) {
-        throw NotImplementedError("DO SOMETHING")
-//        wrapWithErrorThrower { error ->
-//            native.promoteL0(targetLevel, error)
-//        }
+        wrapWithErrorThrower { error ->
+            rocksdb.rocksdb_promote_l0(native, getDefaultColumnFamily().native, targetLevel, error)
+        }
     }
 }
 

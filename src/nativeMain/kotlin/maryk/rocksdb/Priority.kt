@@ -6,6 +6,6 @@ actual enum class Priority(
     BOTTOM(0u),
     LOW(1u),
     HIGH(2u),
-    TOTAL(3u),
-    USER(4u);
+    USER(3u),
+    TOTAL(4u);
 }
