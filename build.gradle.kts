@@ -119,6 +119,8 @@ kotlin {
         }
     }
 
+    val isMacOs = System.getProperty("os.name").contains("Mac", ignoreCase = true)
+
     fun KotlinNativeTarget.setupTarget(buildName: String, buildTask: Exec, extraCFlags: String = "") {
         binaries {
             executable {
@@ -131,27 +133,33 @@ kotlin {
 
         val task = tasks.create("buildDependencies_$buildName", Exec::class) {
             workingDir = projectDir
-            commandLine("./buildDependencies.sh", "--extra-cflags", extraCFlags, "--output-dir", "rocksdb/build/$buildName")
+            val options = buildList<String> {
+                if (buildName.startsWith("linux") && isMacOs) {
+                    addAll(listOf("docker", "run", "--rm", "--platform"))
+                    if (extraCFlags == "-march=x86-64") {
+                        add("linux/amd64")
+                    } else {
+                        add("linux/arm64/v8")
+                    }
+                    addAll(listOf("-v", "${project.projectDir}:/rocks", "-w", "/rocks", "buildpack-deps"))
+                }
+                addAll(listOf("./buildDependencies.sh", "--extra-cflags", extraCFlags, "--output-dir", "rocksdb/build/$buildName"))
+            }
+            commandLine(*options.toTypedArray())
         }
 
         compilations["main"].apply {
             cinterops {
                 create("rocksdb") {
                     defFile("src/nativeInterop/cinterop/rocksdbC.def")
-                    includeDirs("./rocksdb/include/rocksdb")
                     defFile("src/nativeInterop/cinterop/rocksdb_${buildName}.def")
+                    includeDirs("rocksdb/include/rocksdb")
                     tasks[interopProcessingTaskName].dependsOn(buildTask)
                     tasks[interopProcessingTaskName].dependsOn(task)
                 }
             }
         }
     }
-
-    val isMacOs = System.getProperty("os.name").contains("Mac", ignoreCase = true)
-
-//    iosX64 {
-//        setupAppleTarget("ios_simulator_x86_64", buildIOSSimulator)
-//    }
 
     iosArm64 {
         val sdkPathProvider = providers.exec {

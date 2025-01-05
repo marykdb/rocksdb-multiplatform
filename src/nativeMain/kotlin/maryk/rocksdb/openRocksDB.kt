@@ -10,7 +10,7 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.set
 import kotlinx.cinterop.toCStringArray
 import kotlinx.cinterop.toCValues
-import maryk.wrapWithNullErrorThrower2
+import maryk.wrapWithNullErrorThrower
 import rocksdb.rocksdb_open
 import rocksdb.rocksdb_open_column_families
 import rocksdb.rocksdb_open_for_read_only
@@ -25,7 +25,7 @@ actual fun openRocksDB(path: String): RocksDB {
 }
 
 actual fun openRocksDB(options: Options, path: String): RocksDB {
-    return Unit.wrapWithNullErrorThrower2 { error ->
+    return Unit.wrapWithNullErrorThrower { error ->
         rocksdb_open(options.native, path, error)?.let(::RocksDB)
     } ?: throw RocksDBException("No Database could be opened at $path")
 }
@@ -46,7 +46,7 @@ actual fun openRocksDB(
     columnFamilyDescriptors: List<ColumnFamilyDescriptor>,
     columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ): RocksDB =
-    Unit.wrapWithNullErrorThrower2 { error ->
+    Unit.wrapWithNullErrorThrower { error ->
         ColumnFamilyOptions().use { columnFamilyOptions ->
             memScoped {
                 val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
@@ -81,7 +81,7 @@ actual fun openReadOnlyRocksDB(path: String): RocksDB =
         openReadOnlyRocksDB(it, path)
     }
 
-actual fun openReadOnlyRocksDB(options: Options, path: String): RocksDB = Unit.wrapWithNullErrorThrower2 { error ->
+actual fun openReadOnlyRocksDB(options: Options, path: String): RocksDB = Unit.wrapWithNullErrorThrower { error ->
     Options().use {
         rocksdb_open_for_read_only(options.native, path, 0u, error)?.let(::RocksDB)
     }
@@ -103,7 +103,7 @@ actual fun openReadOnlyRocksDB(
     columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ): RocksDB =
     memScoped {
-        Unit.wrapWithNullErrorThrower2 { error ->
+        Unit.wrapWithNullErrorThrower { error ->
             memScoped {
                 ColumnFamilyOptions().use { columnFamilyOptions ->
                     val columnFamilyOptionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)

@@ -24,7 +24,7 @@ import maryk.toByteArray
 import maryk.toUByte
 import maryk.wrapWithErrorThrower
 import maryk.wrapWithMultiErrorThrower
-import maryk.wrapWithNullErrorThrower2
+import maryk.wrapWithNullErrorThrower
 import platform.posix.size_tVar
 import platform.posix.uint64_tVar
 import rocksdb.rocksdb_close
@@ -562,7 +562,7 @@ internal constructor(
         }
     }
 
-    actual fun get(key: ByteArray, value: ByteArray): Int = wrapWithNullErrorThrower2 { error ->
+    actual fun get(key: ByteArray, value: ByteArray): Int = wrapWithNullErrorThrower { error ->
         memScoped {
             val valueLength = alloc<size_tVar>()
             val result = rocksdb_get(native, defaultReadOptions.native, key.toCValues(), key.size.toULong(), valueLength.ptr, error)
@@ -590,7 +590,7 @@ internal constructor(
     ): Int {
         memScoped {
             val valueLength = alloc<size_tVar>()
-            return wrapWithNullErrorThrower2 { error ->
+            return wrapWithNullErrorThrower { error ->
                 rocksdb_get(
                     native,
                     defaultReadOptions.native,
@@ -624,7 +624,7 @@ internal constructor(
     ): Int =
         get(columnFamilyHandle, defaultReadOptions, key, offset, len, value, vOffset, vLen)
 
-    actual fun get(opt: ReadOptions, key: ByteArray, value: ByteArray): Int = wrapWithNullErrorThrower2 { error ->
+    actual fun get(opt: ReadOptions, key: ByteArray, value: ByteArray): Int = wrapWithNullErrorThrower { error ->
         memScoped {
             val valueLength = alloc<size_tVar>()
             val result = rocksdb_get(native, opt.native, key.toCValues(), key.size.toULong(), valueLength.ptr, error)
@@ -651,7 +651,7 @@ internal constructor(
     ): Int {
         memScoped {
             val valueLength = alloc<size_tVar>()
-            return wrapWithNullErrorThrower2 { error ->
+            return wrapWithNullErrorThrower { error ->
                 val retrieved = rocksdb_get(
                     native,
                     opt.native,
@@ -681,7 +681,7 @@ internal constructor(
     ): Int {
         memScoped {
             val valueLength = alloc<size_tVar>()
-            return wrapWithNullErrorThrower2 { error ->
+            return wrapWithNullErrorThrower { error ->
                 val retrieved = rocksdb_get_cf(
                     native,
                     defaultReadOptions.native,
@@ -718,7 +718,7 @@ internal constructor(
     ): Int {
         memScoped {
             val valueLength = alloc<size_tVar>()
-            return wrapWithNullErrorThrower2 { error ->
+            return wrapWithNullErrorThrower { error ->
                 rocksdb_get_cf(
                     native,
                     opt.native,
@@ -752,7 +752,7 @@ internal constructor(
     ): ByteArray? = get(columnFamilyHandle, defaultReadOptions, key, offset, len)
 
     actual fun get(opt: ReadOptions, key: ByteArray): ByteArray? =
-        wrapWithNullErrorThrower2 { error ->
+        wrapWithNullErrorThrower { error ->
             memScoped {
                 val valueLength = alloc<size_tVar>()
                 val result = rocksdb_get(native, opt.native, key.toCValues(), key.size.toULong(), valueLength.ptr, error)
@@ -768,7 +768,7 @@ internal constructor(
         key: ByteArray,
         offset: Int,
         len: Int
-    ): ByteArray? = wrapWithNullErrorThrower2 { error ->
+    ): ByteArray? = wrapWithNullErrorThrower { error ->
         memScoped {
             val valueLength = alloc<size_tVar>()
             val result = rocksdb_get(
@@ -790,7 +790,7 @@ internal constructor(
         columnFamilyHandle: ColumnFamilyHandle,
         opt: ReadOptions,
         key: ByteArray
-    ): ByteArray? = wrapWithNullErrorThrower2 { error ->
+    ): ByteArray? = wrapWithNullErrorThrower { error ->
         memScoped {
             val valueLength = alloc<size_tVar>()
             val result = rocksdb_get_cf(native, opt.native, columnFamilyHandle.native, key.toCValues(), key.size.toULong(), valueLength.ptr, error)
@@ -808,7 +808,7 @@ internal constructor(
         offset: Int,
         len: Int
     ): ByteArray? {
-        return wrapWithNullErrorThrower2 { error ->
+        return wrapWithNullErrorThrower { error ->
             memScoped {
                 val valueLength = alloc<size_tVar>()
                 val result = rocksdb_get_cf(

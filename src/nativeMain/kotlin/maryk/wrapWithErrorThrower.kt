@@ -24,7 +24,7 @@ fun <T: Any, R: Any> T.wrapWithErrorThrower(runnable: T.(CValuesRef<CPointerVar<
     }
 }
 
-fun <T: Any, R: Any> T.wrapWithNullErrorThrower2(runnable: T.(CValuesRef<CPointerVar<ByteVar>>) -> R?): R? {
+fun <T: Any, R: Any> T.wrapWithNullErrorThrower(runnable: T.(CValuesRef<CPointerVar<ByteVar>>) -> R?): R? {
     memScoped {
         val errorRef = alloc<CPointerVar<ByteVar>>()
         val result = runnable(errorRef.ptr)
