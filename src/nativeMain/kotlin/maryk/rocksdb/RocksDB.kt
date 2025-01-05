@@ -14,6 +14,7 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.nativeHeap.free
 import kotlinx.cinterop.set
 import kotlinx.cinterop.toCValues
 import kotlinx.cinterop.toKString
@@ -1141,18 +1142,60 @@ internal constructor(
     }
 
     actual fun getMapProperty(property: String): Map<String, String> {
-//        @Suppress("UNCHECKED_CAST")
-//        return native.valueForMapProperty(property) as Map<String, String>
-        throw NotImplementedError("DO SOMETHING")
+        memScoped {
+            val numEntriesPtr = alloc<size_tVar>()
+            val entrySizesPtr = alloc<CPointerVar<size_tVar>>()
+
+            val mapInArray = rocksdb.rocksdb_property_map_value(
+                native,
+                property,
+                numEntriesPtr.ptr,
+                entrySizesPtr.ptr,
+            ) ?: return emptyMap()
+
+            val numEntries = numEntriesPtr.value.toInt()
+
+            return buildMap {
+                repeat(numEntries) { i ->
+                    val key = mapInArray[i * 2]!!.toKString()
+                    val value = mapInArray[i * 2 + 1]!!.toKString()
+                    put(key, value)
+                }
+            }.also {
+                rocksdb.rocksdb_free(mapInArray)
+            }
+        }
     }
 
     actual fun getMapProperty(
         columnFamilyHandle: ColumnFamilyHandle,
         property: String
     ): Map<String, String> {
-        throw NotImplementedError("DO SOMETHING")
-//        @Suppress("UNCHECKED_CAST")
-//        return native.valueForMapProperty(property, columnFamilyHandle.native) as Map<String, String>
+        memScoped {
+            val numEntriesPtr = alloc<size_tVar>()
+            val entrySizesPtr = alloc<CPointerVar<size_tVar>>()
+
+            val entriesPtr = rocksdb.rocksdb_property_map_value_cf(
+                native,
+                columnFamilyHandle.native,
+                property,
+                numEntriesPtr.ptr,
+                entrySizesPtr.ptr,
+            ) ?: return emptyMap()
+
+            val numEntries = numEntriesPtr.value.toInt()
+
+            return buildMap {
+                // Iterate through pairs (even indices are keys, odd indices are values)
+                for (i in 0 until numEntries * 2 step 2) {
+                    val key = entriesPtr[i]!!.toKString()
+                    val value = entriesPtr[i + 1]!!.toKString()
+                    put(key, value)
+                }
+            }.also {
+                rocksdb.rocksdb_free(entriesPtr)
+            }
+        }
     }
 
     actual fun getLongProperty(property: String): Long {
