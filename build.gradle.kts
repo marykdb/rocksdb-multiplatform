@@ -176,7 +176,7 @@ kotlin {
         setupTarget("ios_simulator_arm64", buildIOSSimulator, "-arch arm64 -target arm64-apple-ios13.0-simulator -isysroot $sdkPath")
     }
     macosX64 {
-        setupTarget("macos_x86_64", buildMacOS, "-arch arm64 -target arm64-apple-macos11.0")
+        setupTarget("macos_x86_64", buildMacOS, "-arch x86_64 -target x86_64-apple-macos11.0")
     }
     macosArm64 {
         setupTarget("macos_arm64", buildMacOS, "-arch arm64 -target arm64-apple-macos11.0")
