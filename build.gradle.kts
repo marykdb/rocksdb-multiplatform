@@ -188,9 +188,9 @@ kotlin {
     macosArm64 {
         setupTarget("macos_arm64", buildMacOS, "-arch arm64 -target arm64-apple-macos11.0")
     }
-    linuxX64 {
-        setupTarget("linux_x86_64", buildLinux, "-march=x86-64")
-    }
+//    linuxX64 {
+//        setupTarget("linux_x86_64", buildLinux, "-march=x86-64")
+//    }
 }
 
 // Creates the folders for the database
