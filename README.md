@@ -17,17 +17,13 @@ across different platforms while maintaining a high level of performance and rel
 
 ## RocksDB API Support
 
-The project supports the full RocksDB Java interfaces on the JVM and Android platforms. However, on iOS 
-and macOS native platforms, the implementation is limited to what is supported by ObjectiveRocks. 
+The project supports the full RocksDB Java interfaces on the JVM and Android platforms. 
 This common library includes most common operations, but if you need additional features, you can request 
 them by creating an issue or submitting a merge request.
 
 ## Native platforms
-
-Currently, only Apple platforms are supported for native compilations, as
-the implementation relies on [ObjectiveRocks](https://github.com/marykdb/ObjectiveRocks), which is an Objective-C implementation.
-Kotlin currently only supports Objective-C and C interop, and the C API of RocksDB is too limited for the current use case. 
-Once a C++ interop is introduced for Kotlin, a more native interop can be created to support more platforms.
+Currently, only Apple platforms are supported for native compilations. Since the implementation is based on the RocksDB C API,
+other native platforms should be able to be added in the future.
 
 ## Reference
 
@@ -38,7 +34,7 @@ You can refer to the [API reference](src/commonMain/kotlin/maryk/rocksdb) or the
 The dependency is published in Maven Central, so you can easily add it to your project:
 
 ```kotlin
-implementation("io.maryk.rocksdb:rocksdb-multiplatform:8.0.0")
+implementation("io.maryk.rocksdb:rocksdb-multiplatform:9.6.1")
 ```
 
 ## Usage Example
