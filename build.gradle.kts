@@ -151,8 +151,7 @@ kotlin {
         compilations["main"].apply {
             cinterops {
                 create("rocksdb") {
-                    defFile("src/nativeInterop/cinterop/rocksdbC.def")
-                    defFile("src/nativeInterop/cinterop/rocksdb_${buildName}.def")
+                    defFile("src/nativeInterop/cinterop/rocksdb.def")
                     includeDirs("rocksdb/include/rocksdb")
                     tasks[interopProcessingTaskName].dependsOn(buildTask)
                     tasks[interopProcessingTaskName].dependsOn(task)

@@ -4,7 +4,7 @@
 # buildDependencies.sh
 #
 # This script downloads, verifies, and builds static libraries
-# for zlib and bzip2 into a specified output directory.
+# for zlib, bzip2, and zstd into a specified output directory.
 #
 # Usage:
 #   chmod +x buildDependencies.sh
@@ -12,7 +12,7 @@
 #
 # Options:
 #   --extra-cflags   Additional CFLAGS to pass to the compiler.
-#   --output-dir     Directory where libz.a and libbz2.a will be placed.
+#   --output-dir     Directory where libz.a, libbz2.a, and libzstd.a will be placed.
 #                    Defaults to the current directory.
 #   -h, --help       Display this help message.
 
@@ -31,6 +31,10 @@ DEFAULT_BZIP2_VER="1.0.8"
 DEFAULT_BZIP2_SHA256="ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
 DEFAULT_BZIP2_DOWNLOAD_BASE="http://sourceware.org/pub/bzip2"
 
+DEFAULT_ZSTD_VER="1.5.6"
+DEFAULT_ZSTD_SHA256="8c29e06cf42aacc1eafc4077ae2ec6c6fcb96a626157e0593d5e82a34fd403c1"
+DEFAULT_ZSTD_DOWNLOAD_BASE="https://github.com/facebook/zstd/releases/download/v${DEFAULT_ZSTD_VER}"
+
 DEFAULT_OUTPUT_DIR="$(pwd)"
 EXTRA_CFLAGS=""
 
@@ -43,7 +47,7 @@ Usage: $0 [OPTIONS]
 
 Options:
   --extra-cflags "FLAGS"    Additional CFLAGS to pass to the compiler.
-  --output-dir "/path"      Directory where libz.a and libbz2.a will be placed.
+  --output-dir "/path"      Directory where libz.a, libbz2.a, and libzstd.a will be placed.
                             Defaults to the current directory.
   -h, --help                Display this help message.
 
@@ -92,6 +96,11 @@ ZLIB_DOWNLOAD_BASE="${ZLIB_DOWNLOAD_BASE:-$DEFAULT_ZLIB_DOWNLOAD_BASE}"
 BZIP2_VER="${BZIP2_VER:-$DEFAULT_BZIP2_VER}"
 BZIP2_SHA256="${BZIP2_SHA256:-$DEFAULT_BZIP2_SHA256}"
 BZIP2_DOWNLOAD_BASE="${BZIP2_DOWNLOAD_BASE:-$DEFAULT_BZIP2_DOWNLOAD_BASE}"
+
+ZSTD_VER="${ZSTD_VER:-$DEFAULT_ZSTD_VER}"
+ZSTD_SHA256="${ZSTD_SHA256:-$DEFAULT_ZSTD_SHA256}"
+ZSTD_DOWNLOAD_BASE="${ZSTD_DOWNLOAD_BASE:-$DEFAULT_ZSTD_DOWNLOAD_BASE}"
+
 # Ensure DOWNLOAD_DIR exists
 mkdir -p "$DOWNLOAD_DIR"
 
@@ -155,6 +164,21 @@ build_bzip2() {
 }
 
 # ---------------------------------------------------------
+# Function to Build zstd
+# ---------------------------------------------------------
+build_zstd() {
+  local tarball="${DOWNLOAD_DIR}/zstd-${ZSTD_VER}.tar.gz"
+  local src_dir="${DOWNLOAD_DIR}/zstd-${ZSTD_VER}"
+  tar xzf "${tarball}" -C "${DOWNLOAD_DIR}"  > /dev/null
+  pushd "${src_dir}/lib" > /dev/null
+  CFLAGS="${EXTRA_CFLAGS} -fPIC -O2" make clean > /dev/null
+  CFLAGS="${EXTRA_CFLAGS} -fPIC -O2" make libzstd.a > /dev/null
+  cd ../../..
+  cp "${src_dir}/lib/libzstd.a" "${OUTPUT_DIR}/"
+  popd > /dev/null
+}
+
+# ---------------------------------------------------------
 # Main Execution Flow
 # ---------------------------------------------------------
 if [ -f "${OUTPUT_DIR}/libbz2.a" ]; then
@@ -167,7 +191,7 @@ else
 fi
 
 if [ -f "${OUTPUT_DIR}/libz.a" ]; then
-  echo "libz.a already exists in ${OUTPUT_DIR}, skipping libz build."
+  echo "libz.a already exists in ${OUTPUT_DIR}, skipping zlib build."
 else
   # Download, verify, and build zlib
   download_and_verify "zlib" "$ZLIB_VER" "$ZLIB_DOWNLOAD_BASE" "$ZLIB_SHA256"
@@ -175,4 +199,11 @@ else
   echo "✅ Finished building libz.a into ${OUTPUT_DIR}!"
 fi
 
-
+if [ -f "${OUTPUT_DIR}/libzstd.a" ]; then
+  echo "libzstd.a already exists in ${OUTPUT_DIR}, skipping zstd build."
+else
+  # Download, verify, and build zstd
+  download_and_verify "zstd" "$ZSTD_VER" "$ZSTD_DOWNLOAD_BASE" "$ZSTD_SHA256"
+  build_zstd
+  echo "✅ Finished building libzstd.a into ${OUTPUT_DIR}!"
+fi
