@@ -4,7 +4,6 @@ import cnames.structs.rocksdb_writebatch_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.toCValues
 import maryk.wrapWithErrorThrower
-import maryk.wrapWithNullErrorThrower
 import rocksdb.rocksdb_writebatch_clear
 import rocksdb.rocksdb_writebatch_count
 import rocksdb.rocksdb_writebatch_delete
@@ -111,13 +110,13 @@ actual abstract class AbstractWriteBatch internal constructor(
     }
 
     actual override fun rollbackToSavePoint() {
-        wrapWithNullErrorThrower { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_writebatch_rollback_to_save_point(nativeBase, error)
         }
     }
 
     actual override fun popSavePoint() {
-        wrapWithNullErrorThrower { error ->
+        wrapWithErrorThrower { error ->
             rocksdb_writebatch_pop_save_point(nativeBase, error)
         }
     }
