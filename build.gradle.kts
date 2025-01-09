@@ -3,6 +3,7 @@
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 import java.util.*
 
@@ -216,6 +217,19 @@ tasks.withType<Test> {
     this.dependsOn(createOrEraseDBFolders)
     this.doLast {
         project.layout.buildDirectory.dir("test-database").get().asFile.deleteRecursively()
+    }
+}
+
+kotlin.targets.withType<KotlinNativeTarget>().configureEach {
+    binaries.withType<TestExecutable>().all {
+        println("Configuring test binary for ${this.target.name} "+linkTaskName)
+
+        tasks.findByName("${this.target.name}Test")?.apply {
+            dependsOn(createOrEraseDBFolders)
+            doLast {
+                project.layout.buildDirectory.dir("test-database").get().asFile.deleteRecursively()
+            }
+        }
     }
 }
 
