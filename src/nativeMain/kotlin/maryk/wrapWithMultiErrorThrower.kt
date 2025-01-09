@@ -18,13 +18,11 @@ fun <T : Any, R : Any> T.wrapWithMultiErrorThrower(
 
     val result = runnable(errsArray)
 
-    // Check each slot
     for (i in 0 until numKeys) {
         val singleErrorPtr = errsArray[i]
         if (singleErrorPtr != null) {
             val errMsg = singleErrorPtr.toKString()
 
-            // In your code, you might want to throw an exception or handle differently:
             throw RocksDBException(
                 errMsg,
                 convertToStatus(errMsg)
