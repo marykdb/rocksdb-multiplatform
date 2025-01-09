@@ -222,8 +222,6 @@ tasks.withType<Test> {
 
 kotlin.targets.withType<KotlinNativeTarget>().configureEach {
     binaries.withType<TestExecutable>().all {
-        println("Configuring test binary for ${this.target.name} "+linkTaskName)
-
         tasks.findByName("${this.target.name}Test")?.apply {
             dependsOn(createOrEraseDBFolders)
             doLast {
