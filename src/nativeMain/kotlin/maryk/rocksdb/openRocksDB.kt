@@ -8,7 +8,6 @@ import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.set
-import kotlinx.cinterop.toCStringArray
 import kotlinx.cinterop.toCValues
 import maryk.wrapWithNullErrorThrower
 import rocksdb.rocksdb_open
@@ -47,30 +46,28 @@ actual fun openRocksDB(
     columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ): RocksDB =
     Unit.wrapWithNullErrorThrower { error ->
-        ColumnFamilyOptions().use { columnFamilyOptions ->
-            memScoped {
-                val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
-                val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
+        memScoped {
+            val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
+            val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
 
-                columnFamilyDescriptors.forEachIndexed { index, it ->
-                    namesArray[index] = it.getName().toCValues().ptr
-                    optionsArray[index] = columnFamilyOptions.native
-                }
+            columnFamilyDescriptors.forEachIndexed { index, cfDesc ->
+                namesArray[index] = cfDesc.getName().toCValues().ptr
+                optionsArray[index] = cfDesc.getOptions().native
+            }
 
-                val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyDescriptors.size)
+            val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyDescriptors.size)
 
-                rocksdb_open_column_families(
-                    options.native,
-                    path,
-                    columnFamilyDescriptors.size,
-                    namesArray,
-                    optionsArray,
-                    handles,
-                    error,
-                )?.let(::RocksDB).also {
-                    for (i in columnFamilyDescriptors.indices) {
-                        columnFamilyHandles += ColumnFamilyHandle(handles[i]!!)
-                    }
+            rocksdb_open_column_families(
+                options.native,
+                path,
+                columnFamilyDescriptors.size,
+                namesArray,
+                optionsArray,
+                handles,
+                error,
+            )?.let(::RocksDB).also {
+                for (i in columnFamilyDescriptors.indices) {
+                    columnFamilyHandles += ColumnFamilyHandle(handles[i]!!)
                 }
             }
         }
@@ -105,32 +102,31 @@ actual fun openReadOnlyRocksDB(
     memScoped {
         Unit.wrapWithNullErrorThrower { error ->
             memScoped {
-                ColumnFamilyOptions().use { columnFamilyOptions ->
-                    val columnFamilyOptionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
+                val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
+                val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
 
-                    columnFamilyDescriptors.forEachIndexed { index, _ ->
-                        columnFamilyOptionsArray[index] = columnFamilyOptions.native
-                    }
-                    memScoped {
-                        val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyDescriptors.size)
-                        rocksdb_open_for_read_only_column_families(
-                            options.native,
-                            path,
-                            columnFamilyDescriptors.size,
-                            columnFamilyDescriptors.map { it.getName().decodeToString() }.toCStringArray(this),
-                            columnFamilyOptionsArray,
-                            handles,
-                            0u,
-                            error,
-                        )?.let(::RocksDB).also {
-                            for (i in columnFamilyDescriptors.indices) {
-                                columnFamilyHandles += ColumnFamilyHandle(handles[i]!!)
-                            }
+                columnFamilyDescriptors.forEachIndexed { index, cfDesc ->
+                    namesArray[index] = cfDesc.getName().toCValues().ptr
+                    optionsArray[index] = cfDesc.getOptions().native
+                }
+
+                memScoped {
+                    val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyDescriptors.size)
+                    rocksdb_open_for_read_only_column_families(
+                        options.native,
+                        path,
+                        columnFamilyDescriptors.size,
+                        namesArray,
+                        optionsArray,
+                        handles,
+                        0u,
+                        error,
+                    )?.let(::RocksDB).also {
+                        for (i in columnFamilyDescriptors.indices) {
+                            columnFamilyHandles += ColumnFamilyHandle(handles[i]!!)
                         }
                     }
                 }
             }
-
-
         } ?: throw RocksDBException("No Database could be opened at $path with given descriptors and handles for column families")
     }

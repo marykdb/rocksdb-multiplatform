@@ -143,4 +143,70 @@ class RocksIteratorTest {
             }
         }
     }
+
+    @Test
+    fun rocksIteratorWithPrefixOverColumnFamily() {
+        DBOptions().apply {
+            setCreateIfMissing(true)
+            setCreateMissingColumnFamilies(true)
+        }.use { options ->
+            val cfOptions = ColumnFamilyOptions().apply {
+                useFixedLengthPrefixExtractor(3)
+            }
+
+            val defaultCfDesc = ColumnFamilyDescriptor(defaultColumnFamily)
+            val cfDesc = ColumnFamilyDescriptor("test".encodeToByteArray(), cfOptions)
+            val handles = mutableListOf<ColumnFamilyHandle>()
+
+            openRocksDB(
+                options,
+                createTestFolder()+"-prefix-cf",
+                listOf(defaultCfDesc, cfDesc),
+                handles,
+            ).use { db ->
+                val cfHandle = handles[1]
+
+                db.put(cfHandle, "kex1".encodeToByteArray(), "valueX".encodeToByteArray())
+                db.put(cfHandle, "key1".encodeToByteArray(), "value1".encodeToByteArray())
+                db.put(cfHandle, "key2".encodeToByteArray(), "value2".encodeToByteArray())
+                db.put(cfHandle, "kez1".encodeToByteArray(), "valueZ".encodeToByteArray())
+
+                ReadOptions().also {
+                    it.setPrefixSameAsStart(true)
+                }.use { readOptions ->
+                    db.newIterator(cfHandle, readOptions).use { iterator ->
+                        assertFalse(iterator.isValid())
+
+                        iterator.seek("key".encodeToByteArray())
+                        assertTrue(iterator.isValid())
+                        assertContentEquals("key1".encodeToByteArray(), iterator.key())
+
+                        iterator.next()
+                        assertTrue(iterator.isValid())
+                        assertContentEquals("key2".encodeToByteArray(), iterator.key())
+
+                        iterator.next()
+                        assertFalse(iterator.isValid())
+                    }
+
+                    db.newIterator(cfHandle, readOptions).use { iterator ->
+                        assertFalse(iterator.isValid())
+
+                        iterator.seekForPrev("key4".encodeToByteArray())
+                        assertTrue(iterator.isValid())
+                        assertContentEquals("key2".encodeToByteArray(), iterator.key())
+
+                        iterator.prev()
+                        assertTrue(iterator.isValid())
+                        assertContentEquals("key1".encodeToByteArray(), iterator.key())
+
+                        iterator.prev()
+                        assertFalse(iterator.isValid())
+                    }
+                }
+            }
+
+            cfOptions.close()
+        }
+    }
 }
