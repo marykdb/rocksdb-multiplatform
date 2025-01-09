@@ -26,8 +26,11 @@ internal constructor(
 
     actual fun getName(): ByteArray = memScoped {
         val length = alloc<uint64_tVar>()
-        rocksdb_column_family_handle_get_name(native, length.ptr)?.toByteArray(length.value)
-            ?: throw RocksDBException("Missing Column Family Name")
+        rocksdb_column_family_handle_get_name(native, length.ptr)?.let { name ->
+            name.toByteArray(length.value).also {
+                rocksdb.rocksdb_free(name)
+            }
+        } ?: throw RocksDBException("Missing Column Family Name")
     }
 
     actual fun getID(): Int =

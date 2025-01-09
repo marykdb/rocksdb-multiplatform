@@ -122,7 +122,7 @@ actual fun openReadOnlyRocksDB(
                             handles,
                             0u,
                             error,
-                        )!!.let(::RocksDB).also {
+                        )?.let(::RocksDB).also {
                             for (i in columnFamilyDescriptors.indices) {
                                 columnFamilyHandles += ColumnFamilyHandle(handles[i]!!)
                             }

@@ -39,7 +39,6 @@ actual class Statistics internal constructor(
 
     actual fun getHistogramData(histogramType: HistogramType) :HistogramData {
         val histogramData = rocksdb_statistics_histogram_data_create()
-        rocksdb_options_statistics_get_histogram_data(native, histogramType.value.toUInt(), histogramData)
         return HistogramData(
             median = rocksdb.rocksdb_statistics_histogram_data_get_median(histogramData),
             p95 = rocksdb.rocksdb_statistics_histogram_data_get_p95(histogramData),

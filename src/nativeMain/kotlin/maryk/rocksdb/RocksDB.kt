@@ -89,7 +89,11 @@ internal constructor(
     private val defaultWriteOptions = WriteOptions()
 
     actual fun getName(): String {
-        return rocksdb.rocksdb_get_name(native)!!.toKString()
+        return rocksdb.rocksdb_get_name(native)!!.let { name ->
+            name.toKString().also {
+                rocksdb.rocksdb_free(name)
+            }
+        }
     }
 
     actual override fun close() {
@@ -582,9 +586,8 @@ internal constructor(
                 for (index in 0 until min(length, value.size)) {
                     value[index] = result[index]
                 }
-                length
-            }.also {
                 rocksdb.rocksdb_free(result)
+                length
             }
         }
     } ?: rocksDBNotFound
@@ -607,10 +610,10 @@ internal constructor(
                     len.toULong(),
                     valueLength.ptr,
                     error
-                ).also {
+                )?.let {
                     rocksdb.rocksdb_free(it)
+                    valueLength.value.toInt()
                 }
-                valueLength.value.toInt()
             } ?: rocksDBNotFound
         }
     }
@@ -636,14 +639,13 @@ internal constructor(
     actual fun get(opt: ReadOptions, key: ByteArray, value: ByteArray): Int = wrapWithNullErrorThrower { error ->
         memScoped {
             val valueLength = alloc<size_tVar>()
-            val result = rocksdb_get(native, opt.native, key.toCValues(), key.size.toULong(), valueLength.ptr, error)
+            rocksdb_get(native, opt.native, key.toCValues(), key.size.toULong(), valueLength.ptr, error)?.let {
+                val length = valueLength.value.toInt()
 
-            val length = valueLength.value.toInt()
-
-            result?.let {
                 for (index in 0 until min(length, value.size)) {
-                    value[index] = result[index]
+                    value[index] = it[index]
                 }
+                rocksdb.rocksdb_free(it)
                 length
             }
         }
@@ -661,23 +663,23 @@ internal constructor(
         memScoped {
             val valueLength = alloc<size_tVar>()
             return wrapWithNullErrorThrower { error ->
-                val retrieved = rocksdb_get(
+                rocksdb_get(
                     native,
                     opt.native,
                     byteArrayToCPointer(key, offset, len),
                     key.size.toULong(),
                     valueLength.ptr,
                     error
-                )
-                if (retrieved != null) {
+                )?.let {
                     val length = valueLength.value.toInt()
 
                     for (index in 0 until min(length, vLen)) {
-                        value[index + vOffset] = retrieved[index]
+                        value[index + vOffset] = it[index]
                     }
 
+                    rocksdb.rocksdb_free(it)
                     length
-                } else rocksDBNotFound
+                }
             } ?: rocksDBNotFound
         }
     }
@@ -691,7 +693,7 @@ internal constructor(
         memScoped {
             val valueLength = alloc<size_tVar>()
             return wrapWithNullErrorThrower { error ->
-                val retrieved = rocksdb_get_cf(
+                rocksdb_get_cf(
                     native,
                     defaultReadOptions.native,
                     columnFamilyHandle.native,
@@ -699,18 +701,17 @@ internal constructor(
                     key.size.toULong(),
                     valueLength.ptr,
                     error
-                )
-                if (retrieved != null) {
+                )?.let {
                     val length = valueLength.value.toInt()
 
                     for (index in 0 until min(length, value.size)) {
-                        value[index] = retrieved[index]
+                        value[index] = it[index]
                     }
 
-                    rocksdb.rocksdb_free(retrieved)
+                    rocksdb.rocksdb_free(it)
 
                     length
-                } else rocksDBNotFound
+                }
             } ?: rocksDBNotFound
         }
     }
@@ -736,10 +737,10 @@ internal constructor(
                     key.size.toULong(),
                     valueLength.ptr,
                     error
-                ).also {
+                )?.let {
                     rocksdb.rocksdb_free(it)
+                    valueLength.value.toInt()
                 }
-                valueLength.value.toInt()
             } ?: rocksDBNotFound
         }
     }
@@ -1029,7 +1030,7 @@ internal constructor(
             val timestamp = alloc<ByteVar>()
             val timestampLength = alloc<size_tVar>()
             val valueFound = alloc<UByteVar>()
-            rocksdb_key_may_exist_cf(
+            val mayExist = rocksdb_key_may_exist_cf(
                 native,
                 readOptions.native,
                 columnFamilyHandle.native,
@@ -1042,8 +1043,7 @@ internal constructor(
                 valueFound.ptr,
             )
             valueHolder?.setValue(value.value?.toByteArray(valueLength.value))
-            // valueFound is unreliable value so using valueLength
-            return valueLength.value > 0uL
+            return mayExist > 0uL
         }
     }
 
@@ -1066,7 +1066,7 @@ internal constructor(
             val timestamp = alloc<ByteVar>()
             val timestampLength = alloc<size_tVar>()
             val valueFound = alloc<UByteVar>()
-            rocksdb_key_may_exist_cf(
+            val mayExist = rocksdb_key_may_exist_cf(
                 native,
                 readOptions.native,
                 columnFamilyHandle.native,
@@ -1079,8 +1079,7 @@ internal constructor(
                 valueFound.ptr,
             )
             valueHolder?.setValue(value.value?.toByteArray(valueLength.value))
-            // valueFound is unreliable value so using valueLength
-            return valueLength.value > 0uL
+            return mayExist > 0uL
         }
     }
 
@@ -1134,11 +1133,19 @@ internal constructor(
         columnFamilyHandle: ColumnFamilyHandle,
         property: String
     ): String? {
-        return rocksdb.rocksdb_property_value_cf(native, columnFamilyHandle.native, property)?.toKString()
+        return rocksdb.rocksdb_property_value_cf(native, columnFamilyHandle.native, property)?.let { value ->
+            value.toKString().also {
+                rocksdb.rocksdb_free(value)
+            }
+        }
     }
 
     actual fun getProperty(property: String): String? {
-        return rocksdb.rocksdb_property_value(native, property)?.toKString()
+        return rocksdb.rocksdb_property_value(native, property)?.let { value ->
+            value.toKString().also {
+                rocksdb.rocksdb_free(value)
+            }
+        }
     }
 
     actual fun getMapProperty(property: String): Map<String, String> {
@@ -1161,7 +1168,6 @@ internal constructor(
                     val value = mapInArray[i * 2 + 1]!!.toKString()
                     put(key, value)
                 }
-            }.also {
                 rocksdb.rocksdb_free(mapInArray)
             }
         }
@@ -1192,7 +1198,6 @@ internal constructor(
                     val value = entriesPtr[i + 1]!!.toKString()
                     put(key, value)
                 }
-            }.also {
                 rocksdb.rocksdb_free(entriesPtr)
             }
         }
@@ -1206,7 +1211,6 @@ internal constructor(
                 property,
                 outValue.ptr,
             )
-
             return outValue.value.toLong()
         }
     }
@@ -1502,7 +1506,6 @@ actual fun listColumnFamilies(
                 for (i in 0uL until cfCount.value) {
                     values[i.toInt()]?.toKString()?.encodeToByteArray()?.let(::add)
                 }
-            }.also {
                 rocksdb_list_column_families_destroy(values, cfCount.value)
             }
         }

@@ -190,10 +190,7 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
 
     actual fun useFixedLengthPrefixExtractor(n: Int): Options {
         assert(isOwningHandle())
-        val prefix = rocksdb_slicetransform_create_fixed_prefix(n.toULong())
-        rocksdb_options_set_prefix_extractor(native, prefix)
-        // Should it be destroyed?
-//        rocksdb_slicetransform_destroy(prefix)
+        rocksdb_options_set_prefix_extractor(native, rocksdb_slicetransform_create_fixed_prefix(n.toULong()))
         return this
     }
 

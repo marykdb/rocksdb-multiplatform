@@ -137,10 +137,7 @@ actual class ColumnFamilyOptions private constructor(
 
     actual fun useFixedLengthPrefixExtractor(n: Int): ColumnFamilyOptions {
         assert(isOwningHandle())
-        val prefix = rocksdb_slicetransform_create_fixed_prefix(n.toULong())
-        rocksdb_options_set_prefix_extractor(native, prefix)
-        // Should it be destroyed?
-//        rocksdb_slicetransform_destroy(prefix)
+        rocksdb_options_set_prefix_extractor(native, rocksdb_slicetransform_create_fixed_prefix(n.toULong()))
         return this
     }
 
