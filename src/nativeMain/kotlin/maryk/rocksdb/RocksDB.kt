@@ -1087,7 +1087,7 @@ internal constructor(
 
     actual fun newIterator(readOptions: ReadOptions): RocksIterator =
         RocksIterator(
-            rocksdb_create_iterator(native, defaultReadOptions.native)!!,
+            rocksdb_create_iterator(native, readOptions.native)!!,
         )
 
     actual fun newIterator(columnFamilyHandle: ColumnFamilyHandle): RocksIterator =

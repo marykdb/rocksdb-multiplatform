@@ -255,6 +255,11 @@ class RocksDBTest {
             getResult = db.get("key2".encodeToByteArray(), outValue)
             assertNotEquals(rocksDBNotFound, getResult)
             assertContentEquals(outValue, "12345".encodeToByteArray())
+
+            val outValue2 = ByteArray(500)
+            // not found value
+            var getResult2 = db.get("keyNotFound".encodeToByteArray(), 0, "keyNotFound".encodeToByteArray().size, outValue2, 0, outValue2.size)
+            assertEquals(rocksDBNotFound, getResult2)
         }
     }
 
