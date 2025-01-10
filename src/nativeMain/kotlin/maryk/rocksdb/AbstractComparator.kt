@@ -26,7 +26,7 @@ actual abstract class AbstractComparator
     private val pinnedName: CPointer<ByteVar> by lazy {
         val actualName = name()
         val nameBytes = (actualName + "\u0000").encodeToByteArray()
-        val mem = nativeHeap.allocArray<ByteVar>(nameBytes.size + 1)
+        val mem = nativeHeap.allocArray<ByteVar>(nameBytes.size)
 
         nameBytes.usePinned { pinned: Pinned<ByteArray> ->
             memcpy(mem, pinned.addressOf(0), nameBytes.size.convert())

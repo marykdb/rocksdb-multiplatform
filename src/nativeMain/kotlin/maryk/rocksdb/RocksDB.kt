@@ -254,7 +254,7 @@ internal constructor(
             memScoped {
                 rocksdb_put(
                     native,
-                    defaultWriteOptions.native,
+                    writeOpts.native,
                     byteArrayToCPointer(key, offset, len),
                     len.toULong(),
                     byteArrayToCPointer(value, vOffset, vLen),
@@ -557,7 +557,7 @@ internal constructor(
             wrapWithErrorThrower { error ->
                 rocksdb_merge_cf(
                     native,
-                    defaultWriteOptions.native,
+                    writeOpts.native,
                     columnFamilyHandle.native,
                     byteArrayToCPointer(key, offset, len),
                     len.toULong(),
@@ -611,8 +611,14 @@ internal constructor(
                     valueLength.ptr,
                     error
                 )?.let {
+                    val length = valueLength.value.toInt()
+
+                    for (index in 0 until min(length, vLen)) {
+                        value[index + vOffset] = it[index]
+                    }
+
                     rocksdb.rocksdb_free(it)
-                    valueLength.value.toInt()
+                    length
                 }
             } ?: rocksDBNotFound
         }
@@ -667,7 +673,7 @@ internal constructor(
                     native,
                     opt.native,
                     byteArrayToCPointer(key, offset, len),
-                    key.size.toULong(),
+                    len.toULong(),
                     valueLength.ptr,
                     error
                 )?.let {
@@ -695,7 +701,7 @@ internal constructor(
             return wrapWithNullErrorThrower { error ->
                 rocksdb_get_cf(
                     native,
-                    defaultReadOptions.native,
+                    opt.native,
                     columnFamilyHandle.native,
                     key.toCValues(),
                     key.size.toULong(),
@@ -709,7 +715,6 @@ internal constructor(
                     }
 
                     rocksdb.rocksdb_free(it)
-
                     length
                 }
             } ?: rocksDBNotFound
@@ -733,13 +738,19 @@ internal constructor(
                     native,
                     opt.native,
                     columnFamilyHandle.native,
-                    key.toCValues(),
-                    key.size.toULong(),
+                    byteArrayToCPointer(key, offset, len),
+                    len.toULong(),
                     valueLength.ptr,
                     error
                 )?.let {
+                    val length = valueLength.value.toInt()
+
+                    for (index in 0 until min(length, vLen)) {
+                        value[index + vOffset] = it[index]
+                    }
+
                     rocksdb.rocksdb_free(it)
-                    valueLength.value.toInt()
+                    length
                 }
             } ?: rocksDBNotFound
         }
@@ -1409,7 +1420,7 @@ internal constructor(
                                 val fileName = rocksdb_sst_file_metadata_get_relative_filename(sstMetaData)
                                 val directory = rocksdb_sst_file_metadata_get_directory(sstMetaData)
                                 val smallestKey = rocksdb_sst_file_metadata_get_smallestkey(sstMetaData, smallestKeyLength.ptr)
-                                val largestKey = rocksdb_sst_file_metadata_get_smallestkey(sstMetaData, largestKeyLength.ptr)
+                                val largestKey = rocksdb.rocksdb_sst_file_metadata_get_largestkey(sstMetaData, largestKeyLength.ptr)
                                 add(
                                     SstFileMetaData(
                                         fileName = fileName!!.toKString(),
