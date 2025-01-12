@@ -8,13 +8,14 @@
 #
 # Usage:
 #   chmod +x buildDependencies.sh
-#   ./buildDependencies.sh [--extra-cflags "FLAGS"] [--output-dir "/path/to/dir"]
+#   ./buildDependencies.sh [--extra-cflags "FLAGS"] [--extra-cmakeflags "FLAGS"] [--output-dir "/path/to/dir"]
 #
 # Options:
-#   --extra-cflags   Additional CFLAGS to pass to the compiler.
-#   --output-dir     Directory where libz.a, libbz2.a, libzstd.a, libsnappy.a, and liblz4.a will be placed.
-#                    Defaults to the current directory.
-#   -h, --help       Display this help message.
+#   --extra-cflags       Additional CFLAGS to pass to the compiler.
+#   --extra-cmakeflags   Additional CFLAGS to pass to the compiler.
+#   --output-dir         Directory where libz.a, libbz2.a, libzstd.a, libsnappy.a, and liblz4.a will be placed.
+#                        Defaults to the current directory.
+#   -h, --help           Display this help message.
 
 set -euo pipefail
 
@@ -22,6 +23,11 @@ set -euo pipefail
 # Default Values
 # ---------------------------------------------------------
 DOWNLOAD_DIR="lib"
+
+# iOS Toolchain
+IOS_TOOLCHAIN_URL="https://github.com/leetal/ios-cmake/archive/refs/tags/4.5.0.tar.gz"
+IOS_TOOLCHAIN_ARCHIVE="${DOWNLOAD_DIR}/ios-cmake-4.5.0.tar.gz"
+IOS_TOOLCHAIN_DIR="${DOWNLOAD_DIR}/ios-toolchain"
 
 # zlib
 DEFAULT_ZLIB_VER="1.3.1"
@@ -50,9 +56,7 @@ DEFAULT_LZ4_DOWNLOAD_BASE="https://github.com/lz4/lz4/archive"
 
 # Build Flags (can be overridden by environment variables)
 ARCHFLAG="${ARCHFLAG:-}"
-JAVA_STATIC_DEPS_CCFLAGS="${JAVA_STATIC_DEPS_CCFLAGS:-}"
-JAVA_STATIC_DEPS_CXXFLAGS="${JAVA_STATIC_DEPS_CXXFLAGS:-}"
-JAVA_STATIC_DEPS_LDFLAGS="${JAVA_STATIC_DEPS_LDFLAGS:-}"
+EXTRA_CMAKEFLAGS="${EXTRA_CMAKEFLAGS:-}"
 EXTRA_CFLAGS="${EXTRA_CFLAGS:-}"
 EXTRA_CXXFLAGS="${EXTRA_CXXFLAGS:-}"
 EXTRA_LDFLAGS="${EXTRA_LDFLAGS:-}"
@@ -69,10 +73,11 @@ usage() {
 Usage: $0 [OPTIONS]
 
 Options:
-  --extra-cflags "FLAGS"    Additional CFLAGS to pass to the compiler.
-  --output-dir "/path"      Directory where libz.a, libbz2.a, libzstd.a, libsnappy.a, and liblz4.a will be placed.
-                            Defaults to the current directory.
-  -h, --help                Display this help message.
+  --extra-cflags "FLAGS"        Additional CFLAGS to pass to the compiler.
+  --extra-cmakeflags "FLAGS"    Additional flags to pass to CMAKE.
+  --output-dir "/path"          Directory where libz.a, libbz2.a, libzstd.a, libsnappy.a, and liblz4.a will be placed.
+                                Defaults to the current directory.
+  -h, --help                    Display this help message.
 
 Example:
   ./buildDependencies.sh --extra-cflags "-O3 -march=native" --output-dir "./libs"
@@ -87,6 +92,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --extra-cflags)
       EXTRA_CFLAGS="$2"
+      shift 2
+      ;;
+    --extra-cmakeflags)
+      EXTRA_CMAKEFLAGS="$2"
       shift 2
       ;;
     --output-dir)
@@ -135,6 +144,29 @@ LZ4_DOWNLOAD_BASE="${LZ4_DOWNLOAD_BASE:-$DEFAULT_LZ4_DOWNLOAD_BASE}"
 
 # Ensure DOWNLOAD_DIR exists
 mkdir -p "$DOWNLOAD_DIR"
+
+download_ios_toolchain() {
+  if [ -d "${IOS_TOOLCHAIN_DIR}" ]; then
+    return
+  fi
+
+  mkdir -p "${DOWNLOAD_DIR}"
+  if curl --silent --fail --location -o "${IOS_TOOLCHAIN_ARCHIVE}" "${IOS_TOOLCHAIN_URL}"; then
+    echo "✅ Downloaded iOS toolchain successfully."
+  else
+    echo "❌ Error downloading iOS toolchain from ${IOS_TOOLCHAIN_URL}" >&2
+    exit 1
+  fi
+  mkdir -p "${IOS_TOOLCHAIN_DIR}"
+  tar -xzf "${IOS_TOOLCHAIN_ARCHIVE}" -C "${DOWNLOAD_DIR}"
+  mv "${DOWNLOAD_DIR}/ios-cmake-4.5.0/ios.toolchain.cmake" "${IOS_TOOLCHAIN_DIR}/"
+  rm -rf "${DOWNLOAD_DIR}/ios-cmake-4.5.0"
+}
+
+if [[ "${EXTRA_CFLAGS}" == *"-isysroot"* ]]; then
+  download_ios_toolchain
+  TOOLCHAIN_FILE="${IOS_TOOLCHAIN_DIR}/ios.toolchain.cmake"
+fi
 
 # ---------------------------------------------------------
 # Function to Download and Verify Tarball
@@ -227,21 +259,28 @@ build_snappy() {
   local tarball="${DOWNLOAD_DIR}/snappy-${SNAPPY_VER}.tar.gz"
   local src_dir="${DOWNLOAD_DIR}/snappy-${SNAPPY_VER}"
 
+  rm -rf $src_dir
+
   tar xzf "${tarball}" -C "${DOWNLOAD_DIR}"  > /dev/null
   pushd "${src_dir}" > /dev/null
 
-  CFLAGS="${ARCHFLAG} ${JAVA_STATIC_DEPS_CCFLAGS} ${EXTRA_CFLAGS}" \
-  CXXFLAGS="${ARCHFLAG} ${JAVA_STATIC_DEPS_CXXFLAGS} ${EXTRA_CXXFLAGS}" \
-  LDFLAGS="${JAVA_STATIC_DEPS_LDFLAGS} ${EXTRA_LDFLAGS}" \
+  if [ -n "${TOOLCHAIN_FILE}" ]; then
+    EXTRA_CMAKEFLAGS+=""" -DCMAKE_TOOLCHAIN_FILE="../../${TOOLCHAIN_FILE}""""
+  fi
+
   cmake -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+        ${EXTRA_CMAKEFLAGS} \
+        -DCMAKE_C_FLAGS="${EXTRA_CFLAGS}" \
+        -DCMAKE_CXX_FLAGS="${EXTRA_CXXFLAGS}" \
         -DSNAPPY_BUILD_BENCHMARKS=OFF \
         -DSNAPPY_BUILD_TESTS=OFF \
         -Wno-dev ${PLATFORM_CMAKE_FLAGS} . \
         --compile-no-warning-as-error
 
-  make ${SNAPPY_MAKE_TARGET} > /dev/null
+  make clean > /dev/null
+  CXXFLAGS="${EXTRA_CXXFLAGS} -fPIC -O2" CFLAGS="${EXTRA_CFLAGS} -fPIC -O2" make ${SNAPPY_MAKE_TARGET} > /dev/null
   cp "snappy.h" "snappy-stubs-public.h" "../../${DOWNLOAD_DIR}/include/"
-  cp "build/libsnappy.a" "../../${OUTPUT_DIR}/"
+  cp "libsnappy.a" "../../${OUTPUT_DIR}/"
   popd > /dev/null
   echo "✅ Finished building libsnappy.a into ${OUTPUT_DIR}!"
 }

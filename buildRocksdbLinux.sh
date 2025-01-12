@@ -52,6 +52,8 @@ build_for_arch() {
   if [[ "$(uname -s)" == "Linux" ]]; then
     echo "Detected Linux — building $arch directly..."
     output=$(
+      apt-get update &&
+      apt-get install -y $pkgs &&
       make -j"$(nproc)" \
         LIB_MODE=static \
         LIBNAME="build/linux_${arch}/librocksdb" \
@@ -92,3 +94,4 @@ build_for_arch() {
 }
 
 build_for_arch "x86_64"
+build_for_arch "aarch64"

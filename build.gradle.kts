@@ -122,7 +122,7 @@ kotlin {
 
     val isMacOs = System.getProperty("os.name").contains("Mac", ignoreCase = true)
 
-    fun KotlinNativeTarget.setupTarget(buildName: String, buildTask: Exec, extraCFlags: String = "") {
+    fun KotlinNativeTarget.setupTarget(buildName: String, buildTask: Exec, extraCFlags: String = "", extraCmakeFlags: String = "") {
         binaries {
             executable {
                 freeCompilerArgs += listOf("-g")
@@ -144,7 +144,7 @@ kotlin {
                     }
                     addAll(listOf("-v", "${project.projectDir}:/rocks", "-w", "/rocks", "buildpack-deps"))
                 }
-                addAll(listOf("./buildDependencies.sh", "--extra-cflags", extraCFlags, "--output-dir", "rocksdb/build/$buildName"))
+                addAll(listOf("./buildDependencies.sh", "--extra-cflags", extraCFlags, "--output-dir", "rocksdb/build/$buildName", "--extra-cmakeflags", extraCmakeFlags))
             }
             commandLine(*options.toTypedArray())
         }
@@ -170,7 +170,11 @@ kotlin {
                 sdkPathProvider.get().trim()
             } else ""
         }
-        setupTarget("ios_arm64", buildIOS, "-arch arm64 -target arm64-apple-ios13.0-simulator -isysroot $sdkPath")
+        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
+            workingDir = projectDir
+            commandLine("./buildRocksdbApple.sh", "--platform=ios", "--arch=arm64")
+        }
+        setupTarget("ios_arm64", buildTask, "-arch arm64 -target arm64-apple-ios13.0-simulator -isysroot $sdkPath", "-DPLATFORM=OS64")
     }
     iosSimulatorArm64 {
         val sdkPathProvider = providers.exec {
@@ -181,13 +185,25 @@ kotlin {
                 sdkPathProvider.get().trim()
             } else ""
         }
-        setupTarget("ios_simulator_arm64", buildIOSSimulator, "-arch arm64 -target arm64-apple-ios13.0-simulator -isysroot $sdkPath")
+        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
+            workingDir = projectDir
+            commandLine("./buildRocksdbApple.sh", "--platform=ios", "--simulator", "--arch=arm64")
+        }
+        setupTarget("ios_simulator_arm64", buildTask, "-arch arm64 -target arm64-apple-ios13.0-simulator -isysroot $sdkPath", "-DPLATFORM=SIMULATORARM64")
     }
     macosX64 {
-        setupTarget("macos_x86_64", buildMacOS, "-arch x86_64 -target x86_64-apple-macos11.0")
+        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
+            workingDir = projectDir
+            commandLine("./buildRocksdbApple.sh", "--platform=macos", "--arch=x86_64")
+        }
+        setupTarget("macos_x86_64", buildTask, "-arch x86_64 -target x86_64-apple-macos11.0", "-DPLATFORM=OS64")
     }
     macosArm64 {
-        setupTarget("macos_arm64", buildMacOS, "-arch arm64 -target arm64-apple-macos11.0")
+        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
+            workingDir = projectDir
+            commandLine("./buildRocksdbApple.sh", "--platform=macos", "--arch=arm64")
+        }
+        setupTarget("macos_arm64", buildTask, "-arch arm64 -target arm64-apple-macos11.0", "-DPLATFORM=MAC")
     }
 //    linuxX64 {
 //        setupTarget("linux_x86_64", buildLinux, "-march=x86-64")

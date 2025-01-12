@@ -22,8 +22,16 @@ This common library includes most common operations, but if you need additional 
 them by creating an issue or submitting a merge request.
 
 ## Native platforms
-Currently, only Apple platforms are supported for native compilations. Since the implementation is based on the RocksDB C API,
-other native platforms should be able to be added in the future.
+Currently, only iOS and macOS (+arm64 simulators) are supported for native compilations. Since the implementation is based on the RocksDB C API,
+other native platforms should be able to be added in the future if RocksDB can be compiled to that platform.
+Unfortunately tvOS and watchOS cannot be supported. No tvOS because it blocks certain calls RocksDB needs, and no watchOS
+because it needs specific arm64_32 support.
+
+Kotlin Native targets:
+- macosArm64
+- macosX64
+- iosArm64
+- iosSimulatorArm64
 
 ## Reference
 
