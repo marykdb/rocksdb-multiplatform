@@ -159,6 +159,12 @@ check_build() {
 # Build (make)
 ###############################################################################
 echo "Starting build for: $BUILD_DIR"
+
+if [ -f "${BUILD_DIR}/librocksdb.a" ]; then
+  echo "** BUILD SKIPPED: ${BUILD_DIR}/librocksdb.a already exists **"
+  exit 0
+fi
+
 BUILD_OUTPUT=$(
   make -j"$(sysctl -n hw.ncpu)" \
     LIB_MODE=static \

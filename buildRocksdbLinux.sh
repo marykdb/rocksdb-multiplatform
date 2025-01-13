@@ -1,6 +1,26 @@
 #!/usr/bin/env bash
 
-echo "Building RocksDB..."
+ARCH="" # e.g. arm64, x86_64, etc.
+
+for arg in "$@"; do
+  case $arg in
+    --arch=*)
+      ARCH="${arg#*=}"
+      ;;
+    *)
+      echo "Unknown option: $arg"
+      exit 1
+      ;;
+  esac
+done
+
+# Validate
+if [ -z "$ARCH" ]; then
+  echo "Usage: $0 --arch=<arm64|x86_64>"
+  exit 1
+fi
+
+echo "Building RocksDB for $ARCH..."
 
 # Optional: navigate to the rocksdb directory
 cd "rocksdb" || { echo "Failed to navigate to rocksdb"; exit 1; }
@@ -8,90 +28,57 @@ cd "rocksdb" || { echo "Failed to navigate to rocksdb"; exit 1; }
 # Simple function to check build output
 check_build() {
   local output="$1"
-  local arch="$2"
+  local folder="$2"
 
-  if echo "$output" | grep -q "AR       build/linux_${arch}/librocksdb.a"; then
-      echo "** BUILD SUCCEEDED for $arch **"
+  if echo "$output" | grep -q "AR       build/$folder/librocksdb.a"; then
+      echo "** BUILD SUCCEEDED for $ARCH **"
   elif echo "$output" | grep -q "make: Nothing to be done for 'static_lib'."; then
-      echo "** BUILD NOT NEEDED for $arch (Already up to date) **"
+      echo "** BUILD NOT NEEDED for $ARCH (Already up to date) **"
   else
-      echo "** BUILD FAILED for $arch **"
+      echo "** BUILD FAILED for $ARCH **"
       echo "$output"
       exit 1
   fi
 }
 
-build_for_arch() {
-  local arch="$1"
+EXTRA_FLAGS="-I../lib/include -DZLIB -DBZIP2 -DSNAPPY -DLZ4 -DZSTD "
 
-  # Set up arch-specific variables
-  local pkgs
-  local cc
-  local cxx
-  local extra_cflags
-  local extra_cxxflags
+if [[ "$ARCH" == "arm64" ]]; then
+  folder="linux_arm64"
+  cc="$HOME/.konan/dependencies/aarch64-unknown-linux-gnu-gcc-8.3.0-glibc-2.25-kernel-4.9-2/bin/aarch64-unknown-linux-gnu-gcc"
+  cxx="$HOME/.konan/dependencies/aarch64-unknown-linux-gnu-gcc-8.3.0-glibc-2.25-kernel-4.9-2/bin/aarch64-unknown-linux-gnu-g++"
+  EXTRA_FLAGS+="-march=armv8-a"
+else
+  folder="linux_x86_64"
+  cc="$HOME/.konan/dependencies/x86_64-unknown-linux-gnu-gcc-8.3.0-glibc-2.19-kernel-4.9-2/bin/x86_64-unknown-linux-gnu-gcc"
+  cxx="$HOME/.konan/dependencies/x86_64-unknown-linux-gnu-gcc-8.3.0-glibc-2.19-kernel-4.9-2/bin/x86_64-unknown-linux-gnu-g++"
+  EXTRA_FLAGS+="-march=x86-64"
+fi
 
-  if [[ "$arch" == "arm64" ]]; then
-    pkgs="gcc-aarch64-linux-gnu g++-aarch64-linux-gnu"
-    cc="aarch64-linux-gnu-gcc"
-    cxx="aarch64-linux-gnu-g++"
-    extra_cflags="-march=armv8-a"
-    extra_cxxflags="-march=armv8-a"
-  else
-    pkgs="gcc-x86-64-linux-gnu g++-x86-64-linux-gnu"
-    cc="x86_64-linux-gnu-gcc"
-    cxx="x86_64-linux-gnu-g++"
-    extra_cflags="-march=x86-64"
-    extra_cxxflags="-march=x86-64"
-  fi
+# Check if the build output already exists
+if [ -f "build/$folder/librocksdb.a" ]; then
+  echo "** BUILD SKIPPED: build/$folder/librocksdb.a already exists **"
+  exit 0
+fi
 
-  echo "Building for $arch..."
+if [[ "$(uname -s)" == "Linux" ]]; then
+  output=$(
+    make -j"$(nproc)" \
+      LIB_MODE=static \
+      LIBNAME="build/$folder/librocksdb" \
+      DEBUG_LEVEL=0 \
+      CC=$cc \
+      CXX=$cxx \
+      OBJ_DIR="build/$folder" \
+      EXTRA_CXXFLAGS="$EXTRA_FLAGS" \
+      EXTRA_CFLAGS="$EXTRA_FLAGS" \
+      PORTABLE=1 \
+      LD_FLAGS="-lbz2 -lz -lz4 -lsnappy" \
+      static_lib
+  )
 
-  # Run either in Docker (non-Linux) or natively (Linux)
-  local output
-  if [[ "$(uname -s)" == "Linux" ]]; then
-    echo "Detected Linux — building $arch directly..."
-    output=$(
-      apt-get update &&
-      apt-get install -y $pkgs &&
-      make -j"$(nproc)" \
-        LIB_MODE=static \
-        LIBNAME="build/linux_${arch}/librocksdb" \
-        DEBUG_LEVEL=0 \
-        OBJ_DIR="build/linux_${arch}" \
-        EXTRA_CXXFLAGS="$extra_cxxflags" \
-        EXTRA_CFLAGS="$extra_cflags" \
-        LD_FLAGS="-lbz2 -lz" \
-        static_lib
-    )
-  else
-    echo "Detected non-Linux system — building $arch via Docker..."
-    output=$(
-      docker run --rm \
-        -v "$PWD":/rocks \
-        -w /rocks \
-        buildpack-deps \
-        bash -c "
-          apt-get update &&
-          apt-get install -y $pkgs &&
-          make -j\$(nproc) \
-               LIB_MODE=static \
-               LIBNAME=build/linux_${arch}/librocksdb \
-               DEBUG_LEVEL=0 \
-               OBJ_DIR=build/linux_${arch} \
-               EXTRA_CXXFLAGS='$extra_cxxflags' \
-               EXTRA_CFLAGS='$extra_cflags' \
-               LD_FLAGS='-lbz2 -lz' \
-               CC=$cc \
-               CXX=$cxx \
-               static_lib
-        "
-    )
-  fi
-
-  # Check build results
-  check_build "$output" "$arch"
-}
-
-build_for_arch "x86_64"
-build_for_arch "aarch64"
+  check_build "$output" "$folder"
+else
+  echo "Should only build on linux"
+  exit 1
+fi

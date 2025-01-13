@@ -8,7 +8,7 @@ storage of data on disk. RocksDB is widely used in many industries for various a
 systems, big data systems, and storage engines for other distributed systems.
 
 The aim of this project is to provide a multi-platform RocksDB implementation that can be used across different platforms,
-including JVM, Android, and native macOS/iOS. This allows developers to write applications that can run on different platforms 
+including JVM, Android, and native Linux/macOS/iOS. This allows developers to write applications that can run on different platforms 
 without having to rewrite the codebase.
 
 This project is useful for developers who want to build multi-platform applications that require high-performance disk-based
@@ -22,7 +22,9 @@ This common library includes most common operations, but if you need additional 
 them by creating an issue or submitting a merge request.
 
 ## Native platforms
-Currently, only iOS and macOS (+arm64 simulators) are supported for native compilations. Since the implementation is based on the RocksDB C API,
+Currently, only Linux, iOS and macOS (+arm64 simulators) are supported for native compilations. 
+
+Since the implementation is based on the RocksDB C API,
 other native platforms should be able to be added in the future if RocksDB can be compiled to that platform.
 Unfortunately tvOS and watchOS cannot be supported. No tvOS because it blocks certain calls RocksDB needs, and no watchOS
 because it needs specific arm64_32 support.
@@ -32,6 +34,8 @@ Kotlin Native targets:
 - macosX64
 - iosArm64
 - iosSimulatorArm64
+- linuxX64
+- linuxArm64
 
 ## Reference
 

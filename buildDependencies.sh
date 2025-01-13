@@ -23,6 +23,7 @@ set -euo pipefail
 # Default Values
 # ---------------------------------------------------------
 DOWNLOAD_DIR="lib"
+TOOLCHAIN_FILE=null
 
 # iOS Toolchain
 IOS_TOOLCHAIN_URL="https://github.com/leetal/ios-cmake/archive/refs/tags/4.5.0.tar.gz"
@@ -92,6 +93,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --extra-cflags)
       EXTRA_CFLAGS="$2"
+      EXTRA_CXXFLAGS="$2"
       shift 2
       ;;
     --extra-cmakeflags)
@@ -114,6 +116,16 @@ done
 
 # Set OUTPUT_DIR to DEFAULT_OUTPUT_DIR if not provided
 OUTPUT_DIR="${OUTPUT_DIR:-$DEFAULT_OUTPUT_DIR}"
+
+set +u
+if [[ "$OUTPUT_DIR" == *linux_x86_64* ]]; then
+  export CC="$HOME/.konan/dependencies/x86_64-unknown-linux-gnu-gcc-8.3.0-glibc-2.19-kernel-4.9-2/bin/x86_64-unknown-linux-gnu-gcc"
+  export CXX="$HOME/.konan/dependencies/x86_64-unknown-linux-gnu-gcc-8.3.0-glibc-2.19-kernel-4.9-2/bin/x86_64-unknown-linux-gnu-g++"
+elif [[ "$OUTPUT_DIR" == *linux_arm64* ]]; then
+  export CC="$HOME/.konan/dependencies/aarch64-unknown-linux-gnu-gcc-8.3.0-glibc-2.25-kernel-4.9-2/bin/aarch64-unknown-linux-gnu-gcc"
+  export CXX="$HOME/.konan/dependencies/aarch64-unknown-linux-gnu-gcc-8.3.0-glibc-2.25-kernel-4.9-2/bin/aarch64-unknown-linux-gnu-g++"
+fi
+set -u
 
 # Create the output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
@@ -163,7 +175,7 @@ download_ios_toolchain() {
   rm -rf "${DOWNLOAD_DIR}/ios-cmake-4.5.0"
 }
 
-if [[ "${EXTRA_CFLAGS}" == *"-isysroot"* ]]; then
+if [[ "${EXTRA_CFLAGS}" == *"-isysroot"* || "${EXTRA_CFLAGS}" == *"apple-macos"* ]]; then
   download_ios_toolchain
   TOOLCHAIN_FILE="${IOS_TOOLCHAIN_DIR}/ios.toolchain.cmake"
 fi
@@ -244,7 +256,7 @@ build_zstd() {
   local src_dir="${DOWNLOAD_DIR}/zstd-${ZSTD_VER}"
   tar xzf "${tarball}" -C "${DOWNLOAD_DIR}"  > /dev/null
   pushd "${src_dir}/lib" > /dev/null
-  CFLAGS="${EXTRA_CFLAGS} -fPIC -O2" make clean > /dev/null
+  make clean > /dev/null
   CFLAGS="${EXTRA_CFLAGS} -fPIC -O2" make libzstd.a > /dev/null
   popd > /dev/null
   cp "${src_dir}/lib/zstd.h" "${src_dir}/lib/zdict.h" "${DOWNLOAD_DIR}/include/"
@@ -264,8 +276,16 @@ build_snappy() {
   tar xzf "${tarball}" -C "${DOWNLOAD_DIR}"  > /dev/null
   pushd "${src_dir}" > /dev/null
 
-  if [ -n "${TOOLCHAIN_FILE}" ]; then
+  if [ "${TOOLCHAIN_FILE}" != null ]; then
     EXTRA_CMAKEFLAGS+=""" -DCMAKE_TOOLCHAIN_FILE="../../${TOOLCHAIN_FILE}""""
+  else
+    local toolchain_file="toolchain.cmake"
+    echo "set(CMAKE_C_FLAGS \"\${CMAKE_CXX_FLAGS} ${EXTRA_CFLAGS}\")" > "${toolchain_file}"
+    echo "set(CMAKE_CXX_FLAGS \"\${CMAKE_CXX_FLAGS} ${EXTRA_CXXFLAGS}\")" >> "${toolchain_file}"
+    echo "set(CMAKE_POSITION_INDEPENDENT_CODE ON)" >> "${toolchain_file}"
+    echo "set(CMAKE_BUILD_TYPE Release)" >> "${toolchain_file}"
+
+    EXTRA_CMAKEFLAGS+=""" -DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX -DCMAKE_TOOLCHAIN_FILE=$toolchain_file"""
   fi
 
   cmake -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
@@ -295,7 +315,7 @@ build_lz4() {
   echo "Building LZ4 version ${LZ4_VER}..."
   tar xzf "${tarball}" -C "${DOWNLOAD_DIR}" > /dev/null
   pushd "${src_dir}/lib" > /dev/null
-  CFLAGS="${EXTRA_CFLAGS} -fPIC -O2" LDFLAGS="${EXTRA_LDFLAGS}" make clean > /dev/null
+  make clean > /dev/null
   CFLAGS="${EXTRA_CFLAGS} -fPIC -O2" LDFLAGS="${EXTRA_LDFLAGS}" make > /dev/null
   cp "lz4.h" "lz4hc.h" "../../../${DOWNLOAD_DIR}/include"
   cp "liblz4.a" "../../../${OUTPUT_DIR}/"
