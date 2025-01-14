@@ -21,21 +21,21 @@ The project supports the full RocksDB Java interfaces on the JVM and Android pla
 This common library includes most common operations, but if you need additional features, you can request 
 them by creating an issue or submitting a merge request.
 
-## Native platforms
-Currently, only Linux, iOS and macOS (+arm64 simulators) are supported for native compilations. 
+## Supported platforms 
+
+- **JVM** - linux32, linux32-musl, linux64, linux64-musl, macOS, win64 (Same as RocksDBJava) 
+- **Android** - arm64-v8a, armeabi-v7a, x86, x86_64 (Default Android native build targets)
+
+Kotlin Native:
+- **macOS**: macosArm64 & macosX64
+- **iOS**: iosArm64 & iosSimulatorArm64
+- **Linux**: linuxX64 & linuxArm64
 
 Since the implementation is based on the RocksDB C API,
 other native platforms should be able to be added in the future if RocksDB can be compiled to that platform.
-Unfortunately tvOS and watchOS cannot be supported. No tvOS because it blocks certain calls RocksDB needs, and no watchOS
-because it needs specific arm64_32 support.
 
-Kotlin Native targets:
-- macosArm64
-- macosX64
-- iosArm64
-- iosSimulatorArm64
-- linuxX64
-- linuxArm64
+Unfortunately tvOS and watchOS cannot be supported yet. No tvOS because it blocks certain calls RocksDB needs, and no watchOS
+because it needs specific arm64_32 support.
 
 ## Reference
 
