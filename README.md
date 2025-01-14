@@ -1,5 +1,5 @@
 [![GitHub license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Download](https://img.shields.io/maven-central/v/io.maryk.rocksdb/rocksdb-android)](https://central.sonatype.com/artifact/io.maryk.rocksdb/rocksdb-multiplatform)
+[![Download](https://img.shields.io/maven-central/v/io.maryk.rocksdb/rocksdb-multiplatform)](https://central.sonatype.com/artifact/io.maryk.rocksdb/rocksdb-multiplatform)
 
 # Kotlin Multiplatform RocksDB implementation
 
