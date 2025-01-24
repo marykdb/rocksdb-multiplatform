@@ -1,4 +1,3 @@
-
 package maryk.rocksdb
 
 expect abstract class AbstractWriteBatch : RocksObject, WriteBatchInterface {
@@ -208,7 +207,7 @@ expect abstract class AbstractWriteBatch : RocksObject, WriteBatchInterface {
      *
      * @throws RocksDBException If there is no previous call to
      * [.setSavePoint], an exception with
-     * [Status.Code.NotFound] will be thrown.
+     * [StatusCode.NotFound] will be thrown.
      */
     override fun popSavePoint()
 

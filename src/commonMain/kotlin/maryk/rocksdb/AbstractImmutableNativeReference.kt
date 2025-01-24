@@ -6,5 +6,7 @@ package maryk.rocksdb
  * underlying native C++ object
  */
 expect abstract class AbstractImmutableNativeReference : AbstractNativeReference {
+    open fun isOwningHandle(): Boolean
+
     override fun close()
 }

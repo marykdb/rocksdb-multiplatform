@@ -106,7 +106,7 @@ internal constructor(
         }
     }
 
-    actual fun closeE() {
+    actual open fun closeE() {
         if (isOwningHandle()) {
             rocksdb_close(native)
             super.close()

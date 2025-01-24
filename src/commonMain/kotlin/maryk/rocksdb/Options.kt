@@ -140,6 +140,21 @@ expect class Options() : RocksObject {
     fun setNumLevels(numLevels: Int): Options
 
     /**
+     * Maximum size of each compaction (not guarantee)
+     *
+     * @param maxCompactionBytes the compaction size limit
+     * @return the reference to the current options.
+     */
+    fun setMaxCompactionBytes(maxCompactionBytes: Long): Options
+
+    /**
+     * Control maximum size of each compaction (not guaranteed)
+     *
+     * @return compaction size threshold
+     */
+    fun maxCompactionBytes(): Long
+
+    /**
      * Set compaction style for DB.
      *
      * Default: LEVEL.

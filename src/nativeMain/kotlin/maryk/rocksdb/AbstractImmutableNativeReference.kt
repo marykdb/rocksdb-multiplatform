@@ -5,7 +5,7 @@ import kotlin.concurrent.AtomicReference
 actual abstract class AbstractImmutableNativeReference(): AbstractNativeReference()  {
     private val isClosed = AtomicReference(false)
 
-    open fun isOwningHandle(): Boolean {
+    actual open fun isOwningHandle(): Boolean {
         return !isClosed.value
     }
 

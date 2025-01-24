@@ -178,6 +178,64 @@ expect class ColumnFamilyOptions() : RocksObject {
     ): ColumnFamilyOptions
 
     /**
+     * Set the merge operator to be used for merging two merge operands
+     * of the same key. The merge function is invoked during
+     * compaction and at lookup time, if multiple key/value pairs belonging
+     * to the same key are found in the database.
+     *
+     * @param name the name of the merge function, as defined by
+     * the MergeOperators factory (see utilities/MergeOperators.h)
+     * The merge function is specified by name and must be one of the
+     * standard merge operators provided by RocksDB. The available
+     * operators are "put", "uint64add", "stringappend" and "stringappendtest".
+     * @return the instance of the current object.
+     */
+    fun setMergeOperatorName(name: String): ColumnFamilyOptions
+
+    /**
+     * Set the merge operator to be used for merging two different key/value
+     * pairs that share the same key. The merge function is invoked during
+     * compaction and at lookup time, if multiple key/value pairs belonging
+     * to the same key are found in the database.
+     *
+     * @param mergeOperator {@link MergeOperator} instance.
+     * @return the instance of the current object.
+     */
+    fun setMergeOperator(mergeOperator: MergeOperator): ColumnFamilyOptions
+
+    /**
+     * A single CompactionFilter instance to call into during compaction.
+     * Allows an application to modify/delete a key-value during background
+     * compaction.
+     *
+     * If the client requires a new compaction filter to be used for different
+     * compaction runs, it can specify call
+     * {@link #setCompactionFilterFactory(AbstractCompactionFilterFactory)}
+     * instead.
+     *
+     * The client should specify only set one of the two.
+     * {@link #setCompactionFilter(AbstractCompactionFilter)} takes precedence
+     * over {@link #setCompactionFilterFactory(AbstractCompactionFilterFactory)}
+     * if the client specifies both.
+     *
+     * If multithreaded compaction is being used, the supplied CompactionFilter
+     * instance may be used from different threads concurrently and so should be thread-safe.
+     *
+     * @param compactionFilter {@link AbstractCompactionFilter} instance.
+     * @return the instance of the current object.
+     */
+    fun setCompactionFilter(
+        compactionFilter: AbstractCompactionFilter<out AbstractSlice<*>>
+    ): ColumnFamilyOptions
+
+    /**
+     * Accessor for the CompactionFilter instance in use.
+     *
+     * @return Reference to the CompactionFilter, or null if one hasn't been set.
+     */
+    fun compactionFilter(): AbstractCompactionFilter<out AbstractSlice<*>>?
+
+    /**
      * This prefix-extractor uses the first n bytes of a key as its prefix.
      *
      * In some hash-based memtable representation such as HashLinkedList

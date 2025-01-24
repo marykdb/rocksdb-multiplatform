@@ -23,3 +23,8 @@ fun assertContainsExactly(results: Collection<ByteArray?>, vararg toMatch: ByteA
     if (results.size != toMatch.size) fail("Results do not match exactly $toMatch")
     assertContains(results, *toMatch)
 }
+
+fun assertContainsExactly(results: Collection<ByteArray?>, toMatch: List<ByteArray>) {
+    if (results.size != toMatch.size) fail("Results do not match exactly $toMatch")
+    assertContains(results, *toMatch.toTypedArray())
+}

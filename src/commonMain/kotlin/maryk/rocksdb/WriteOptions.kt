@@ -97,7 +97,7 @@ expect class WriteOptions() : RocksObject {
 
     /**
      * If true and we need to wait or sleep for the write request, fails
-     * immediately with [Status.Code.Incomplete].
+     * immediately with [StatusCode.Incomplete].
      *
      * @param noSlowdown true to fail write requests if we need to wait or sleep
      * @return the instance of the current WriteOptions.
@@ -106,7 +106,7 @@ expect class WriteOptions() : RocksObject {
 
     /**
      * If true and we need to wait or sleep for the write request, fails
-     * immediately with [Status.Code.Incomplete].
+     * immediately with [StatusCode.Incomplete].
      *
      * @return true when write requests are failed if we need to wait or sleep
      */
@@ -115,7 +115,7 @@ expect class WriteOptions() : RocksObject {
     /**
      * If true, this write request is of lower priority if compaction is
      * behind. In this case that, [.noSlowdown] == true, the request
-     * will be cancelled immediately with [Status.Code.Incomplete] returned.
+     * will be cancelled immediately with [StatusCode.Incomplete] returned.
      * Otherwise, it will be slowed down. The slowdown value is determined by
      * RocksDB to guarantee it introduces minimum impacts to high priority writes.
      *

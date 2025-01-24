@@ -124,6 +124,13 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
 
     actual fun numLevels() = rocksdb_options_get_num_levels(native)
 
+    actual fun setMaxCompactionBytes(maxCompactionBytes: Long): Options {
+        rocksdb.rocksdb_options_set_max_compaction_bytes(native, maxCompactionBytes.toULong())
+        return this
+    }
+
+    actual fun maxCompactionBytes(): Long = rocksdb.rocksdb_options_get_max_compaction_bytes(native).toLong()
+
     actual fun setCompactionStyle(compactionStyle: CompactionStyle): Options {
         rocksdb_options_set_compaction_style(native, compactionStyle.value.toInt())
         return this

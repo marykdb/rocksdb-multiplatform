@@ -23,7 +23,7 @@ expect open class RocksDB : RocksObject {
      *
      * @throws RocksDBException if an error occurs whilst closing.
      */
-    fun closeE()
+    open fun closeE()
 
     /**
      * This is similar to {@link #closeE()} except that it
