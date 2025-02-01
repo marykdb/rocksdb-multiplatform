@@ -1,36 +1,9 @@
 package maryk.rocksdb
 
 /**
- * Represents a RocksDB instance with transaction support.
- *
- * `TransactionDB` extends the functionality of `RocksDB` by providing
- * transactional capabilities, allowing for atomic operations across multiple
- * key-value pairs. It implements the [TransactionalDB] interface, parameterized
- * with [TransactionOptions], to facilitate transaction management.
- *
- * **Example Usage:**
- *
- * ```kotlin
- * val options = Options().setCreateIfMissing(true)
- * val transactionDbOptions = TransactionDBOptions()
- * val transactionDB = TransactionDB.open(options, transactionDbOptions, "/path/to/db")
- *
- * val writeOptions = WriteOptions().setSync(true)
- * val txn = transactionDB.beginTransaction(writeOptions)
- *
- * try {
- *     txn.put("key1", "value1")
- *     txn.put("key2", "value2")
- *     txn.commit()
- * } catch (e: RocksDBException) {
- *     txn.rollback()
- * } finally {
- *     txn.close()
- *     transactionDB.close()
- * }
- * ```
+ * Database with Transaction support.
  */
-expect class TransactionDB : RocksDB {
+expect class OptimisticTransactionDB : RocksDB {
     /**
      * Starts a new Transaction.
      *
@@ -52,7 +25,7 @@ expect class TransactionDB : RocksDB {
      * @param transactionOptions Any options for the transaction.
      * @return A new [Transaction] instance.
      */
-    fun beginTransaction(writeOptions: WriteOptions, transactionOptions: TransactionOptions): Transaction
+    fun beginTransaction(writeOptions: WriteOptions, transactionOptions: OptimisticTransactionOptions): Transaction
 
     /**
      * Starts a new Transaction by reusing an existing transaction.
@@ -82,46 +55,9 @@ expect class TransactionDB : RocksDB {
      */
     fun beginTransaction(
         writeOptions: WriteOptions,
-        transactionOptions: TransactionOptions,
+        transactionOptions: OptimisticTransactionOptions,
         oldTransaction: Transaction
     ): Transaction
-
-//    /**
-//     * Retrieves a transaction by its name.
-//     *
-//     * @param transactionName The name of the transaction to retrieve.
-//     *
-//     * @return A [Transaction] instance if found; otherwise, `null`.
-//     */
-//    fun getTransactionByName(transactionName: String): Transaction?
-
-    /**
-     * Retrieves all prepared transactions currently held by the database.
-     *
-     * @return A list of all [Transaction] instances that are in a prepared state.
-     */
-    fun getAllPreparedTransactions(): List<Transaction>
-
-//    /**
-//     * Retrieves the current status of all locks held by the database.
-//     *
-//     * @return A map where each key is a transaction ID, and each value is a [KeyLockInfo] instance detailing the lock information.
-//     */
-//    fun getLockStatusData(): Map<Long, KeyLockInfo>
-//
-//    /**
-//     * Retrieves the deadlock information buffer.
-//     *
-//     * @return An array of [DeadlockPath] instances representing detected deadlocks.
-//     */
-//    fun getDeadlockInfoBuffer(): Array<DeadlockPath>
-
-    /**
-     * Sets the size of the deadlock information buffer.
-     *
-     * @param targetSize The desired size of the deadlock information buffer.
-     */
-    fun setDeadlockInfoBufferSize(targetSize: Int)
 }
 
 //

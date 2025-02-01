@@ -14,6 +14,8 @@ actual abstract class Buffer(
         return this
     }
 
+    actual fun position(): Int = position
+
     actual fun remaining() = limit - position
 
     fun limit(newLimit: Int): Buffer {

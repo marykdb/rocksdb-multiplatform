@@ -135,22 +135,9 @@ actual class ColumnFamilyOptions private constructor(
         return this
     }
 
-    actual fun setMergeOperatorName(name: String): ColumnFamilyOptions {
-        TODO()
-        return this
-    }
-
     actual fun setMergeOperator(mergeOperator: MergeOperator): ColumnFamilyOptions {
-        //rocksdb_options_set_merge_operator(native, mergeOperator.native)
-        TODO()
-    }
-
-    actual fun setCompactionFilter(compactionFilter: AbstractCompactionFilter<out AbstractSlice<*>>): ColumnFamilyOptions {
-        TODO()
-    }
-
-    actual fun compactionFilter(): AbstractCompactionFilter<out AbstractSlice<*>>? {
-        TODO()
+        rocksdb.rocksdb_options_set_merge_operator(native, mergeOperator.native)
+        return this
     }
 
     actual fun useFixedLengthPrefixExtractor(n: Int): ColumnFamilyOptions {

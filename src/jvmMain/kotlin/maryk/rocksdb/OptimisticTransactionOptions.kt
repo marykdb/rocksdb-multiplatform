@@ -1,0 +1,5 @@
+package maryk.rocksdb
+
+import org.rocksdb.OptimisticTransactionOptions
+
+actual typealias OptimisticTransactionOptions = OptimisticTransactionOptions

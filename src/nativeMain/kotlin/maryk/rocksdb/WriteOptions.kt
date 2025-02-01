@@ -17,7 +17,7 @@ import rocksdb.rocksdb_writeoptions_set_low_pri
 import rocksdb.rocksdb_writeoptions_set_no_slowdown
 import rocksdb.rocksdb_writeoptions_set_sync
 
-actual class WriteOptions private constructor(
+actual class WriteOptions internal constructor(
     internal val native: CPointer<rocksdb_writeoptions_t>
 ) : RocksObject() {
     actual constructor() : this(rocksdb_writeoptions_create()!!)

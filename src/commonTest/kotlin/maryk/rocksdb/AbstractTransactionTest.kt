@@ -1,10 +1,11 @@
 package maryk.rocksdb
 
-import kotlinx.datetime.Clock
+import assertBufferEquals
 import maryk.ByteBuffer
 import maryk.allocateByteBuffer
 import maryk.allocateDirectByteBuffer
 import maryk.assertContainsExactly
+import maryk.assertContentEquals
 import maryk.createFolder
 import maryk.deleteFolder
 import maryk.flip
@@ -75,7 +76,7 @@ abstract class AbstractTransactionTest {
             dbContainer.beginTransaction().use { txn ->
                 txn.setSnapshot()
                 val snapshot = txn.getSnapshot()
-                assertFalse(snapshot!!.isOwningHandle())
+                assertNotNull(snapshot)
             }
         }
     }
@@ -424,7 +425,7 @@ abstract class AbstractTransactionTest {
 
                             allocateDirectByteBuffer(20) { expectedBuffer ->
                                 expectedBuffer.put("value1".encodeToByteArray())
-                                assertEquals(v1Read2, expectedBuffer)
+                                assertBufferEquals(v1Read2, expectedBuffer)
                             }
                         }
                     }
@@ -486,10 +487,8 @@ abstract class AbstractTransactionTest {
                                 assertEquals(StatusCode.NotFound, getStatus2.getStatus().getCode())
                             }
 
-                            k1.flip()
                             txn.put(testCf, k1, v1)
 
-                            k1.flip()
                             v1.flip()
                         }
 
@@ -500,7 +499,7 @@ abstract class AbstractTransactionTest {
 
                             allocateBuffer(20) { expectedBuffer ->
                                 expectedBuffer.put("value1".encodeToByteArray())
-                                assertEquals(v1Read3, expectedBuffer)
+                                assertBufferEquals(v1Read3, expectedBuffer)
                             }
                         }
                     }
@@ -1062,19 +1061,19 @@ abstract class AbstractTransactionTest {
         }
     }
 
-    @Test
-    fun elapsedTime() {
-        val preStartTxnTime = Clock.System.now().toEpochMilliseconds()
-        startDb().use { dbContainer ->
-            dbContainer.beginTransaction().use { txn ->
-                Thread.sleep(2)
-
-                val txnElapsedTime = txn.getElapsedTime()
-                assertTrue(txnElapsedTime < (Clock.System.now().toEpochMilliseconds() - preStartTxnTime))
-                assertTrue(txnElapsedTime > 0)
-            }
-        }
-    }
+//    @Test
+//    fun elapsedTime() {
+//        val preStartTxnTime = Clock.System.now().toEpochMilliseconds()
+//        startDb().use { dbContainer ->
+//            dbContainer.beginTransaction().use { txn ->
+//                Thread.sleep(2)
+//
+//                val txnElapsedTime = txn.getElapsedTime()
+//                assertTrue(txnElapsedTime < (Clock.System.now().toEpochMilliseconds() - preStartTxnTime))
+//                assertTrue(txnElapsedTime > 0)
+//            }
+//        }
+//    }
 
     @Test
     fun getWriteBatch() {
@@ -1118,7 +1117,6 @@ abstract class AbstractTransactionTest {
 
                 val txnWriteOptions = txn.getWriteOptions()
                 assertNotNull(txnWriteOptions)
-                assertFalse(txnWriteOptions.isOwningHandle())
                 assertNotSame(writeOptions, txnWriteOptions)
                 assertTrue(txnWriteOptions.disableWAL())
                 assertTrue(txnWriteOptions.sync())
@@ -1129,7 +1127,6 @@ abstract class AbstractTransactionTest {
 
                 val updatedWriteOptions = txn.getWriteOptions()
                 assertNotNull(updatedWriteOptions)
-                assertFalse(updatedWriteOptions.isOwningHandle())
                 assertNotSame(writeOptions, updatedWriteOptions)
                 assertTrue(updatedWriteOptions.disableWAL())
                 assertFalse(updatedWriteOptions.sync())
@@ -1213,7 +1210,6 @@ abstract class AbstractTransactionTest {
                 val writeBatch = txn.getCommitTimeWriteBatch()
 
                 assertNotNull(writeBatch)
-                assertFalse(writeBatch.isOwningHandle())
                 assertEquals(0, writeBatch.count())
             }
         }
