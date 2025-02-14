@@ -174,13 +174,13 @@ kotlin {
         }
         setupTarget("ios_simulator_arm64", buildTask, "-arch arm64 -target arm64-apple-ios13.0-simulator -isysroot $sdkPath", "-DPLATFORM=SIMULATORARM64")
     }
-//    macosX64 {
-//        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
-//            workingDir = projectDir
-//            commandLine("./buildRocksdbApple.sh", "--platform=macos", "--arch=x86_64")
-//        }
-//        setupTarget("macos_x86_64", buildTask, "-arch x86_64 -target x86_64-apple-macos11.0", "-DPLATFORM=OS64")
-//    }
+    macosX64 {
+        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
+            workingDir = projectDir
+            commandLine("./buildRocksdbApple.sh", "--platform=macos", "--arch=x86_64")
+        }
+        setupTarget("macos_x86_64", buildTask, "-arch x86_64 -target x86_64-apple-macos11.0", "-DPLATFORM=OS64")
+    }
     macosArm64 {
         val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
             workingDir = projectDir
@@ -195,13 +195,13 @@ kotlin {
         }
         setupTarget("linux_x86_64", buildTask, "-march=x86-64")
     }
-//    linuxArm64 {
-//        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
-//            workingDir = projectDir
-//            commandLine("./buildRocksdbLinux.sh", "--arch=arm64")
-//        }
-//        setupTarget("linux_arm64", buildTask, "-march=armv8-a")
-//    }
+    linuxArm64 {
+        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
+            workingDir = projectDir
+            commandLine("./buildRocksdbLinux.sh", "--arch=arm64")
+        }
+        setupTarget("linux_arm64", buildTask, "-march=armv8-a")
+    }
 }
 
 // Creates the folders for the database
