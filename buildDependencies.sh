@@ -124,6 +124,12 @@ if [[ "$OUTPUT_DIR" == *linux_x86_64* ]]; then
 elif [[ "$OUTPUT_DIR" == *linux_arm64* ]]; then
   export CC="$HOME/.konan/dependencies/aarch64-unknown-linux-gnu-gcc-8.3.0-glibc-2.25-kernel-4.9-2/bin/aarch64-unknown-linux-gnu-gcc"
   export CXX="$HOME/.konan/dependencies/aarch64-unknown-linux-gnu-gcc-8.3.0-glibc-2.25-kernel-4.9-2/bin/aarch64-unknown-linux-gnu-g++"
+elif [[ "$OUTPUT_DIR" == *macos_x86_64* ]]; then
+  export CC="clang"
+  export CXX="clang++"
+elif [[ "$OUTPUT_DIR" == *macos_arm64* ]]; then
+  export CC="clang"
+  export CXX="clang++"
 fi
 set -u
 
@@ -175,7 +181,7 @@ download_ios_toolchain() {
   rm -rf "${DOWNLOAD_DIR}/ios-cmake-4.5.0"
 }
 
-if [[ "${EXTRA_CFLAGS}" == *"-isysroot"* || "${EXTRA_CFLAGS}" == *"apple-macos"* ]]; then
+if [[ "${EXTRA_CFLAGS}" == *"-isysroot"* ]]; then
   download_ios_toolchain
   TOOLCHAIN_FILE="${IOS_TOOLCHAIN_DIR}/ios.toolchain.cmake"
 fi
