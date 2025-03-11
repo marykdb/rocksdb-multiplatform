@@ -20,7 +20,7 @@ plugins {
 }
 
 group = "io.maryk.rocksdb"
-version = "9.10.1"
+version = "9.10.2"
 
 val rocksDBJVMVersion = "9.10.0"
 val rocksDBAndroidVersion = "9.10.1"
@@ -201,6 +201,13 @@ kotlin {
             commandLine("./buildRocksdbLinux.sh", "--arch=arm64")
         }
         setupTarget("linux_arm64", buildTask, "-march=armv8-a")
+    }
+    mingwX64 {
+        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
+            workingDir = projectDir
+            commandLine("./buildRocksdbMinGW.sh", "--arch=x86_64")
+        }
+        setupTarget("mingw_x86_64", buildTask, "")
     }
 }
 

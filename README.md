@@ -8,7 +8,7 @@ storage of data on disk. RocksDB is widely used in many industries for various a
 systems, big data systems, and storage engines for other distributed systems.
 
 The aim of this project is to provide a multiplatform RocksDB implementation that can be used across different platforms,
-including JVM, Android, and native Linux/macOS/iOS. This allows developers to write applications that can run on different platforms 
+including JVM, Android, and native Linux/macOS/iOS/Windows. This allows developers to write applications that can run on different platforms 
 without having to rewrite the codebase.
 
 This project is useful for developers who want to build multiplatform applications that require high-performance disk-based
@@ -30,6 +30,7 @@ Kotlin Native:
 - **macOS**: macosArm64 & macosX64
 - **iOS**: iosArm64 & iosSimulatorArm64
 - **Linux**: linuxX64 & linuxArm64
+- **Windows**: mingwX64
 
 Since the implementation is based on the RocksDB C API,
 other native platforms should be able to be added in the future if RocksDB can be compiled to that platform.
@@ -46,7 +47,7 @@ You can refer to the [API reference](src/commonMain/kotlin/maryk/rocksdb) or the
 The dependency is published in Maven Central, so you can easily add it to your project:
 
 ```kotlin
-implementation("io.maryk.rocksdb:rocksdb-multiplatform:9.10.1")
+implementation("io.maryk.rocksdb:rocksdb-multiplatform:9.10.2")
 ```
 
 ## Usage Example

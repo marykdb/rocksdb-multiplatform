@@ -130,6 +130,12 @@ elif [[ "$OUTPUT_DIR" == *macos_x86_64* ]]; then
 elif [[ "$OUTPUT_DIR" == *macos_arm64* ]]; then
   export CC="clang"
   export CXX="clang++"
+elif [[ "$OUTPUT_DIR" == *mingw_x86_64* ]]; then
+  export CC="x86_64-w64-mingw32-gcc"
+  export CXX="x86_64-w64-mingw32-g++"
+  export AR="x86_64-w64-mingw32-ar"
+  export uname="mingw32"
+  export CROSS_PREFIX="x86_64-w64-mingw32-"
 fi
 set -u
 
@@ -229,9 +235,9 @@ build_zlib() {
   local src_dir="${DOWNLOAD_DIR}/zlib-${ZLIB_VER}"
   tar xzf "${tarball}" -C "${DOWNLOAD_DIR}"  > /dev/null
   pushd "${src_dir}" > /dev/null
-  CFLAGS="${EXTRA_CFLAGS} -fPIC" ./configure --static
+  CROSS_PREFIX="${CROSS_PREFIX}" CFLAGS="${EXTRA_CFLAGS} -fPIC" ./configure --static
   make clean > /dev/null
-  make > /dev/null
+  make static
   cp "zlib.h" "zconf.h" "../../${DOWNLOAD_DIR}/include/"
   cp "libz.a" "../../${OUTPUT_DIR}/"
   popd > /dev/null
@@ -290,8 +296,15 @@ build_snappy() {
     echo "set(CMAKE_CXX_FLAGS \"\${CMAKE_CXX_FLAGS} ${EXTRA_CXXFLAGS}\")" >> "${toolchain_file}"
     echo "set(CMAKE_POSITION_INDEPENDENT_CODE ON)" >> "${toolchain_file}"
     echo "set(CMAKE_BUILD_TYPE Release)" >> "${toolchain_file}"
+    echo "set(CMAKE_C_COMPILER_WORKS ON)" >> "${toolchain_file}"
+    echo "set(CMAKE_CXX_COMPILER_WORKS ON)" >> "${toolchain_file}"
+    echo "set(CMAKE_16BIT_TYPE \"unsigned long\")" >> "${toolchain_file}"
 
     EXTRA_CMAKEFLAGS+=""" -DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX -DCMAKE_TOOLCHAIN_FILE=$toolchain_file"""
+    if [[ "$OUTPUT_DIR" == *mingw_x86_64* ]]; then
+      EXTRA_CMAKEFLAGS+=" -DCMAKE_SYSTEM_NAME=Windows"
+      EXTRA_CMAKEFLAGS+=" -DSNAPPY_IS_BIG_ENDIAN=0"
+    fi
   fi
 
   cmake -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
@@ -322,7 +335,14 @@ build_lz4() {
   tar xzf "${tarball}" -C "${DOWNLOAD_DIR}" > /dev/null
   pushd "${src_dir}/lib" > /dev/null
   make clean > /dev/null
-  CFLAGS="${EXTRA_CFLAGS} -fPIC -O2" LDFLAGS="${EXTRA_LDFLAGS}" make > /dev/null
+
+  TARGET_OS=null
+  if [[ "$OUTPUT_DIR" == *mingw_x86_64* ]]; then
+    # Because we use linux cross compiler, we need to set it to linux
+    TARGET_OS="Linux"
+  fi
+
+  TARGET_OS=$TARGET_OS CFLAGS="${EXTRA_CFLAGS} -fPIC -O2" LDFLAGS="${EXTRA_LDFLAGS}" make > /dev/null
   cp "lz4.h" "lz4hc.h" "../../../${DOWNLOAD_DIR}/include"
   cp "liblz4.a" "../../../${OUTPUT_DIR}/"
   popd > /dev/null
