@@ -20,10 +20,10 @@ plugins {
 }
 
 group = "io.maryk.rocksdb"
-version = "9.10.0"
+version = "9.10.1"
 
 val rocksDBJVMVersion = "9.10.0"
-val rocksDBAndroidVersion = "9.10.0"
+val rocksDBAndroidVersion = "9.10.1"
 
 val kotlinXDateTimeVersion = "0.6.1"
 
