@@ -5,7 +5,7 @@ name: Run tests on commit and PR to master
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, ming ]
   pull_request:
     branches: [ master ]
 
@@ -26,3 +26,36 @@ jobs:
       - name: Run kotlin JVM tests
         run: ./gradlew jvmTest
 
+  test-windows:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: 17
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Run kotlin mingW tests
+        run: ./gradlew mingwX64Test
+
+  windows-x64:
+    name: Windows x64
+    runs-on: ubuntu-latest
+    container:
+      image: gcc:8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - run: apt-get update && apt-get install -y mingw-w64 cmake
+      - uses: actions/setup-java@v4
+        with:
+          distribution: adopt
+          java-version: 21
+      - run: chmod +x gradlew
+      - uses: gradle/actions/setup-gradle@v3
+      - run: ./gradlew mingwX64Test
