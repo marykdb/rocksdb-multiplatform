@@ -5,7 +5,6 @@ import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
-import java.util.*
 
 repositories {
     google()
@@ -13,10 +12,9 @@ repositories {
 }
 
 plugins {
-    id("maven-publish")
-    id("signing")
-    id("com.android.library") version "8.7.2"
+    id("com.android.library") version "8.13.0"
     kotlin("multiplatform") version "2.2.10"
+    id("com.vanniktech.maven.publish") version "0.34.0"
 }
 
 group = "io.maryk.rocksdb"
@@ -31,7 +29,6 @@ val rocksdbBuildPath = "./rocksdb/build"
 
 android {
     namespace = "io.maryk.rocksdb"
-    buildToolsVersion = "34.0.0"
     compileSdk = 36
 
     defaultConfig {
@@ -123,7 +120,7 @@ kotlin {
 
         val dependencyTask = tasks.create("buildDependencies_$buildName", Exec::class) {
             workingDir = projectDir
-            val options = buildList<String> {
+            val options = buildList {
                 if (buildName.startsWith("linux") && isMacOs) {
                     addAll(listOf("docker", "run", "--rm", "--platform"))
                     if (extraCFlags == "-march=x86-64") {
@@ -254,77 +251,39 @@ kotlin.targets.withType<KotlinNativeTarget>().configureEach {
     }
 }
 
-// Placeholder secrets to allow project sync and build without publication setup
-ext["signing.keyId"] = System.getenv("SIGNING_KEY_ID")
-ext["signing.password"] = System.getenv("SIGNING_PASSWORD")
-ext["signing.secretKeyRingFile"] = System.getenv("SIGNING_SECRET_KEY_RING_FILE")
-ext["ossrhUsername"] = System.getenv("OSSRH_USERNAME")
-ext["ossrhPassword"] = System.getenv("OSSRH_PASSWORD")
-
-// Load secrets from local.properties if available, otherwise fallback to environment variables (useful for CI/CD)
-val secretPropsFile = project.rootProject.file("local.properties")
-if (secretPropsFile.exists()) {
-    secretPropsFile.reader().use { reader ->
-        Properties().apply {
-            load(reader)
-            forEach { name, value ->
-                ext[name.toString()] = value.toString()
-            }
-        }
-    }
+mavenPublishing {
+    publishToMavenCentral()
+    signAllPublications()
 }
 
-fun getExtraString(name: String): String? = ext[name]?.toString()
+mavenPublishing {
+    coordinates(artifactId = "rocksdb-multiplatform")
 
-val emptyJavadocJar by tasks.registering(Jar::class) {
-    archiveClassifier.set("javadoc")
-}
-
-afterEvaluate {
-    publishing {
-        repositories {
-            maven {
-                name = "sonatype"
-                url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-                credentials {
-                    username = getExtraString("ossrhUsername")
-                    password = getExtraString("ossrhPassword")
-                }
+    pom {
+        name.set("rocksdb-multiplatform")
+        description.set("Kotlin Multiplatform RocksDB interface")
+        inceptionYear.set("2019")
+        url.set("https://github.com/marykdb/rocksdb-multiplatform")
+        licenses {
+            license {
+                name.set("The Apache License, Version 2.0")
+                url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                distribution.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
             }
         }
 
-        publications.withType<MavenPublication> {
-            if (this.name == "jvm") {
-                artifact(emptyJavadocJar.get())
-            }
-            pom {
-                name = project.name
-                description = "Kotlin multiplatform RocksDB interface"
-                url = "https://github.com/marykdb/rocksdb-multiplatform"
-
-                licenses {
-                    license {
-                        name = "The Apache Software License, Version 2.0"
-                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
-                        distribution = "repo"
-                    }
-                }
-                developers {
-                    developer {
-                        id = "jurmous"
-                        name = "Jurriaan Mous"
-                    }
-                }
-                scm {
-                    url = "https://github.com/marykdb/rocksdb-multiplatform"
-                }
+        developers {
+            developer {
+                id.set("jurmous")
+                name.set("Jurriaan Mous")
             }
         }
-    }
 
-    signing {
-        println(publishing.publications)
-        sign(publishing.publications)
+        scm {
+            url.set("https://github.com/marykdb/rocksdb-multiplatform")
+            connection.set("scm:git:git://github.com/marykdb/rocksdb-multiplatform.git")
+            developerConnection.set("scm:git:ssh://git@github.com/marykdb/rocksdb-multiplatform.git")
+        }
     }
 }
 
