@@ -1,21 +1,19 @@
 package maryk.rocksdb
 
-import kotlin.concurrent.AtomicReference
-import kotlin.experimental.ExperimentalNativeApi
-import kotlin.native.identityHashCode
+import kotlin.concurrent.AtomicInt
 
 actual abstract class AbstractImmutableNativeReference(): AbstractNativeReference()  {
-    private val isClosed = AtomicReference(false)
+    private val isClosed = AtomicInt(0)
 
     actual open fun isOwningHandle(): Boolean {
-        return !isClosed.value
+        return isClosed.value == 0
     }
 
     internal fun disownHandle() {
-        isClosed.getAndSet(true)
+        isClosed.getAndSet(1)
     }
 
     actual override fun close() {
-        isClosed.compareAndSet(false, true)
+        isClosed.compareAndSet(0, 1)
     }
 }
