@@ -32,54 +32,6 @@ expect class ColumnFamilyOptions() : RocksObject {
     fun minWriteBufferNumberToMerge(): Int
 
     /**
-     * The total maximum number of write buffers to maintain in memory including
-     * copies of buffers that have already been flushed.  Unlike
-     * [AdvancedMutableColumnFamilyOptionsInterface.maxWriteBufferNumber],
-     * this parameter does not affect flushing.
-     * This controls the minimum amount of write history that will be available
-     * in memory for conflict checking when Transactions are used.
-     *
-     * When using an OptimisticTransactionDB:
-     * If this value is too low, some transactions may fail at commit time due
-     * to not being able to determine whether there were any write conflicts.
-     *
-     * When using a TransactionDB:
-     * If Transaction::SetSnapshot is used, TransactionDB will read either
-     * in-memory write buffers or SST files to do write-conflict checking.
-     * Increasing this value can reduce the number of reads to SST files
-     * done for conflict detection.
-     *
-     * Setting this value to 0 will cause write buffers to be freed immediately
-     * after they are flushed.
-     * If this value is set to -1,
-     * [AdvancedMutableColumnFamilyOptionsInterface.maxWriteBufferNumber]
-     * will be used.
-     *
-     * Default:
-     * If using a TransactionDB/OptimisticTransactionDB, the default value will
-     * be set to the value of
-     * [AdvancedMutableColumnFamilyOptionsInterface.maxWriteBufferNumber]
-     * if it is not explicitly set by the user. Otherwise, the default is 0.
-     *
-     * @param maxWriteBufferNumberToMaintain The maximum number of write
-     * buffers to maintain
-     *
-     * @return the reference to the current options.
-     */
-    fun setMaxWriteBufferNumberToMaintain(
-        maxWriteBufferNumberToMaintain: Int
-    ): ColumnFamilyOptions
-
-    /**
-     * The total maximum number of write buffers to maintain in memory including
-     * copies of buffers that have already been flushed.
-     *
-     * @return maxWriteBufferNumberToMaintain The maximum number of write buffers
-     * to maintain
-     */
-    fun maxWriteBufferNumberToMaintain(): Int
-
-    /**
      * Control locality of bloom filter probes to improve cache miss rate.
      * This option only applies to memtable prefix bloom and plaintable
      * prefix bloom. It essentially limits the max number of cache lines each

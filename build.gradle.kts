@@ -15,24 +15,24 @@ repositories {
 plugins {
     id("maven-publish")
     id("signing")
-    id("com.android.library") version "8.7.0"
-    kotlin("multiplatform") version "2.1.10"
+    id("com.android.library") version "8.7.2"
+    kotlin("multiplatform") version "2.2.10"
 }
 
 group = "io.maryk.rocksdb"
-version = "9.10.2"
+version = "10.4.2"
 
-val rocksDBJVMVersion = "9.10.0"
-val rocksDBAndroidVersion = "9.10.1"
+val rocksDBJVMVersion = "10.4.2"
+val rocksDBAndroidVersion = "10.4.2"
 
-val kotlinXDateTimeVersion = "0.6.1"
+val kotlinXDateTimeVersion = "0.7.1"
 
 val rocksdbBuildPath = "./rocksdb/build"
 
 android {
     namespace = "io.maryk.rocksdb"
     buildToolsVersion = "34.0.0"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 21
@@ -54,7 +54,7 @@ kotlin {
     }
     jvm()
     androidTarget {
-        publishAllLibraryVariants()
+        publishLibraryVariants("release")
         publishLibraryVariantsGroupedByFlavor = true
     }
 
@@ -69,8 +69,8 @@ kotlin {
     sourceSets {
         all {
             languageSettings.apply {
-                languageVersion = "2.1"
-                apiVersion = "2.1"
+                languageVersion = "2.2"
+                apiVersion = "2.2"
                 progressiveMode = true
                 optIn("kotlinx.cinterop.ExperimentalForeignApi")
                 optIn("kotlinx.cinterop.BetaInteropApi")
@@ -86,6 +86,12 @@ kotlin {
         jvmMain {
             dependencies {
                 api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion")
+                // Temp because 10.4.2 does not contain the needed JNI files within root jar
+                // https://github.com/facebook/rocksdb/issues/13893#issuecomment-3240464232
+                api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:osx")
+                api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:linux64")
+                api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:linux32")
+                api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:win64")
             }
         }
         jvmTest {

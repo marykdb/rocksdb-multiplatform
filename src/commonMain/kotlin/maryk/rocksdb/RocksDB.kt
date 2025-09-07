@@ -1771,13 +1771,23 @@ expect open class RocksDB : RocksObject {
     fun enableFileDeletions()
 
     /**
-     * Delete the file name from the db directory and update the internal state to
-     * reflect that. Supports deletion of sst and log files only. 'name' must be
-     * path relative to the db directory. eg. 000001.sst, /archive/000003.log
+     * Delete files in multiple ranges at once.
+     * Deleting files in a lot of ranges one at a time can be slow; use this API for
+     * better performance in that case.
      *
-     * @param name the file name
+     * @param columnFamilyHandle The column family for operation (use the overload without
+     * [columnFamilyHandle] for the default column family).
+     * @param ranges Pairs of ranges (from1, to1, from2, to2, ...).
+     * @param includeEnd Whether ranges should include end.
+     *
+     * @throws RocksDBException thrown if error happens in underlying
+     * native library.
      */
-    fun deleteFile(name: String)
+    fun deleteFilesInRanges(
+        columnFamilyHandle: ColumnFamilyHandle,
+        ranges: List<ByteArray>,
+        includeEnd: Boolean
+    )
 
     /**
      * Obtains the meta data of the specified column family of the DB.

@@ -690,19 +690,65 @@ class RocksDBTest {
         }
     }
 
-    @Test
-    fun deleteFile() {
-        Options().setCreateIfMissing(true).use { options ->
-            openRocksDB(options, createTestFolder()).use { db ->
-                try {
-                    db.deleteFile("/000003.log")
-                } catch (e: RocksDBException) {
-                    // Will throw an exception on Native because log is not archived
-                    assertEquals(StatusCode.NotSupported, e.getStatus()?.getCode())
-                }
-            }
-        }
-    }
+//    @Test
+//    fun deleteFilesInRange() {
+//        val KEY_SIZE = 20
+//        val VALUE_SIZE = 1000
+//        val FILE_SIZE = 64_000
+//        val NUM_FILES = 10
+//        val KEY_INTERVAL = 10_000
+//
+//        fun padKey(n: Int): ByteArray = n.toString().padStart(KEY_SIZE, '0').encodeToByteArray()
+//
+//        Options().apply {
+//            setCreateIfMissing(true)
+//            setCompressionType(CompressionType.NO_COMPRESSION)
+//            setTargetFileSizeBase(FILE_SIZE.toLong())
+//            setWriteBufferSize((FILE_SIZE / 2).toLong())
+//            setDisableAutoCompactions(true)
+//            setLevelCompactionDynamicLevelBytes(false)
+//        }.use { opt ->
+//            openRocksDB(opt, createTestFolder()).use { db ->
+//                val records = FILE_SIZE / (KEY_SIZE + VALUE_SIZE)
+//
+//                // fill database with key/value pairs in interleaved fashion
+//                val value = ByteArray(VALUE_SIZE)
+//                var keyInit = 0
+//                repeat(NUM_FILES) {
+//                    var intKey = keyInit++
+//                    repeat(records) {
+//                        intKey += KEY_INTERVAL
+//                        Random.nextBytes(value)
+//                        db.put(padKey(intKey), value)
+//                    }
+//                }
+//
+//                // Flush all memtables to create L0 files
+//                FlushOptions().setWaitForFlush(true).use { flushOptions ->
+//                    db.flush(flushOptions)
+//                }
+//
+//                // Compact to ensure files are organized into L1
+//                db.compactRange()
+//
+//                // Ensure there are no L0 files left after compaction
+//                assertEquals(0L, db.getLongProperty("rocksdb.num-files-at-level0"))
+//
+//                // Should be ~10 files at L1; accept ±2
+//                var files = db.getLongProperty("rocksdb.num-files-at-level1").toInt()
+//                assertTrue(files in 8..12)
+//
+//                // Delete roughly the lower 60% of the keyspace
+//                val endKey = padKey(records * KEY_INTERVAL * 6 / 10)
+//                // Our deleteFilesInRanges API expects pairs [from, to]; use empty begin to represent the minimal key
+//                db.deleteFilesInRanges(listOf(byteArrayOf(), endKey), includeEnd = false)
+//
+//                files = db.getLongProperty("rocksdb.num-files-at-level1").toInt()
+//                // Expect ~5 files remain; accept ±2. The exact behavior is covered by native tests; here we assert JNI did work.
+//                assertTrue(files in 3..7)
+//            }
+//        }
+//    }
 
     @Test
     fun getColumnFamilyMetaData() {

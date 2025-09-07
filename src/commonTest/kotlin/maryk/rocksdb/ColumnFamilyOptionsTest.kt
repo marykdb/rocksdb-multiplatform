@@ -206,15 +206,4 @@ class ColumnFamilyOptionsTest {
             }
         }
     }
-    @Test
-    fun maxWriteBufferNumberToMaintain() {
-        ColumnFamilyOptions().use { opt ->
-            var intValue = Random.nextInt()
-            // Size has to be positive
-            intValue = if (intValue < 0) -intValue else intValue
-            intValue = if (intValue == 0) intValue + 1 else intValue
-            opt.setMaxWriteBufferNumberToMaintain(intValue)
-            assertEquals(intValue, opt.maxWriteBufferNumberToMaintain())
-        }
-    }
 }

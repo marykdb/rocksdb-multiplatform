@@ -22,7 +22,6 @@ import rocksdb.rocksdb_options_get_max_bytes_for_level_multiplier
 import rocksdb.rocksdb_options_get_max_sequential_skip_in_iterations
 import rocksdb.rocksdb_options_get_max_successive_merges
 import rocksdb.rocksdb_options_get_max_write_buffer_number
-import rocksdb.rocksdb_options_get_max_write_buffer_number_to_maintain
 import rocksdb.rocksdb_options_get_memtable_huge_page_size
 import rocksdb.rocksdb_options_get_memtable_prefix_bloom_size_ratio
 import rocksdb.rocksdb_options_get_min_write_buffer_number_to_merge
@@ -44,7 +43,6 @@ import rocksdb.rocksdb_options_set_max_bytes_for_level_multiplier
 import rocksdb.rocksdb_options_set_max_sequential_skip_in_iterations
 import rocksdb.rocksdb_options_set_max_successive_merges
 import rocksdb.rocksdb_options_set_max_write_buffer_number
-import rocksdb.rocksdb_options_set_max_write_buffer_number_to_maintain
 import rocksdb.rocksdb_options_set_memtable_huge_page_size
 import rocksdb.rocksdb_options_set_memtable_prefix_bloom_size_ratio
 import rocksdb.rocksdb_options_set_min_write_buffer_number_to_merge
@@ -77,17 +75,6 @@ actual class ColumnFamilyOptions private constructor(
     actual fun minWriteBufferNumberToMerge(): Int {
         assert(isOwningHandle())
         return rocksdb_options_get_min_write_buffer_number_to_merge(native)
-    }
-
-    actual fun setMaxWriteBufferNumberToMaintain(maxWriteBufferNumberToMaintain: Int): ColumnFamilyOptions {
-        assert(isOwningHandle())
-        rocksdb_options_set_max_write_buffer_number_to_maintain(native, maxWriteBufferNumberToMaintain)
-        return this
-    }
-
-    actual fun maxWriteBufferNumberToMaintain(): Int {
-        assert(isOwningHandle())
-        return rocksdb_options_get_max_write_buffer_number_to_maintain(native)
     }
 
     actual fun setBloomLocality(bloomLocality: Int): ColumnFamilyOptions {

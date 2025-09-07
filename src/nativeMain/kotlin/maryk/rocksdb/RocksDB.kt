@@ -38,7 +38,7 @@ import rocksdb.rocksdb_create_iterator
 import rocksdb.rocksdb_create_iterator_cf
 import rocksdb.rocksdb_delete
 import rocksdb.rocksdb_delete_cf
-import rocksdb.rocksdb_delete_file
+import rocksdb.rocksdb_delete_file_in_range_cf
 import rocksdb.rocksdb_delete_range_cf
 import rocksdb.rocksdb_destroy_db
 import rocksdb.rocksdb_disable_file_deletions
@@ -1393,10 +1393,6 @@ internal constructor(
         }
     }
 
-    actual fun deleteFile(name: String) {
-        rocksdb_delete_file(native, name)
-    }
-
     internal fun processColumnFamilyMetaData(metaData: CPointer<rocksdb_column_family_metadata_t>?): ColumnFamilyMetaData {
         val levelCount = rocksdb_column_family_metadata_get_level_count(metaData)
 
@@ -1490,6 +1486,43 @@ internal constructor(
     actual fun promoteL0(targetLevel: Int) {
         wrapWithErrorThrower { error ->
             rocksdb.rocksdb_promote_l0(native, getDefaultColumnFamily().native, targetLevel, error)
+        }
+    }
+
+    actual fun deleteFilesInRanges(
+        columnFamilyHandle: ColumnFamilyHandle,
+        ranges: List<ByteArray>,
+        includeEnd: Boolean
+    ) {
+        if (ranges.isEmpty()) return
+        require(ranges.size % 2 == 0) { "ranges must be pairs of [from, to]" }
+
+        var i = 0
+        while (i < ranges.size) {
+            val begin = ranges[i]
+            val end = ranges[i + 1]
+
+            // Emulate inclusive end by using an exclusive upper bound of end + 0x00
+            val limit = if (includeEnd) {
+                ByteArray(end.size + 1).also { dst ->
+                    end.copyInto(dst)
+                    dst[end.size] = 0
+                }
+            } else end
+
+            wrapWithErrorThrower { error ->
+                rocksdb_delete_file_in_range_cf(
+                    db = native,
+                    column_family = columnFamilyHandle.native,
+                    start_key = begin.toCValues(),
+                    start_key_len = begin.size.toULong(),
+                    limit_key = limit.toCValues(),
+                    limit_key_len = limit.size.toULong(),
+                    errptr = error,
+                )
+            }
+
+            i += 2
         }
     }
 }
