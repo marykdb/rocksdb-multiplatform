@@ -13,7 +13,7 @@ repositories {
 
 plugins {
     id("com.android.library") version "8.13.0"
-    kotlin("multiplatform") version "2.2.10"
+    kotlin("multiplatform") version "2.2.20"
     id("com.vanniktech.maven.publish") version "0.34.0"
 }
 
