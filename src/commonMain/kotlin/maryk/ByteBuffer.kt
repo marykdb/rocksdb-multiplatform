@@ -1,6 +1,6 @@
 package maryk
 
-expect abstract class ByteBuffer : Buffer {
+expect sealed class ByteBuffer : Buffer {
     final override fun array(): ByteArray
     fun put(src: ByteArray): ByteBuffer
     abstract operator fun get(index: Int): Byte

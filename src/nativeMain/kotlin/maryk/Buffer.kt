@@ -1,6 +1,6 @@
 package maryk
 
-actual abstract class Buffer(
+actual sealed class Buffer(
     internal var capacity: Int,
     internal var limit: Int,
     internal var position: Int = 0

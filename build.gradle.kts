@@ -1,6 +1,7 @@
 @file:Suppress("UnstableApiUsage")
 
 import java.util.Locale
+import org.gradle.api.JavaVersion
 import org.gradle.api.tasks.Exec
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.register
@@ -126,10 +127,17 @@ android {
         multiDexEnabled = true
         testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
     }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
 }
 
 kotlin {
-    jvmToolchain(17)
+    val toolchainVersion = JavaVersion.current().majorVersion.toInt()
+    jvmToolchain(toolchainVersion)
 
     // configure all Kotlin/JVM Tests to use JUnit Jupiter
     targets.withType<KotlinJvmTarget>().configureEach {

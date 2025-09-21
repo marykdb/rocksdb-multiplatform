@@ -1,6 +1,6 @@
 package maryk
 
-expect abstract class Buffer {
+expect sealed class Buffer {
     abstract fun array(): Any
     fun remaining(): Int
     fun position(): Int
