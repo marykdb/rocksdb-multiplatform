@@ -96,7 +96,10 @@ mkdir -p "$DOWNLOAD_DIR"
 
 ZIP_PATH="${DOWNLOAD_DIR}/${ARTIFACT_NAME}"
 METADATA_PATH="${DESTINATION}/.rocksdb-prebuilt"
-EXPECTED_MARKER="version=${VERSION}"$([[ -n "$SHA256" ]] && printf ' sha256=%s' "$SHA256")
+EXPECTED_MARKER="version=${VERSION}"
+if [[ -n "$SHA256" ]]; then
+  EXPECTED_MARKER+=" sha256=${SHA256}"
+fi
 
 if [[ -f "$METADATA_PATH" && "$(<"$METADATA_PATH")" == "$EXPECTED_MARKER" ]]; then
   if [[ -d "${DESTINATION}/lib" && -d "${DESTINATION}/include" ]]; then
