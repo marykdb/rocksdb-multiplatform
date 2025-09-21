@@ -22,7 +22,6 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.withType
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCompilation
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBinary
 import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
@@ -305,8 +304,7 @@ fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String
         }
     }
 
-    val mainCompilation = compilations.getByName("main") as KotlinNativeCompilation
-    val interop = mainCompilation.cinterops.create("rocksdb") {
+    val interop = compilations.getByName("main").cinterops.maybeCreate("rocksdb").apply {
         defFile(project.file("src/nativeInterop/cinterop/rocksdb.def"))
         includeDirs(project.files(includeDir, includeRocksdbDir, includeNestedRocksdbDir))
         compilerOpts(
