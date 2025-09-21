@@ -1,10 +1,14 @@
 @file:Suppress("UnstableApiUsage")
 
+import java.util.Locale
+import org.gradle.api.tasks.Exec
 import org.gradle.kotlin.dsl.get
+import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBinary
 
 repositories {
     google()
@@ -24,8 +28,94 @@ val rocksDBJVMVersion = "10.4.2"
 val rocksDBAndroidVersion = "10.4.2"
 
 val kotlinXDateTimeVersion = "0.7.1"
+val rocksdbPrebuiltBaseUrlValue = providers.gradleProperty("rocksdbPrebuiltBaseUrl").orElse("https://github.com/marykdb/build-rocksdb/releases/download").get()
+val rocksdbPrebuiltVersionValue = providers.gradleProperty("rocksdbPrebuiltVersion").orElse("rocksdb-10.4.2-20250921T085231Z").get()
+val rocksdbSupportedNativeTargets = setOf(
+    "androidNativeArm32",
+    "androidNativeArm64",
+    "androidNativeX64",
+    "androidNativeX86",
+    "iosArm64",
+    "iosSimulatorArm64",
+    "linuxArm64",
+    "linuxX64",
+    "macosArm64",
+    "macosX64",
+    "mingwX64",
+    "tvosArm64",
+    "tvosSimulatorArm64",
+    "watchosArm64",
+    "watchosDeviceArm64",
+    "watchosSimulatorArm64"
+)
 
-val rocksdbBuildPath = "./rocksdb/build"
+fun org.gradle.api.Project.rocksdbShaFor(targetName: String): String? =
+    findProperty("rocksdbPrebuiltSha.$targetName")?.toString()?.takeIf { it.isNotBlank() }
+
+fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String) {
+    val targetName = this.name
+    if (!rocksdbSupportedNativeTargets.contains(targetName)) return
+
+    val project = this.project
+    val capitalizedName = targetName.replaceFirstChar { character ->
+        if (character.isLowerCase()) character.titlecase(Locale.ROOT) else character.toString()
+    }
+    val prebuiltDir = project.layout.buildDirectory.dir("rocksdb/$targetName").get().asFile
+    val includeDir = prebuiltDir.resolve("include")
+    val includeRocksdbDir = includeDir.resolve("rocksdb")
+    val includeNestedRocksdbDir = includeRocksdbDir.resolve("rocksdb")
+    val libDir = prebuiltDir.resolve("lib")
+    val sha = project.rocksdbShaFor(targetName)
+
+    val downloadTask = project.tasks.register("downloadRocksdb$capitalizedName", Exec::class.java) {
+        group = "rocksdb"
+        description = "Download RocksDB prebuilt bundle for $targetName"
+        workingDir = project.projectDir
+
+        val command = mutableListOf(
+            project.layout.projectDirectory.file("download-rocksdb.sh").asFile.absolutePath,
+            "--kmp-target", targetName,
+            "--version", version,
+            "--destination", prebuiltDir.absolutePath,
+            "--base-url", baseUrl
+        )
+        if (sha != null) {
+            command += listOf("--sha256", sha)
+        }
+        commandLine(command)
+
+        inputs.property("rocksdbVersion", version)
+        if (sha != null) {
+            inputs.property("rocksdbSha", sha)
+        }
+        outputs.dir(prebuiltDir)
+    }
+
+    val interop = compilations["main"].cinterops.create("rocksdb") {
+        defFile(project.file("src/nativeInterop/cinterop/rocksdb.def"))
+        includeDirs(project.files(includeDir, includeRocksdbDir, includeNestedRocksdbDir))
+        compilerOpts(
+            "-I${includeDir.absolutePath}",
+            "-I${includeRocksdbDir.absolutePath}",
+            "-I${includeNestedRocksdbDir.absolutePath}"
+        )
+        extraOpts("-libraryPath", libDir.absolutePath)
+    }
+
+    project.tasks.named(interop.interopProcessingTaskName).configure {
+        dependsOn(downloadTask)
+    }
+
+    binaries.withType<TestExecutable>().configureEach {
+        linkerOpts("-L${libDir.absolutePath}")
+    }
+
+    binaries.withType<NativeBinary>().configureEach {
+        linkTaskProvider.configure {
+            dependsOn(downloadTask)
+        }
+    }
+}
 
 android {
     namespace = "io.maryk.rocksdb"
@@ -54,6 +144,27 @@ kotlin {
         publishLibraryVariants("release")
         publishLibraryVariantsGroupedByFlavor = true
     }
+
+    androidNativeArm32()
+    androidNativeArm64()
+    androidNativeX64()
+    androidNativeX86()
+
+    iosArm64()
+    iosSimulatorArm64()
+
+    macosX64()
+    macosArm64()
+    linuxX64()
+    linuxArm64()
+    mingwX64()
+
+    tvosArm64()
+    tvosSimulatorArm64()
+
+    watchosArm64()
+    watchosDeviceArm64()
+    watchosSimulatorArm64()
 
     targets.configureEach {
         compilations.configureEach {
@@ -106,111 +217,8 @@ kotlin {
         }
     }
 
-    val isMacOs = System.getProperty("os.name").contains("Mac", ignoreCase = true)
-
-    fun KotlinNativeTarget.setupTarget(buildName: String, buildTask: Exec, extraCFlags: String = "", extraCmakeFlags: String = "") {
-        binaries {
-            executable {
-                freeCompilerArgs += listOf("-g")
-            }
-            getTest("DEBUG").linkerOpts = mutableListOf(
-                "-L$rocksdbBuildPath/${buildName}"
-            )
-        }
-
-        val dependencyTask = tasks.create("buildDependencies_$buildName", Exec::class) {
-            workingDir = projectDir
-            val options = buildList {
-                if (buildName.startsWith("linux") && isMacOs) {
-                    addAll(listOf("docker", "run", "--rm", "--platform"))
-                    if (extraCFlags == "-march=x86-64") {
-                        add("linux/amd64")
-                    } else {
-                        add("linux/arm64/v8")
-                    }
-                    addAll(listOf("-v", "${project.projectDir}:/rocks", "-w", "/rocks", "buildpack-deps"))
-                }
-                addAll(listOf("./buildDependencies.sh", "--extra-cflags", extraCFlags, "--output-dir", "rocksdb/build/$buildName", "--extra-cmakeflags", extraCmakeFlags))
-            }
-            commandLine(*options.toTypedArray())
-        }
-
-        compilations["main"].apply {
-            cinterops {
-                create("rocksdb") {
-                    defFile("src/nativeInterop/cinterop/rocksdb.def")
-                    includeDirs("rocksdb/include/rocksdb")
-                    tasks[interopProcessingTaskName].dependsOn(buildTask)
-                    tasks[interopProcessingTaskName].dependsOn(dependencyTask)
-                }
-            }
-        }
-    }
-
-    iosArm64 {
-        val sdkPathProvider = providers.exec {
-            commandLine("xcrun", "--sdk", "iphoneos", "--show-sdk-path")
-        }.standardOutput.asText
-        val sdkPath: String by lazy {
-            if (isMacOs) {
-                sdkPathProvider.get().trim()
-            } else ""
-        }
-        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
-            workingDir = projectDir
-            commandLine("./buildRocksdbApple.sh", "--platform=ios", "--arch=arm64")
-        }
-        setupTarget("ios_arm64", buildTask, "-arch arm64 -target arm64-apple-ios13.0 -isysroot $sdkPath", "-DPLATFORM=OS64")
-    }
-    iosSimulatorArm64 {
-        val sdkPathProvider = providers.exec {
-            commandLine("xcrun", "--sdk", "iphonesimulator", "--show-sdk-path")
-        }.standardOutput.asText
-        val sdkPath: String by lazy {
-            if (isMacOs) {
-                sdkPathProvider.get().trim()
-            } else ""
-        }
-        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
-            workingDir = projectDir
-            commandLine("./buildRocksdbApple.sh", "--platform=ios", "--simulator", "--arch=arm64")
-        }
-        setupTarget("ios_simulator_arm64", buildTask, "-arch arm64 -target arm64-apple-ios13.0-simulator -isysroot $sdkPath", "-DPLATFORM=SIMULATORARM64")
-    }
-    macosX64 {
-        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
-            workingDir = projectDir
-            commandLine("./buildRocksdbApple.sh", "--platform=macos", "--arch=x86_64")
-        }
-        setupTarget("macos_x86_64", buildTask, "-arch x86_64 -target x86_64-apple-macos11.0", "-DPLATFORM=OS64")
-    }
-    macosArm64 {
-        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
-            workingDir = projectDir
-            commandLine("./buildRocksdbApple.sh", "--platform=macos", "--arch=arm64")
-        }
-        setupTarget("macos_arm64", buildTask, "-arch arm64 -target arm64-apple-macos11.0", "-DPLATFORM=MAC")
-    }
-    linuxX64 {
-        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
-            workingDir = projectDir
-            commandLine("./buildRocksdbLinux.sh", "--arch=x86-64")
-        }
-        setupTarget("linux_x86_64", buildTask, "-march=x86-64")
-    }
-    linuxArm64 {
-        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
-            workingDir = projectDir
-            commandLine("./buildRocksdbLinux.sh", "--arch=arm64")
-        }
-        setupTarget("linux_arm64", buildTask, "-march=armv8-a")
-    }
-    mingwX64 {
-        val buildTask = tasks.create("buildLib-"+this.name, Exec::class) {
-            workingDir = projectDir
-            commandLine("./buildRocksdbMinGW.sh", "--arch=x86_64")
-        }
-        setupTarget("mingw_x86_64", buildTask, "")
+    targets.withType<KotlinNativeTarget>().configureEach {
+        configureRocksdbPrebuilt(rocksdbPrebuiltVersionValue, rocksdbPrebuiltBaseUrlValue)
     }
 }
 

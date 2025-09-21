@@ -1,0 +1,48 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  native-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            display-name: macOS Arm & Simulators
+            gradle-tasks: macosArm64Test iosSimulatorArm64Test tvosSimulatorArm64Test watchosSimulatorArm64Test
+          - os: macos-13
+            display-name: macOS Intel
+            gradle-tasks: macosX64Test
+          - os: ubuntu-latest
+            display-name: Linux targets
+            gradle-tasks: linuxX64Test jvmTest
+          - os: windows-latest
+            display-name: Windows targets
+            gradle-tasks: mingwX64Test
+    name: ${{ matrix.display-name }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Run ${{ matrix.display-name }} tests
+        run: ./gradlew --stacktrace --info ${{ matrix.gradle-tasks }}
