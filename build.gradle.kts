@@ -1,15 +1,31 @@
 @file:Suppress("UnstableApiUsage")
 
+import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URI
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
 import java.util.Locale
+import java.util.zip.ZipFile
+import kotlin.text.Charsets
+import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.JavaVersion
-import org.gradle.api.tasks.Exec
-import org.gradle.kotlin.dsl.get
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBinary
 import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBinary
 
 repositories {
     google()
@@ -50,7 +66,214 @@ val rocksdbSupportedNativeTargets = setOf(
     "watchosSimulatorArm64"
 )
 
-fun org.gradle.api.Project.rocksdbShaFor(targetName: String): String? =
+@CacheableTask
+abstract class DownloadRocksdbTask : DefaultTask() {
+    companion object {
+        private val artifactNames = mapOf(
+            "androidNativeArm32" to "rocksdb-android-arm32.zip",
+            "androidNativeArm64" to "rocksdb-android-arm64.zip",
+            "androidNativeX64" to "rocksdb-android-x64.zip",
+            "androidNativeX86" to "rocksdb-android-x86.zip",
+            "iosArm64" to "rocksdb-ios-arm64.zip",
+            "iosSimulatorArm64" to "rocksdb-ios-simulator-arm64.zip",
+            "macosArm64" to "rocksdb-macos-arm64.zip",
+            "macosX64" to "rocksdb-macos-x86_64.zip",
+            "linuxArm64" to "rocksdb-linux-arm64.zip",
+            "linuxX64" to "rocksdb-linux-x86_64.zip",
+            "mingwArm64" to "rocksdb-mingw-arm64.zip",
+            "mingwX64" to "rocksdb-mingw-x86_64.zip",
+            "tvosArm64" to "rocksdb-tvos-arm64.zip",
+            "tvosSimulatorArm64" to "rocksdb-tvos-simulator-arm64.zip",
+            "watchosArm64" to "rocksdb-watchos-arm64.zip",
+            "watchosDeviceArm64" to "rocksdb-watchos-device-arm64.zip",
+            "watchosSimulatorArm64" to "rocksdb-watchos-simulator-arm64.zip"
+        )
+    }
+
+    @get:Input
+    abstract val kmpTarget: Property<String>
+
+    @get:Input
+    abstract val version: Property<String>
+
+    @get:Input
+    abstract val baseUrl: Property<String>
+
+    @get:Input
+    @get:Optional
+    abstract val sha256: Property<String?>
+
+    @get:OutputDirectory
+    abstract val destinationDir: DirectoryProperty
+
+    @Suppress("unused")
+    @TaskAction
+    fun download() {
+        val target = kmpTarget.get()
+        val artifactName = artifactNames[target]
+            ?: throw GradleException("No artifact mapping found for KMP target '$target'.")
+
+        val destination = destinationDir.get().asFile
+        val shaValue = sha256.orNull?.takeIf { it.isNotBlank() }
+        val expectedMarker = buildString {
+            append("version=${version.get()}")
+            if (shaValue != null) {
+                append(" sha256=$shaValue")
+            }
+        }
+
+        val metadataFile = File(destination, ".rocksdb-prebuilt")
+        val metadataMatches = metadataFile.isFile &&
+            metadataFile.readText(Charsets.UTF_8).trim() == expectedMarker
+        val destinationComplete =
+            destination.resolve("lib").isDirectory && destination.resolve("include").isDirectory
+
+        if (metadataMatches && destinationComplete) {
+            return
+        }
+
+        val downloadDir = project.layout.buildDirectory.dir("rocksdb-downloads").get().asFile
+        downloadDir.mkdirs()
+
+        val zipFile = File(downloadDir, artifactName)
+        val url = "${baseUrl.get().trimEnd('/')}/${version.get()}/$artifactName"
+
+        if (!metadataMatches && shaValue == null && zipFile.exists()) {
+            zipFile.delete()
+        }
+
+        if (!zipFile.exists()) {
+            downloadArchive(url, zipFile)
+        }
+
+        if (shaValue != null) {
+            if (!zipFile.hasExpectedSha(shaValue)) {
+                project.logger.warn("Checksum mismatch for RocksDB archive '$artifactName'. Re-downloading.")
+                zipFile.delete()
+                downloadArchive(url, zipFile)
+                if (!zipFile.hasExpectedSha(shaValue)) {
+                    zipFile.delete()
+                    throw GradleException("Checksum mismatch for RocksDB archive '$artifactName'.")
+                }
+            }
+        }
+
+        if (destination.exists()) {
+            destination.deleteRecursively()
+        }
+        destination.mkdirs()
+
+        val tempDir = Files.createTempDirectory("rocksdb-download").toFile()
+        try {
+            unzip(zipFile, tempDir)
+            tempDir.listFiles()?.forEach { extracted ->
+                val targetFile = File(destination, extracted.name)
+                if (targetFile.exists()) {
+                    targetFile.deleteRecursively()
+                }
+                extracted.copyRecursively(targetFile, overwrite = true)
+            }
+        } finally {
+            tempDir.deleteRecursively()
+        }
+
+        metadataFile.writeText(expectedMarker, Charsets.UTF_8)
+    }
+
+    private fun downloadArchive(url: String, targetFile: File) {
+        targetFile.parentFile?.mkdirs()
+        var lastFailure: Exception? = null
+
+        repeat(3) { attempt ->
+            var connection: HttpURLConnection? = null
+            val tempFile = Files.createTempFile(targetFile.parentFile.toPath(), "rocksdb", ".tmp").toFile()
+            try {
+                connection = URI.create(url).toURL().openConnection() as HttpURLConnection
+                connection.connectTimeout = 30_000
+                connection.readTimeout = 30_000
+                connection.instanceFollowRedirects = true
+
+                val responseCode = connection.responseCode
+                if (responseCode !in 200..299) {
+                    val message = connection.errorStream?.bufferedReader()?.use { it.readText() }
+                    throw GradleException(
+                        buildString {
+                            append("Failed to download RocksDB archive from $url. HTTP $responseCode")
+                            if (!message.isNullOrBlank()) {
+                                append(':').append(' ')
+                                append(message.trim())
+                            }
+                        }
+                    )
+                }
+
+                connection.inputStream.use { input ->
+                    FileOutputStream(tempFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+
+                Files.move(tempFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                return
+            } catch (ex: Exception) {
+                lastFailure = ex
+                tempFile.delete()
+                if (attempt == 2) {
+                    throw GradleException("Unable to download RocksDB archive from $url", ex)
+                }
+                project.logger.warn("Attempt ${attempt + 1} to download RocksDB archive failed: ${ex.message}")
+                try {
+                    Thread.sleep(2_000)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                }
+            } finally {
+                connection?.disconnect()
+                if (tempFile.exists()) {
+                    tempFile.delete()
+                }
+            }
+        }
+
+        lastFailure?.let { throw GradleException("Unable to download RocksDB archive from $url", it) }
+    }
+
+    private fun File.hasExpectedSha(expected: String): Boolean {
+        val digest = MessageDigest.getInstance("SHA-256")
+        inputStream().use { input ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            while (true) {
+                val read = input.read(buffer)
+                if (read == -1) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        val actual = digest.digest().joinToString(separator = "") { byte -> "%02x".format(byte) }
+        return actual.equals(expected, ignoreCase = true)
+    }
+
+    private fun unzip(zipFile: File, destination: File) {
+        ZipFile(zipFile).use { archive ->
+            val entries = archive.entries()
+            while (entries.hasMoreElements()) {
+                val entry = entries.nextElement()
+                val outputFile = File(destination, entry.name)
+                if (entry.isDirectory) {
+                    outputFile.mkdirs()
+                } else {
+                    outputFile.parentFile?.mkdirs()
+                    archive.getInputStream(entry).use { input ->
+                        FileOutputStream(outputFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fun rocksdbShaFor(targetName: String): String? =
     findProperty("rocksdbPrebuiltSha.$targetName")?.toString()?.takeIf { it.isNotBlank() }
 
 fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String) {
@@ -61,35 +284,24 @@ fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String
     val capitalizedName = targetName.replaceFirstChar { character ->
         if (character.isLowerCase()) character.titlecase(Locale.ROOT) else character.toString()
     }
-    val prebuiltDir = project.layout.buildDirectory.dir("rocksdb/$targetName").get().asFile
+    val prebuiltDirProvider = project.layout.buildDirectory.dir("rocksdb/$targetName")
+    val prebuiltDir = prebuiltDirProvider.get().asFile
     val includeDir = prebuiltDir.resolve("include")
     val includeRocksdbDir = includeDir.resolve("rocksdb")
     val includeNestedRocksdbDir = includeRocksdbDir.resolve("rocksdb")
     val libDir = prebuiltDir.resolve("lib")
-    val sha = project.rocksdbShaFor(targetName)
+    val sha = rocksdbShaFor(targetName)
 
-    val downloadTask = project.tasks.register("downloadRocksdb$capitalizedName", Exec::class.java) {
+    val downloadTask = project.tasks.register<DownloadRocksdbTask>("downloadRocksdb$capitalizedName") {
         group = "rocksdb"
         description = "Download RocksDB prebuilt bundle for $targetName"
-        workingDir = project.projectDir
-
-        val command = mutableListOf(
-            project.layout.projectDirectory.file("download-rocksdb.sh").asFile.absolutePath,
-            "--kmp-target", targetName,
-            "--version", version,
-            "--destination", prebuiltDir.absolutePath,
-            "--base-url", baseUrl
-        )
+        kmpTarget.set(targetName)
+        this.version.set(version)
+        this.baseUrl.set(baseUrl)
+        destinationDir.set(prebuiltDirProvider)
         if (sha != null) {
-            command += listOf("--sha256", sha)
+            sha256.set(sha)
         }
-        commandLine(command)
-
-        inputs.property("rocksdbVersion", version)
-        if (sha != null) {
-            inputs.property("rocksdbSha", sha)
-        }
-        outputs.dir(prebuiltDir)
     }
 
     val interop = compilations["main"].cinterops.create("rocksdb") {
@@ -231,17 +443,19 @@ kotlin {
 }
 
 // Creates the folders for the database
-val createOrEraseDBFolders = task("createOrEraseDBFolders") {
+val createOrEraseDBFolders = tasks.register("createOrEraseDBFolders") {
     group = "verification"
 
-    val subdir = project.layout.buildDirectory.dir("test-database").get().asFile
+    doLast {
+        val subdir = project.layout.buildDirectory.dir("test-database").get().asFile
 
-    if (!subdir.exists()) {
-        subdir.deleteOnExit()
-        subdir.mkdirs()
-    } else {
-        subdir.deleteRecursively()
-        subdir.mkdirs()
+        if (!subdir.exists()) {
+            subdir.deleteOnExit()
+            subdir.mkdirs()
+        } else {
+            subdir.deleteRecursively()
+            subdir.mkdirs()
+        }
     }
 }
 
