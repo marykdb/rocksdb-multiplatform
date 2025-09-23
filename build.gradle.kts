@@ -46,7 +46,7 @@ val rocksDBAndroidVersion = "10.4.2"
 
 val kotlinXDateTimeVersion = "0.7.1"
 val rocksdbPrebuiltBaseUrlValue = providers.gradleProperty("rocksdbPrebuiltBaseUrl").orElse("https://github.com/marykdb/build-rocksdb/releases/download").get()
-val rocksdbPrebuiltVersionValue = providers.gradleProperty("rocksdbPrebuiltVersion").orElse("rocksdb-10.4.2-20250921T085231Z").get()
+val rocksdbPrebuiltVersionValue = providers.gradleProperty("rocksdbPrebuiltVersion").get()
 val rocksdbSupportedNativeTargets = setOf(
     "androidNativeArm32",
     "androidNativeArm64",
@@ -249,6 +249,7 @@ abstract class DownloadRocksdbTask : DefaultTask() {
             }
         }
         val actual = digest.digest().joinToString(separator = "") { byte -> "%02x".format(byte) }
+        println("Actual SHA-256: $actual")
         return actual.equals(expected, ignoreCase = true)
     }
 
