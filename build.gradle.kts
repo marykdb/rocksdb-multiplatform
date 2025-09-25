@@ -8,6 +8,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.Locale
+import java.util.Properties
 import java.util.zip.ZipFile
 import kotlin.text.Charsets
 import org.gradle.api.DefaultTask
@@ -66,30 +67,30 @@ val rocksdbSupportedNativeTargets = setOf(
     "watchosSimulatorArm64"
 )
 
+object RocksdbArtifacts {
+    val names: Map<String, String> = mapOf(
+        "androidNativeArm32" to "rocksdb-android-arm32.zip",
+        "androidNativeArm64" to "rocksdb-android-arm64.zip",
+        "androidNativeX64" to "rocksdb-android-x64.zip",
+        "androidNativeX86" to "rocksdb-android-x86.zip",
+        "iosArm64" to "rocksdb-ios-arm64.zip",
+        "iosSimulatorArm64" to "rocksdb-ios-simulator-arm64.zip",
+        "macosArm64" to "rocksdb-macos-arm64.zip",
+        "macosX64" to "rocksdb-macos-x86_64.zip",
+        "linuxArm64" to "rocksdb-linux-arm64.zip",
+        "linuxX64" to "rocksdb-linux-x86_64.zip",
+        "mingwArm64" to "rocksdb-mingw-arm64.zip",
+        "mingwX64" to "rocksdb-mingw-x86_64.zip",
+        "tvosArm64" to "rocksdb-tvos-arm64.zip",
+        "tvosSimulatorArm64" to "rocksdb-tvos-simulator-arm64.zip",
+        "watchosArm64" to "rocksdb-watchos-arm64.zip",
+        "watchosDeviceArm64" to "rocksdb-watchos-device-arm64.zip",
+        "watchosSimulatorArm64" to "rocksdb-watchos-simulator-arm64.zip"
+    )
+}
+
 @CacheableTask
 abstract class DownloadRocksdbTask : DefaultTask() {
-    companion object {
-        private val artifactNames = mapOf(
-            "androidNativeArm32" to "rocksdb-android-arm32.zip",
-            "androidNativeArm64" to "rocksdb-android-arm64.zip",
-            "androidNativeX64" to "rocksdb-android-x64.zip",
-            "androidNativeX86" to "rocksdb-android-x86.zip",
-            "iosArm64" to "rocksdb-ios-arm64.zip",
-            "iosSimulatorArm64" to "rocksdb-ios-simulator-arm64.zip",
-            "macosArm64" to "rocksdb-macos-arm64.zip",
-            "macosX64" to "rocksdb-macos-x86_64.zip",
-            "linuxArm64" to "rocksdb-linux-arm64.zip",
-            "linuxX64" to "rocksdb-linux-x86_64.zip",
-            "mingwArm64" to "rocksdb-mingw-arm64.zip",
-            "mingwX64" to "rocksdb-mingw-x86_64.zip",
-            "tvosArm64" to "rocksdb-tvos-arm64.zip",
-            "tvosSimulatorArm64" to "rocksdb-tvos-simulator-arm64.zip",
-            "watchosArm64" to "rocksdb-watchos-arm64.zip",
-            "watchosDeviceArm64" to "rocksdb-watchos-device-arm64.zip",
-            "watchosSimulatorArm64" to "rocksdb-watchos-simulator-arm64.zip"
-        )
-    }
-
     @get:Input
     abstract val kmpTarget: Property<String>
 
@@ -110,7 +111,7 @@ abstract class DownloadRocksdbTask : DefaultTask() {
     @TaskAction
     fun download() {
         val target = kmpTarget.get()
-        val artifactName = artifactNames[target]
+        val artifactName = RocksdbArtifacts.names[target]
             ?: throw GradleException("No artifact mapping found for KMP target '$target'.")
 
         val destination = destinationDir.get().asFile
@@ -341,6 +342,60 @@ fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String
     }
 }
 
+private fun fetchSha256WithRetry(url: String): String {
+    var lastFailure: Exception? = null
+    repeat(3) { attempt ->
+        var connection: HttpURLConnection? = null
+        try {
+            val httpConnection = URI.create(url).toURL().openConnection() as HttpURLConnection
+            connection = httpConnection
+            httpConnection.connectTimeout = 30_000
+            httpConnection.readTimeout = 30_000
+            httpConnection.instanceFollowRedirects = true
+
+            val responseCode = httpConnection.responseCode
+            if (responseCode !in 200..299) {
+                val message = httpConnection.errorStream?.bufferedReader()?.use { it.readText() }?.trim()
+                throw GradleException(
+                    buildString {
+                        append("Failed to download RocksDB archive from $url. HTTP $responseCode")
+                        if (!message.isNullOrBlank()) {
+                            append(':').append(' ')
+                            append(message)
+                        }
+                    }
+                )
+            }
+
+            val digest = MessageDigest.getInstance("SHA-256")
+            httpConnection.inputStream.use { input ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read == -1) break
+                    digest.update(buffer, 0, read)
+                }
+            }
+
+            return digest.digest().joinToString(separator = "") { byte -> "%02x".format(byte) }
+        } catch (ex: Exception) {
+            lastFailure = ex
+            if (attempt == 2) {
+                throw GradleException("Unable to download RocksDB archive from $url", ex)
+            }
+            try {
+                Thread.sleep(2_000)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+            }
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
+    throw GradleException("Unable to download RocksDB archive from $url", lastFailure ?: IllegalStateException("Unknown failure"))
+}
+
 android {
     namespace = "io.maryk.rocksdb"
     compileSdk = 36
@@ -450,6 +505,74 @@ kotlin {
 
     targets.withType<KotlinNativeTarget>().configureEach {
         configureRocksdbPrebuilt(rocksdbPrebuiltVersionValue, rocksdbPrebuiltBaseUrlValue)
+    }
+}
+
+tasks.register("updateRocksdbShas") {
+    group = "rocksdb"
+    description = "Download RocksDB prebuilts for the configured version and refresh SHA entries in gradle.properties."
+
+    doLast {
+        val propertiesFile = project.rootProject.file("gradle.properties")
+        if (!propertiesFile.exists()) {
+            throw GradleException("Unable to locate gradle.properties at ${propertiesFile.absolutePath}")
+        }
+
+        val properties = Properties().apply {
+            propertiesFile.inputStream().use { input -> load(input) }
+        }
+
+        val baseUrlFromFile = properties.getProperty("rocksdbPrebuiltBaseUrl")?.trim()
+        val baseUrl = (baseUrlFromFile?.takeIf { it.isNotEmpty() } ?: rocksdbPrebuiltBaseUrlValue).trimEnd('/')
+        val version = properties.getProperty("rocksdbPrebuiltVersion")?.trim()?.takeIf { it.isNotEmpty() }
+            ?: throw GradleException("rocksdbPrebuiltVersion is not set in gradle.properties")
+
+        val shaRegex = Regex("^rocksdbPrebuiltSha\\.([A-Za-z0-9]+)=.*")
+        val lines = propertiesFile.readLines(Charsets.UTF_8)
+        val targets = lines.mapNotNull { line -> shaRegex.find(line)?.groupValues?.get(1) }.distinct()
+
+        if (targets.isEmpty()) {
+            logger.lifecycle("No rocksdbPrebuiltSha entries found in ${propertiesFile.toRelativeString(project.rootProject.projectDir)}")
+            return@doLast
+        }
+
+        val updatedShas = mutableMapOf<String, String>()
+        targets.forEach { target ->
+            val artifactName = RocksdbArtifacts.names[target]
+                ?: throw GradleException("No artifact mapping found for target '$target'.")
+            val url = "$baseUrl/$version/$artifactName"
+            logger.lifecycle("Calculating SHA-256 for $artifactName")
+            val sha = fetchSha256WithRetry(url)
+            updatedShas[target] = sha
+            val previous = properties.getProperty("rocksdbPrebuiltSha.$target")
+            if (previous == null || !previous.equals(sha, ignoreCase = true)) {
+                logger.lifecycle("rocksdbPrebuiltSha.$target = $sha")
+            }
+        }
+
+        val updatedContent = lines.map { line ->
+            val match = shaRegex.find(line)
+            if (match != null) {
+                val target = match.groupValues[1]
+                val sha = updatedShas[target]
+                if (sha != null) {
+                    "rocksdbPrebuiltSha.$target=$sha"
+                } else {
+                    line
+                }
+            } else {
+                line
+            }
+        }
+
+        propertiesFile.writeText(buildString {
+            updatedContent.joinTo(this, "\n")
+            append('\n')
+        }, Charsets.UTF_8)
+
+        logger.lifecycle(
+            "Updated ${updatedShas.size} RocksDB SHA entries in ${propertiesFile.toRelativeString(project.rootProject.projectDir)}"
+        )
     }
 }
 
