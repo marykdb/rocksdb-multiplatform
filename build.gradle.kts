@@ -10,6 +10,7 @@ import java.security.MessageDigest
 import java.util.Locale
 import java.util.Properties
 import java.util.zip.ZipFile
+import kotlin.io.walkTopDown
 import kotlin.text.Charsets
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -26,6 +27,7 @@ import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBinary
 import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
+import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 
 repositories {
@@ -66,6 +68,285 @@ val rocksdbSupportedNativeTargets = setOf(
     "watchosDeviceArm64",
     "watchosSimulatorArm64"
 )
+
+private data class KonanPathCandidate(val path: File, val exists: Boolean, val isDirectory: Boolean)
+
+private data class KonanWindowsDiscovery(
+    val candidates: List<KonanPathCandidate>,
+    val dependencyRoot: File?,
+    val llvmRoot: File?,
+    val llvmLibDir: File?,
+    val clangLibDirs: List<File>,
+    val libcxx: File?,
+    val libcxxAbi: File?,
+    val libunwind: File?,
+    val libstdcxx: File?,
+    val libsupcxx: File?
+)
+
+private fun discoverKonanWindowsLibraries(additionalCandidates: Collection<File> = emptyList()): KonanWindowsDiscovery {
+    fun normalizeCandidate(file: File): File = file.absoluteFile
+
+    val rawCandidates = buildList {
+        additionalCandidates.mapTo(this, ::normalizeCandidate)
+        System.getenv("KONAN_DATA_DIR")
+            ?.takeIf { it.isNotBlank() }
+            ?.let(::File)
+            ?.let(::normalizeCandidate)
+            ?.let(this::add)
+        System.getProperty("konan.user.home")
+            ?.takeIf { it.isNotBlank() }
+            ?.let(::File)
+            ?.let(::normalizeCandidate)
+            ?.let(this::add)
+        System.getProperty("user.home")
+            ?.takeIf { it.isNotBlank() }
+            ?.let { File(it, ".konan") }
+            ?.let(::normalizeCandidate)
+            ?.let(this::add)
+    }
+        .distinctBy { it.absolutePath }
+
+    val candidates = rawCandidates.map { candidate ->
+        KonanPathCandidate(candidate, candidate.exists(), candidate.isDirectory)
+    }
+
+    fun discoverDependencyRoots(candidate: File): Sequence<File> {
+        val immediate = sequenceOf(candidate, candidate.resolve("dependencies"))
+        val nested = candidate.listFiles()?.asSequence()?.filter(File::isDirectory)?.flatMap { child ->
+            sequenceOf(child, child.resolve("dependencies")).filter { it.exists() && it.isDirectory }
+        } ?: emptySequence()
+        return (immediate + nested)
+            .filter { possible ->
+                possible.exists() && possible.isDirectory &&
+                    (possible.name.equals("dependencies", ignoreCase = true) ||
+                        possible.list()?.any { it.startsWith("llvm-", ignoreCase = true) } == true)
+            }
+    }
+
+    val dependencyRoot = candidates.asSequence()
+        .flatMap { candidate -> discoverDependencyRoots(candidate.path) }
+        .firstOrNull()
+
+    val llvmRoot = dependencyRoot
+        ?.listFiles()
+        ?.asSequence()
+        ?.filter { it.isDirectory && it.name.startsWith("llvm-", ignoreCase = true) }
+        ?.filter { it.name.contains("windows", ignoreCase = true) }
+        ?.sortedByDescending { it.name }
+        ?.firstOrNull()
+
+    fun buildSearchRoots(): List<File> {
+        val roots = mutableListOf<File>()
+        if (dependencyRoot != null) {
+            roots += dependencyRoot
+        }
+        if (llvmRoot != null) {
+            roots += llvmRoot
+            llvmRoot.resolve("lib").takeIf(File::isDirectory)?.let(roots::add)
+            llvmRoot.resolve("lib64").takeIf(File::isDirectory)?.let(roots::add)
+            val clangRoot = llvmRoot.resolve("lib").resolve("clang")
+            if (clangRoot.isDirectory) {
+                clangRoot.listFiles()?.filter(File::isDirectory)?.forEach { versionDir ->
+                    versionDir.resolve("lib").takeIf(File::isDirectory)?.let(roots::add)
+                    versionDir.resolve("lib").resolve("windows")
+                        .takeIf(File::isDirectory)
+                        ?.let(roots::add)
+                }
+            }
+        }
+        return roots
+    }
+
+    fun findKonanWindowsLibrary(vararg names: String): File? {
+        val normalizedNames = names.filter { it.isNotBlank() }
+        if (normalizedNames.isEmpty()) return null
+        return buildSearchRoots().asSequence()
+            .filter(File::exists)
+            .flatMap { root ->
+                root.walkTopDown()
+                    .filter { file ->
+                        file.isFile && normalizedNames.any { candidate ->
+                            file.name.equals(candidate, ignoreCase = true)
+                        }
+                    }
+            }
+            .firstOrNull()
+    }
+
+    val libcxx = findKonanWindowsLibrary("libc++.a", "libc++.dll.a", "libc++.lib")
+    val libcxxAbi = findKonanWindowsLibrary("libc++abi.a", "libc++abi.dll.a", "libc++abi.lib")
+    val libunwind = findKonanWindowsLibrary("libunwind.a", "libunwind.dll.a", "libunwind.lib")
+    val libstdcxx = findKonanWindowsLibrary("libstdc++.a", "libstdc++.dll.a", "libstdc++.lib")
+    val libsupcxx = findKonanWindowsLibrary("libsupc++.a", "libsupc++.dll.a", "libsupc++.lib")
+
+    val llvmLibDir = listOfNotNull(libcxx, libcxxAbi, libunwind, libstdcxx, libsupcxx)
+        .asSequence()
+        .map(File::getParentFile)
+        .firstOrNull()
+        ?: llvmRoot?.resolve("lib")?.takeIf(File::isDirectory)
+
+    val clangLibDirs = buildSearchRoots()
+        .asSequence()
+        .mapNotNull { candidate ->
+            candidate.takeIf { dir ->
+                dir.isDirectory && (
+                    dir.absolutePath.contains("clang", ignoreCase = true) ||
+                        dir.name.equals("windows", ignoreCase = true)
+                )
+            }
+        }
+        .distinctBy { it.absolutePath }
+        .toList()
+
+    return KonanWindowsDiscovery(
+        candidates = candidates,
+        dependencyRoot = dependencyRoot,
+        llvmRoot = llvmRoot,
+        llvmLibDir = llvmLibDir,
+        clangLibDirs = clangLibDirs,
+        libcxx = libcxx,
+        libcxxAbi = libcxxAbi,
+        libunwind = libunwind,
+        libstdcxx = libstdcxx,
+        libsupcxx = libsupcxx
+    )
+}
+
+private fun KotlinNativeLink.appendMingwLinkerArgs(targetName: String) {
+    val logger = this.logger
+    val discovery = discoverKonanWindowsLibraries()
+
+    val candidateSummary = discovery.candidates
+        .takeIf { it.isNotEmpty() }
+        ?.joinToString(
+            separator = ", ",
+            transform = {
+                buildString {
+                    append(it.path.absolutePath)
+                    append(" (exists=")
+                    append(it.exists)
+                    append(", dir=")
+                    append(it.isDirectory)
+                    append(')')
+                }
+            }
+        ) ?: "<none>"
+    logger.lifecycle("[rocksdb-mingw] KONAN root candidates => {}", candidateSummary)
+
+    val dependencyRoot = discovery.dependencyRoot
+    if (dependencyRoot != null) {
+        logger.lifecycle(
+            "[rocksdb-mingw] using KONAN dependency root {}",
+            dependencyRoot.absolutePath
+        )
+    } else {
+        logger.lifecycle("[rocksdb-mingw] no KONAN dependency root resolved")
+    }
+
+    val llvmRoot = discovery.llvmRoot
+    if (llvmRoot != null) {
+        logger.lifecycle(
+            "[rocksdb-mingw] using LLVM root {}",
+            llvmRoot.absolutePath
+        )
+    } else {
+        logger.lifecycle("[rocksdb-mingw] unable to resolve LLVM root")
+    }
+
+    val llvmLibDir = discovery.llvmLibDir
+    if (llvmLibDir != null) {
+        logger.lifecycle(
+            "[rocksdb-mingw] using LLVM lib dir {}",
+            llvmLibDir.absolutePath
+        )
+    } else {
+        logger.lifecycle("[rocksdb-mingw] unable to resolve LLVM lib dir")
+    }
+
+    fun logLibraryResolution(tag: String, file: File?) {
+        if (file != null) {
+            logger.lifecycle("[rocksdb-mingw] located {} {}", tag, file.absolutePath)
+        }
+    }
+
+    logLibraryResolution("libc++ archive", discovery.libcxx)
+    logLibraryResolution("libc++abi archive", discovery.libcxxAbi)
+    logLibraryResolution("libunwind archive", discovery.libunwind)
+    logLibraryResolution("libstdc++ archive", discovery.libstdcxx)
+    logLibraryResolution("libsupc++ archive", discovery.libsupcxx)
+
+    val librarySearchDirs = linkedSetOf<File>()
+    listOfNotNull(llvmLibDir, discovery.libcxx?.parentFile, discovery.libcxxAbi?.parentFile, discovery.libunwind?.parentFile)
+        .forEach { dir -> librarySearchDirs += dir }
+    discovery.clangLibDirs.forEach { dir -> librarySearchDirs += dir }
+
+    val usingClangLibraries = discovery.libcxx != null && discovery.libcxxAbi != null
+
+    if (discovery.clangLibDirs.isEmpty()) {
+        logger.lifecycle("[rocksdb-mingw] no explicit clang library directories discovered")
+    } else {
+        logger.lifecycle(
+            "[rocksdb-mingw] clang library directories => {}",
+            discovery.clangLibDirs.joinToString(" ") { it.absolutePath }
+        )
+    }
+
+    val libraryFlags = buildList {
+        if (usingClangLibraries) {
+            add("-l:${discovery.libcxx!!.name}")
+            add("-l:${discovery.libcxxAbi!!.name}")
+            discovery.libunwind?.let { add("-l:${it.name}") }
+        } else {
+            logger.lifecycle("[rocksdb-mingw] libc++ archives not fully resolved; defaulting to -lc++ and -lc++abi")
+            add("-lc++")
+            add("-lc++abi")
+
+            if (discovery.libunwind != null) {
+                add("-l:${discovery.libunwind.name}")
+            } else {
+                logger.lifecycle("[rocksdb-mingw] unable to locate libunwind archive; falling back to -lunwind")
+                add("-lunwind")
+            }
+
+            if (discovery.libstdcxx != null) {
+                logger.lifecycle("[rocksdb-mingw] also exposing resolved libstdc++ archive for compatibility")
+                add("-l:${discovery.libstdcxx.name}")
+                discovery.libstdcxx.parentFile?.let(librarySearchDirs::add)
+            }
+
+            if (discovery.libsupcxx != null) {
+                logger.lifecycle("[rocksdb-mingw] also exposing resolved libsupc++ archive for compatibility")
+                add("-l:${discovery.libsupcxx.name}")
+                discovery.libsupcxx.parentFile?.let(librarySearchDirs::add)
+            }
+        }
+    }
+
+    if (librarySearchDirs.isEmpty()) {
+        logger.lifecycle("[rocksdb-mingw] no additional library search directories configured")
+    } else {
+        logger.lifecycle(
+            "[rocksdb-mingw] library search directories => {}",
+            librarySearchDirs.joinToString(" ") { it.absolutePath }
+        )
+    }
+
+    val linkerArgs = buildList {
+        librarySearchDirs.forEach { dir -> add("-L${dir.absolutePath}") }
+        addAll(libraryFlags)
+    }
+
+    logger.lifecycle(
+        "[rocksdb-mingw] linker opts for {} => {}",
+        targetName,
+        linkerArgs.joinToString(" ")
+    )
+
+    if (linkerArgs.isNotEmpty()) {
+        this.binary.linkerOpts(*linkerArgs.toTypedArray())
+    }
+}
 
 object RocksdbArtifacts {
     val names: Map<String, String> = mapOf(
@@ -321,11 +602,13 @@ fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String
         dependsOn(downloadTask)
     }
 
-    if (targetName.startsWith("linux")) {
-        compilations.configureEach {
-            compileTaskProvider.configure {
-                compilerOptions {
-                    freeCompilerArgs.addAll(listOf("-linker-option", "--allow-shlib-undefined"))
+    if (targetName.startsWith("mingw")) {
+        binaries.withType<NativeBinary>().configureEach {
+            val binaryTargetName = this.target.name
+            linkTaskProvider.configure {
+                val linkTask = this
+                linkTask.doFirst("rocksdbMingwStdlib") {
+                    linkTask.appendMingwLinkerArgs(binaryTargetName)
                 }
             }
         }
