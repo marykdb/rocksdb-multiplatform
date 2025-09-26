@@ -299,27 +299,27 @@ private fun KotlinNativeLink.appendMingwLinkerArgs(targetName: String) {
             discovery.libunwind?.let { add("-l:${it.name}") }
         } else {
             logger.lifecycle("[rocksdb-mingw] libc++ archives not fully resolved; defaulting to -lc++ and -lc++abi")
-            add("-lc++")
-            add("-lc++abi")
+//            add("-lc++")
+//            add("-lc++abi")
 
-            if (discovery.libunwind != null) {
-                add("-l:${discovery.libunwind.name}")
-            } else {
-                logger.lifecycle("[rocksdb-mingw] unable to locate libunwind archive; falling back to -lunwind")
-                add("-lunwind")
-            }
+//            if (discovery.libunwind != null) {
+//                add("-l:${discovery.libunwind.name}")
+//            } else {
+//                logger.lifecycle("[rocksdb-mingw] unable to locate libunwind archive; falling back to -lunwind")
+//                add("-lunwind")
+//            }
 
-            if (discovery.libstdcxx != null) {
-                logger.lifecycle("[rocksdb-mingw] also exposing resolved libstdc++ archive for compatibility")
-                add("-l:${discovery.libstdcxx.name}")
-                discovery.libstdcxx.parentFile?.let(librarySearchDirs::add)
-            }
-
-            if (discovery.libsupcxx != null) {
-                logger.lifecycle("[rocksdb-mingw] also exposing resolved libsupc++ archive for compatibility")
-                add("-l:${discovery.libsupcxx.name}")
-                discovery.libsupcxx.parentFile?.let(librarySearchDirs::add)
-            }
+//            if (discovery.libstdcxx != null) {
+//                logger.lifecycle("[rocksdb-mingw] also exposing resolved libstdc++ archive for compatibility")
+//                add("-l:${discovery.libstdcxx.name}")
+//                discovery.libstdcxx.parentFile?.let(librarySearchDirs::add)
+//            }
+//
+//            if (discovery.libsupcxx != null) {
+//                logger.lifecycle("[rocksdb-mingw] also exposing resolved libsupc++ archive for compatibility")
+//                add("-l:${discovery.libsupcxx.name}")
+//                discovery.libsupcxx.parentFile?.let(librarySearchDirs::add)
+//            }
         }
     }
 
@@ -531,7 +531,6 @@ abstract class DownloadRocksdbTask : DefaultTask() {
             }
         }
         val actual = digest.digest().joinToString(separator = "") { byte -> "%02x".format(byte) }
-        println("Actual SHA-256: $actual")
         return actual.equals(expected, ignoreCase = true)
     }
 
