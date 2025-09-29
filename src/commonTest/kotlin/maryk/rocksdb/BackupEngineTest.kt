@@ -1,5 +1,6 @@
 package maryk.rocksdb
 
+import maryk.WindowsIgnore
 import maryk.createFolder
 import maryk.rocksdb.util.createTestDBFolder
 import kotlin.random.Random
@@ -16,6 +17,7 @@ class BackupEngineTest {
         return folder
     }
 
+    @WindowsIgnore("RocksDB backup engine crashes under Wine")
     @Test
     fun backupDb() {
         // Open empty database.
@@ -41,6 +43,7 @@ class BackupEngineTest {
         }
     }
 
+    @WindowsIgnore("RocksDB backup engine crashes under Wine")
     @Test
     fun deleteBackup() {
         // Open empty database.
@@ -71,6 +74,7 @@ class BackupEngineTest {
         }
     }
 
+    @WindowsIgnore("RocksDB backup engine crashes under Wine")
     @Test
     fun purgeOldBackups() {
         // Open empty database.
@@ -102,6 +106,7 @@ class BackupEngineTest {
         }
     }
 
+    @WindowsIgnore("RocksDB backup engine crashes under Wine")
     @Test
     fun restoreLatestBackup() {
         Options().setCreateIfMissing(true).use { opt ->
@@ -159,6 +164,7 @@ class BackupEngineTest {
         }
     }
 
+    @WindowsIgnore("RocksDB backup engine crashes under Wine")
     @Test
     fun restoreFromBackup() {
         Options().setCreateIfMissing(true).use { opt ->

@@ -1,5 +1,6 @@
 package maryk.rocksdb
 
+import maryk.WindowsIgnore
 import maryk.createFolder
 import maryk.deleteFolder
 import maryk.rocksdb.util.createTestDBFolder
@@ -25,6 +26,7 @@ class CheckPointTest {
         deleteFolder(checkpointFolder)
     }
 
+    @WindowsIgnore("RocksDB checkpoint support crashes under Wine")
     @Test
     fun checkPoint() {
         Options().setCreateIfMissing(true).use { options ->
@@ -58,6 +60,7 @@ class CheckPointTest {
         }
     }
 
+    @WindowsIgnore("RocksDB checkpoint support crashes under Wine")
     @Test
     fun failIfDbNotInitialized() {
         openRocksDB(
@@ -70,6 +73,7 @@ class CheckPointTest {
         }
     }
 
+    @WindowsIgnore("RocksDB checkpoint support crashes under Wine")
     @Test
     fun failWithIllegalPath() {
         openRocksDB(createTestFolder()).use { db ->

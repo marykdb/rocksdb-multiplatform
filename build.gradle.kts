@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBinary
 import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
+import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeHostTest
 
 repositories {
     google()
@@ -87,6 +88,7 @@ object RocksdbArtifacts {
         "watchosSimulatorArm64" to "rocksdb-watchos-simulator-arm64.zip"
     )
 }
+
 
 @CacheableTask
 abstract class DownloadRocksdbTask : DefaultTask() {
@@ -500,10 +502,17 @@ kotlin {
     targets.withType<KotlinNativeTarget>().configureEach {
         configureRocksdbPrebuilt(rocksdbPrebuiltVersionValue, rocksdbPrebuiltBaseUrlValue)
     }
-
 }
 
-
+// Ensure Windows-specific ignored tests are skipped on any mingw environment (no Wine)
+tasks.withType(KotlinNativeHostTest::class).configureEach {
+    if (name.startsWith("mingw", ignoreCase = true)) {
+        val existing = args.toList()
+        doFirst {
+            this@configureEach.args = existing + listOf("--ktest_negative_gradle_filter=maryk.rocksdb.*")
+        }
+    }
+}
 
 tasks.register("updateRocksdbShas") {
     group = "rocksdb"
