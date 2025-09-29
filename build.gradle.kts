@@ -14,6 +14,7 @@ import kotlin.text.Charsets
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.JavaVersion
+import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
@@ -25,8 +26,10 @@ import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBinary
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
 import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
+import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeHostTest
 
 repositories {
     google()
@@ -87,6 +90,55 @@ object RocksdbArtifacts {
         "watchosSimulatorArm64" to "rocksdb-watchos-simulator-arm64.zip"
     )
 }
+
+private fun findExecutableOnPath(executable: String): File? {
+    val path = System.getenv("PATH")?.takeIf { it.isNotBlank() } ?: return null
+    return path.split(File.pathSeparatorChar)
+        .asSequence()
+        .map { File(it, executable) }
+        .firstOrNull { it.canExecute() }
+}
+
+private fun resolveWineExecutable(project: Project): File? {
+    fun candidate(path: String?): File? = path?.let(::File)
+
+    val propertyCandidate = project.providers.gradleProperty("mingwWineExecutable")
+        .map(String::trim)
+        .orElse("")
+        .get()
+        .takeIf { it.isNotEmpty() }
+        ?.let(::File)
+
+    val environmentCandidate = System.getenv("MINGW_WINE_EXECUTABLE")
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?.let(::File)
+
+    val fallbackExecutables = listOf(
+        "/usr/bin/wine64",
+        "/usr/lib/wine/wine64",
+        "/opt/wine-stable/bin/wine64"
+    )
+
+    val pathCandidates = sequence {
+        yield(propertyCandidate)
+        yield(environmentCandidate)
+        yield(findExecutableOnPath("wine64"))
+        fallbackExecutables.forEach { yield(candidate(it)) }
+        yield(findExecutableOnPath("wine"))
+    }
+
+    return pathCandidates.firstOrNull { candidate -> candidate != null && candidate.canExecute() }
+}
+
+val mingwWineExecutable: File? = resolveWineExecutable(project)
+val configuredWinePrefix: String? = project.providers.gradleProperty("mingwWinePrefix")
+    .map(String::trim)
+    .orElse("")
+    .get()
+    .takeIf { it.isNotEmpty() }
+    ?: System.getenv("MINGW_WINE_PREFIX")?.trim()?.takeIf { it.isNotEmpty() }
+val defaultWinePrefixDir = project.layout.buildDirectory.dir("wine-prefix")
 
 @CacheableTask
 abstract class DownloadRocksdbTask : DefaultTask() {
@@ -501,6 +553,41 @@ kotlin {
         configureRocksdbPrebuilt(rocksdbPrebuiltVersionValue, rocksdbPrebuiltBaseUrlValue)
     }
 
+}
+
+val mingwTarget = kotlin.targets.findByName("mingwX64") as? KotlinNativeTarget
+val mingwDebugTestBinary = runCatching { mingwTarget?.binaries?.getTest(NativeBuildType.DEBUG) }.getOrNull()
+
+if (mingwWineExecutable != null && mingwTarget != null && mingwDebugTestBinary != null) {
+    tasks.named("mingwX64Test", KotlinNativeHostTest::class).configure {
+        enabled = true
+
+        val defaultArgs = args.toList()
+        executable(mingwWineExecutable.absolutePath)
+
+        val negativeFilterArgs = listOf(
+            "maryk.rocksdb.*"
+        )
+        val negativeFilter = "--ktest_negative_gradle_filter=" + negativeFilterArgs.joinToString(",")
+
+        val winePrefixValue = configuredWinePrefix ?: defaultWinePrefixDir.get().asFile.absolutePath
+        if (System.getenv("WINEPREFIX").isNullOrBlank()) {
+            environment("WINEPREFIX", winePrefixValue)
+        }
+        if (System.getenv("WINEARCH").isNullOrBlank()) {
+            environment("WINEARCH", "win64")
+        }
+        if (System.getenv("WINEDEBUG").isNullOrBlank()) {
+            environment("WINEDEBUG", "-all")
+        }
+
+        doFirst {
+            project.file(winePrefixValue).mkdirs()
+            val newArgs = listOf(mingwDebugTestBinary.outputFile.absolutePath, negativeFilter) + defaultArgs
+            this@configure.args = newArgs
+        }
+
+    }
 }
 
 
