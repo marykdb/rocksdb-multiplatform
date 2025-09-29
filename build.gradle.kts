@@ -434,8 +434,7 @@ kotlin {
     mingwX64 {
         binaries.all {
             linkerOpts(
-                "-lstdc++",
-                "-lrpcrt4",
+                "-lrpcrt4", "-Wl,--verbose"
             )
         }
     }
@@ -501,7 +500,10 @@ kotlin {
     targets.withType<KotlinNativeTarget>().configureEach {
         configureRocksdbPrebuilt(rocksdbPrebuiltVersionValue, rocksdbPrebuiltBaseUrlValue)
     }
+
 }
+
+
 
 tasks.register("updateRocksdbShas") {
     group = "rocksdb"
