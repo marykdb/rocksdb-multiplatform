@@ -15,11 +15,16 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.JavaVersion
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.withType
@@ -273,6 +278,78 @@ abstract class DownloadRocksdbTask : DefaultTask() {
     }
 }
 
+@CacheableTask
+abstract class BuildMingwTlsShimTask : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
+    abstract val sourceFile: RegularFileProperty
+
+    @get:OutputFile
+    abstract val outputLibrary: RegularFileProperty
+
+    @TaskAction
+    fun build() {
+        val source = sourceFile.get().asFile
+        if (!source.isFile) {
+            throw GradleException("Mingw TLS shim source not found at ${source.absolutePath}")
+        }
+
+        val output = outputLibrary.get().asFile
+        output.parentFile.mkdirs()
+
+        val llvmBinDir = locateKonanLlvmBinDir()
+        val clang = File(llvmBinDir, "clang++")
+        val ar = File(llvmBinDir, "llvm-ar")
+
+        if (!clang.canExecute()) {
+            throw GradleException("Unable to find executable clang++ at ${clang.absolutePath}")
+        }
+        if (!ar.canExecute()) {
+            throw GradleException("Unable to find executable llvm-ar at ${ar.absolutePath}")
+        }
+
+        val objectFile = File(output.parentFile, output.nameWithoutExtension + ".o")
+
+        @Suppress("DEPRECATION")
+        project.exec {
+            commandLine(
+                clang.absolutePath,
+                "--target=x86_64-w64-windows-gnu",
+                "-std=c++17",
+                "-c",
+                source.absolutePath,
+                "-o",
+                objectFile.absolutePath
+            )
+        }
+
+        @Suppress("DEPRECATION")
+        project.exec {
+            commandLine(
+                ar.absolutePath,
+                "rcs",
+                output.absolutePath,
+                objectFile.absolutePath
+            )
+        }
+    }
+
+    private fun locateKonanLlvmBinDir(): File {
+        val dependenciesDir = File(System.getProperty("user.home"), ".konan/dependencies")
+        val llvmDir = dependenciesDir
+            .listFiles()
+            ?.filter { it.isDirectory && it.name.startsWith("llvm-") }
+            ?.maxByOrNull { it.name }
+            ?: throw GradleException("Unable to locate Kotlin/Native LLVM distribution in ${dependenciesDir.absolutePath}")
+
+        val binDir = File(llvmDir, "bin")
+        if (!binDir.isDirectory) {
+            throw GradleException("LLVM bin directory not found at ${binDir.absolutePath}")
+        }
+        return binDir
+    }
+}
+
 fun rocksdbShaFor(targetName: String): String? =
     findProperty("rocksdbPrebuiltSha.$targetName")?.toString()?.takeIf { it.isNotBlank() }
 
@@ -315,8 +392,22 @@ fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String
         extraOpts("-libraryPath", libDir.absolutePath)
     }
 
+    val mingwShimTask = if (targetName == "mingwX64") {
+        project.tasks.register<BuildMingwTlsShimTask>("buildMingwTlsShim") {
+            group = "rocksdb"
+            description = "Build TLS compatibility shim for RocksDB on MinGW"
+            sourceFile.set(project.layout.projectDirectory.file("src/nativeInterop/cinterop/mingw_tls_shim.cpp"))
+            outputLibrary.set(
+                project.layout.file(project.provider { File(libDir, "libmingw_tls_shim.a") })
+            )
+        }
+    } else {
+        null
+    }
+
     project.tasks.named(interop.interopProcessingTaskName).configure {
         dependsOn(downloadTask)
+        mingwShimTask?.let { dependsOn(it) }
     }
 
     binaries.withType<TestExecutable>().configureEach {
@@ -324,8 +415,10 @@ fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String
     }
 
     binaries.withType<NativeBinary>().configureEach {
+        mingwShimTask?.let { linkerOpts(File(libDir, "libmingw_tls_shim.a").absolutePath) }
         linkTaskProvider.configure {
             dependsOn(downloadTask)
+            mingwShimTask?.let { dependsOn(it) }
         }
     }
 }
