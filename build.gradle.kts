@@ -15,18 +15,26 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.JavaVersion
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.withType
+import org.gradle.internal.os.OperatingSystem
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBinary
 import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
+import org.jetbrains.kotlin.konan.target.KonanTarget
 
 repositories {
     google()
@@ -273,6 +281,146 @@ abstract class DownloadRocksdbTask : DefaultTask() {
     }
 }
 
+@CacheableTask
+abstract class BuildMingwTlsShimTask : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
+    abstract val sourceFile: RegularFileProperty
+
+    @get:OutputFile
+    abstract val outputLibrary: RegularFileProperty
+
+    @TaskAction
+    fun build() {
+        val source = sourceFile.get().asFile
+        if (!source.isFile) {
+            throw GradleException("Mingw TLS shim source not found at ${source.absolutePath}")
+        }
+
+        val output = outputLibrary.get().asFile
+        output.parentFile.mkdirs()
+
+        val llvmBinDir = locateKonanLlvmBinDir()
+        val os = OperatingSystem.current()
+        val clangName = if (os.isWindows) "clang++.exe" else "clang++"
+        val arName = if (os.isWindows) "llvm-ar.exe" else "llvm-ar"
+        val clang = File(llvmBinDir, clangName)
+        val ar = File(llvmBinDir, arName)
+
+        if (!clang.canExecute()) {
+            throw GradleException("Unable to find executable clang++ at ${clang.absolutePath}")
+        }
+        if (!ar.canExecute()) {
+            throw GradleException("Unable to find executable llvm-ar at ${ar.absolutePath}")
+        }
+
+        val objectFile = File(output.parentFile, output.nameWithoutExtension + ".o")
+
+        @Suppress("DEPRECATION")
+        project.exec {
+            commandLine(
+                clang.absolutePath,
+                "--target=x86_64-w64-windows-gnu",
+                "-std=c++17",
+                "-c",
+                source.absolutePath,
+                "-o",
+                objectFile.absolutePath
+            )
+        }
+
+        @Suppress("DEPRECATION")
+        project.exec {
+            commandLine(
+                ar.absolutePath,
+                "rcs",
+                output.absolutePath,
+                objectFile.absolutePath
+            )
+        }
+    }
+
+    private fun locateKonanLlvmBinDir(): File {
+        val setupClass = Class.forName("org.jetbrains.kotlin.gradle.utils.NativeCompilerDownloaderKt")
+        val setupMethod = setupClass.getDeclaredMethod(
+            "setupNativeCompiler",
+            Project::class.java,
+            KonanTarget::class.java
+        )
+        setupMethod.isAccessible = true
+        setupMethod.invoke(null, project, KonanTarget.MINGW_X64)
+
+        val nativePropertiesClass = Class.forName("org.jetbrains.kotlin.gradle.internal.properties.NativePropertiesKt")
+        val getNativeProperties = nativePropertiesClass.getDeclaredMethod("getNativeProperties", Project::class.java)
+        val nativeProperties = getNativeProperties.invoke(null, project)
+
+        val nativePropertiesInterface = Class.forName("org.jetbrains.kotlin.gradle.internal.properties.NativeProperties")
+        @Suppress("UNCHECKED_CAST")
+        val konanHomeProvider = nativePropertiesInterface
+            .getMethod("getActualNativeHomeDirectory")
+            .invoke(nativeProperties) as Provider<File>
+        val konanHomeFile = konanHomeProvider.orNull
+            ?: throw GradleException("Unable to locate Kotlin/Native home directory")
+
+        @Suppress("UNCHECKED_CAST")
+        val konanDataDirProvider = nativePropertiesInterface
+            .getMethod("getKonanDataDir")
+            .invoke(nativeProperties) as Provider<File>
+        val konanDataDirFile = konanDataDirProvider.orNull
+            ?: File(System.getProperty("user.home"), ".konan")
+
+        val konanHome = konanHomeFile.absolutePath
+        val konanDataDir = konanDataDirFile.absolutePath
+
+        val distributionHelper = Class.forName("org.jetbrains.kotlin.konan.target.DistributionKt")
+        val buildDistribution = distributionHelper.getDeclaredMethod(
+            "buildDistribution",
+            String::class.java,
+            String::class.java
+        )
+        val distribution = buildDistribution.invoke(null, konanHome, konanDataDir)
+
+        val bundleServiceClass = Class.forName("org.jetbrains.kotlin.gradle.targets.native.toolchain.KotlinNativeBundleBuildService")
+        val companionField = bundleServiceClass.getDeclaredField("Companion")
+        val companionInstance = companionField.get(null)
+        val registerIfAbsent = companionInstance.javaClass.getMethod("registerIfAbsent", Project::class.java)
+        @Suppress("UNCHECKED_CAST")
+        val bundleServiceProvider = registerIfAbsent.invoke(companionInstance, project) as Provider<Any>
+        val bundleService = bundleServiceProvider.get()
+        val downloadDependencies = bundleServiceClass.getDeclaredMethod(
+            "downloadNativeDependencies\$kotlin_gradle_plugin_common",
+            File::class.java,
+            String::class.java,
+            Set::class.java
+        )
+        downloadDependencies.isAccessible = true
+        downloadDependencies.invoke(
+            bundleService,
+            konanHomeFile,
+            konanDataDir,
+            setOf(KonanTarget.MINGW_X64)
+        )
+
+        val platformManagerClass = Class.forName("org.jetbrains.kotlin.konan.target.PlatformManager")
+        val distributionClass = Class.forName("org.jetbrains.kotlin.konan.target.Distribution")
+        val platformManager = platformManagerClass
+            .getConstructor(distributionClass)
+            .newInstance(distribution)
+
+        val loaderMethod = platformManagerClass.getMethod("loader", KonanTarget::class.java)
+        val configurables = loaderMethod.invoke(platformManager, KonanTarget.MINGW_X64)
+
+        val configurablesClass = Class.forName("org.jetbrains.kotlin.konan.target.Configurables")
+        val llvmHome = configurablesClass.getMethod("getAbsoluteLlvmHome").invoke(configurables) as String
+
+        val binDir = File(llvmHome, "bin")
+        if (!binDir.isDirectory) {
+            throw GradleException("LLVM bin directory not found at ${binDir.absolutePath}")
+        }
+        return binDir
+    }
+}
+
 fun rocksdbShaFor(targetName: String): String? =
     findProperty("rocksdbPrebuiltSha.$targetName")?.toString()?.takeIf { it.isNotBlank() }
 
@@ -315,8 +463,23 @@ fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String
         extraOpts("-libraryPath", libDir.absolutePath)
     }
 
+    val mingwShimTask = if (targetName == "mingwX64") {
+        project.tasks.register<BuildMingwTlsShimTask>("buildMingwTlsShim") {
+            group = "rocksdb"
+            description = "Build TLS compatibility shim for RocksDB on MinGW"
+            dependsOn(downloadTask)
+            sourceFile.set(project.layout.projectDirectory.file("src/nativeInterop/cinterop/mingw_tls_shim.cpp"))
+            outputLibrary.set(
+                project.layout.file(project.provider { File(libDir, "libmingw_tls_shim.a") })
+            )
+        }
+    } else {
+        null
+    }
+
     project.tasks.named(interop.interopProcessingTaskName).configure {
         dependsOn(downloadTask)
+        mingwShimTask?.let { dependsOn(it) }
     }
 
     binaries.withType<TestExecutable>().configureEach {
@@ -324,8 +487,10 @@ fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String
     }
 
     binaries.withType<NativeBinary>().configureEach {
+        mingwShimTask?.let { linkerOpts(File(libDir, "libmingw_tls_shim.a").absolutePath) }
         linkTaskProvider.configure {
             dependsOn(downloadTask)
+            mingwShimTask?.let { dependsOn(it) }
         }
     }
 }
