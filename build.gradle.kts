@@ -434,7 +434,7 @@ kotlin {
     mingwX64 {
         binaries.all {
             linkerOpts(
-                "-lrpcrt4", "-Wl,--verbose"
+                "-lrpcrt4"
             )
         }
     }
