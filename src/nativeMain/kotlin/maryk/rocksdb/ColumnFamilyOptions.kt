@@ -46,6 +46,7 @@ import rocksdb.rocksdb_options_set_max_write_buffer_number
 import rocksdb.rocksdb_options_set_memtable_huge_page_size
 import rocksdb.rocksdb_options_set_memtable_prefix_bloom_size_ratio
 import rocksdb.rocksdb_options_set_min_write_buffer_number_to_merge
+import rocksdb.rocksdb_options_set_plain_table_factory
 import rocksdb.rocksdb_options_set_num_levels
 import rocksdb.rocksdb_options_set_prefix_extractor
 import rocksdb.rocksdb_options_set_target_file_size_base
@@ -57,6 +58,8 @@ import kotlin.experimental.ExperimentalNativeApi
 actual class ColumnFamilyOptions private constructor(
     internal val native: CPointer<rocksdb_options_t>
 ) : RocksObject() {
+    private var tableFormatConfig: TableFormatConfig? = null
+
     actual constructor() : this(rocksdb_options_create()!!)
 
     override fun close() {
@@ -64,6 +67,16 @@ actual class ColumnFamilyOptions private constructor(
             rocksdb_options_destroy(native)
             super.close()
         }
+    }
+
+    actual fun setTableFormatConfig(tableFormatConfig: TableFormatConfig): ColumnFamilyOptions {
+        when (tableFormatConfig) {
+            is BlockBasedTableConfig -> tableFormatConfig.applyToOptions(native)
+            is PlainTableConfig -> tableFormatConfig.applyToOptions(native)
+            else -> error("Unsupported table format config: ${tableFormatConfig::class.simpleName}")
+        }
+        this.tableFormatConfig = tableFormatConfig
+        return this
     }
 
     actual fun setMinWriteBufferNumberToMerge(minWriteBufferNumberToMerge: Int): ColumnFamilyOptions {

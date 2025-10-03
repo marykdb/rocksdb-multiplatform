@@ -7,7 +7,7 @@ import kotlinx.cinterop.CPointer
 import kotlin.experimental.ExperimentalNativeApi
 
 actual abstract class Cache() : RocksObject() {
-    protected lateinit var native: CPointer<rocksdb_cache_t>
+    internal lateinit var native: CPointer<rocksdb_cache_t>
 
     actual fun getUsage(): Long {
         assert(isOwningHandle());

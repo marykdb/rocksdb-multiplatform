@@ -59,6 +59,7 @@ import rocksdb.rocksdb_options_set_max_log_file_size
 import rocksdb.rocksdb_options_set_max_open_files
 import rocksdb.rocksdb_options_set_max_write_buffer_number
 import rocksdb.rocksdb_options_set_min_write_buffer_number_to_merge
+import rocksdb.rocksdb_options_set_plain_table_factory
 import rocksdb.rocksdb_options_set_num_levels
 import rocksdb.rocksdb_options_set_paranoid_checks
 import rocksdb.rocksdb_options_set_prefix_extractor
@@ -72,6 +73,7 @@ import kotlin.experimental.ExperimentalNativeApi
 actual class Options private constructor(val native: CPointer<rocksdb_options_t>) : RocksObject() {
     private var statistics: Statistics? = null
     private var env: Env? = null
+    private var tableFormatConfig: TableFormatConfig? = null
 
     actual constructor() : this(rocksdb_options_create()!!)
 
@@ -80,6 +82,16 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
             rocksdb_options_destroy(native)
             super.close()
         }
+    }
+
+    actual fun setTableFormatConfig(tableFormatConfig: TableFormatConfig): Options {
+        when (tableFormatConfig) {
+            is BlockBasedTableConfig -> tableFormatConfig.applyToOptions(native)
+            is PlainTableConfig -> tableFormatConfig.applyToOptions(native)
+            else -> error("Unsupported table format config: ${tableFormatConfig::class.simpleName}")
+        }
+        this.tableFormatConfig = tableFormatConfig
+        return this
     }
 
     actual fun setMaxOpenFiles(maxOpenFiles: Int): Options {

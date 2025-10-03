@@ -9,9 +9,6 @@ actual class Snapshot internal constructor(
     actual fun getSequenceNumber() = rocksdb.rocksdb_snapshot_get_sequence_number(native).toLong()
 
     override fun close() {
-        if (isOwningHandle()) {
-            rocksdb.rocksdb_free(native)
-        }
         super.close()
     }
 }

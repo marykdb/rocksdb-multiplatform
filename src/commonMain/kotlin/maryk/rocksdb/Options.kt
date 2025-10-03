@@ -2,6 +2,11 @@ package maryk.rocksdb
 
 expect class Options() : RocksObject {
     /**
+     * Configure the table factory backing SSTs written for this instance.
+     */
+    fun setTableFormatConfig(tableFormatConfig: TableFormatConfig): Options
+
+    /**
      * Number of open files that can be used by the DB.  You may need to
      * increase this if your database has a large working set. Value -1 means
      * files opened are always kept open. You can estimate number of files based

@@ -63,4 +63,54 @@ expect class ReadOptions() : RocksObject {
      * @return the reference to the current ReadOptions.
      */
     fun setPrefixSameAsStart(prefixSameAsStart: Boolean): ReadOptions
+
+    /**
+     * @return the snapshot that will be used for reads, if any.
+     */
+    fun snapshot(): Snapshot?
+
+    /**
+     * Use the specified snapshot for read operations. Pass {@code null} to clear it.
+     */
+    fun setSnapshot(snapshot: Snapshot?): ReadOptions
+
+    /**
+     * @return the exclusive upper bound for iteration, or {@code null} if unset.
+     */
+    fun iterateUpperBound(): Slice?
+
+    /**
+     * Restrict iteration to keys strictly smaller than the supplied bound.
+     */
+    fun setIterateUpperBound(iterateUpperBound: AbstractSlice<*>): ReadOptions
+
+    /**
+     * @return the inclusive lower bound for iteration, or {@code null} if unset.
+     */
+    fun iterateLowerBound(): Slice?
+
+    /**
+     * Restrict iteration to keys greater or equal to the supplied bound.
+     */
+    fun setIterateLowerBound(iterateLowerBound: AbstractSlice<*>): ReadOptions
+
+    /**
+     * @return the tier used when serving reads.
+     */
+    fun readTier(): ReadTier
+
+    /**
+     * Choose which data tier to consult when serving reads.
+     */
+    fun setReadTier(readTier: ReadTier): ReadOptions
+
+    /**
+     * @return whether the iterator will remain positioned when new data is appended.
+     */
+    fun tailing(): Boolean
+
+    /**
+     * Enable a tailing iterator that can continue reading newly appended data.
+     */
+    fun setTailing(tailing: Boolean): ReadOptions
 }

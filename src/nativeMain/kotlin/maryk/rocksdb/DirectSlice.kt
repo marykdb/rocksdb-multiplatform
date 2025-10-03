@@ -3,10 +3,10 @@ package maryk.rocksdb
 import kotlinx.cinterop.Arena
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.alloc
+import kotlinx.cinterop.allocArrayOf
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.plus
 import kotlinx.cinterop.ptr
-import kotlinx.cinterop.toCValues
 import maryk.ByteBuffer
 import maryk.DirectByteBuffer
 import maryk.toByteArray
@@ -20,7 +20,9 @@ actual class DirectSlice() : AbstractSlice<ByteBuffer>() {
         super.disposeInternal()
     }
     actual constructor(str: String) : this() {
-        data = DirectByteBuffer(str.encodeToByteArray().toCValues().getPointer(scope), str.length)
+        val bytes = str.encodeToByteArray()
+        val pointer = scope.allocArrayOf(bytes)
+        data = DirectByteBuffer(pointer, str.length)
     }
 
     actual constructor(data: ByteBuffer) : this() {

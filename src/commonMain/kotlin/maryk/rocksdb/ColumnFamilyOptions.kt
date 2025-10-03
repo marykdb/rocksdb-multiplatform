@@ -2,6 +2,11 @@ package maryk.rocksdb
 
 expect class ColumnFamilyOptions() : RocksObject {
     /**
+     * Configure the table factory backing SSTs written for this column family.
+     */
+    fun setTableFormatConfig(tableFormatConfig: TableFormatConfig): ColumnFamilyOptions
+
+    /**
      * The minimum number of write buffers that will be merged together
      * before writing to storage.  If set to 1, then
      * all write buffers are flushed to L0 as individual files and this increases

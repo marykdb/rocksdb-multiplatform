@@ -9,9 +9,11 @@ import cnames.structs.rocksdb_t
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.CPointerVar
+import kotlinx.cinterop.CValuesRef
 import kotlinx.cinterop.UByteVar
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.allocArray
+import kotlinx.cinterop.cstr
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.set
@@ -50,6 +52,8 @@ import rocksdb.rocksdb_get_cf
 import rocksdb.rocksdb_get_column_family_metadata
 import rocksdb.rocksdb_get_default_column_family_handle
 import rocksdb.rocksdb_get_latest_sequence_number
+import rocksdb.rocksdb_ingest_external_file
+import rocksdb.rocksdb_ingest_external_file_cf
 import rocksdb.rocksdb_key_may_exist
 import rocksdb.rocksdb_key_may_exist_cf
 import rocksdb.rocksdb_level_metadata_destroy
@@ -1465,6 +1469,51 @@ internal constructor(
         val metaData = rocksdb_get_column_family_metadata(native)
 
         return processColumnFamilyMetaData(metaData)
+    }
+
+    private inline fun ingestFiles(
+        filePaths: List<String>,
+        ingestOptions: IngestExternalFileOptions,
+        crossinline action: (CPointer<CPointerVar<ByteVar>>, ULong, CValuesRef<CPointerVar<ByteVar>>) -> Unit
+    ) {
+        if (filePaths.isEmpty()) {
+            return
+        }
+        memScoped {
+            val names = allocArray<CPointerVar<ByteVar>>(filePaths.size)
+            filePaths.forEachIndexed { index, path ->
+                names[index] = path.cstr.ptr
+            }
+            wrapWithErrorThrower { error ->
+                action(names, filePaths.size.toULong(), error)
+            }
+        }
+    }
+
+    actual fun ingestExternalFile(
+        filePaths: List<String>,
+        ingestOptions: IngestExternalFileOptions
+    ) {
+        ingestFiles(filePaths, ingestOptions) { files, count, error ->
+            rocksdb_ingest_external_file(native, files, count, ingestOptions.native, error)
+        }
+    }
+
+    actual fun ingestExternalFile(
+        columnFamilyHandle: ColumnFamilyHandle,
+        filePaths: List<String>,
+        ingestOptions: IngestExternalFileOptions
+    ) {
+        ingestFiles(filePaths, ingestOptions) { files, count, error ->
+            rocksdb_ingest_external_file_cf(
+                native,
+                columnFamilyHandle.native,
+                files,
+                count,
+                ingestOptions.native,
+                error
+            )
+        }
     }
 
     actual fun verifyChecksum() {

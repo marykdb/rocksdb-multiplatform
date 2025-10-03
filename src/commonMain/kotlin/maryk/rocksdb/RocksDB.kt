@@ -1808,6 +1808,23 @@ expect open class RocksDB : RocksObject {
     fun getColumnFamilyMetaData(): ColumnFamilyMetaData
 
     /**
+     * Ingest externally created SST files into the default column family.
+     */
+    fun ingestExternalFile(
+        filePaths: List<String>,
+        ingestOptions: IngestExternalFileOptions
+    )
+
+    /**
+     * Ingest externally created SST files into the given column family.
+     */
+    fun ingestExternalFile(
+        columnFamilyHandle: ColumnFamilyHandle,
+        filePaths: List<String>,
+        ingestOptions: IngestExternalFileOptions
+    )
+
+    /**
      * Verify checksum
      *
      * @throws RocksDBException if the checksum is not valid
