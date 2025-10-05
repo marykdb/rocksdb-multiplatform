@@ -29,6 +29,7 @@ import maryk.wrapWithMultiErrorThrower
 import maryk.wrapWithNullErrorThrower
 import platform.posix.size_tVar
 import platform.posix.uint64_tVar
+import rocksdb.rocksdb_cancel_all_background_work
 import rocksdb.rocksdb_close
 import rocksdb.rocksdb_column_family_metadata_get_level_count
 import rocksdb.rocksdb_column_family_metadata_get_level_metadata
@@ -38,6 +39,7 @@ import rocksdb.rocksdb_compact_range_cf_opt
 import rocksdb.rocksdb_create_column_family
 import rocksdb.rocksdb_create_iterator
 import rocksdb.rocksdb_create_iterator_cf
+import rocksdb.rocksdb_get_updates_since
 import rocksdb.rocksdb_delete
 import rocksdb.rocksdb_delete_cf
 import rocksdb.rocksdb_delete_file_in_range_cf
@@ -52,6 +54,7 @@ import rocksdb.rocksdb_get_cf
 import rocksdb.rocksdb_get_column_family_metadata
 import rocksdb.rocksdb_get_default_column_family_handle
 import rocksdb.rocksdb_get_latest_sequence_number
+import rocksdb.rocksdb_free
 import rocksdb.rocksdb_ingest_external_file
 import rocksdb.rocksdb_ingest_external_file_cf
 import rocksdb.rocksdb_key_may_exist
@@ -63,6 +66,15 @@ import rocksdb.rocksdb_level_metadata_get_size
 import rocksdb.rocksdb_level_metadata_get_sst_file_metadata
 import rocksdb.rocksdb_list_column_families
 import rocksdb.rocksdb_list_column_families_destroy
+import rocksdb.rocksdb_livefiles
+import rocksdb.rocksdb_livefiles_column_family_name
+import rocksdb.rocksdb_livefiles_count
+import rocksdb.rocksdb_livefiles_destroy
+import rocksdb.rocksdb_livefiles_largestkey
+import rocksdb.rocksdb_livefiles_level
+import rocksdb.rocksdb_livefiles_name
+import rocksdb.rocksdb_livefiles_size
+import rocksdb.rocksdb_livefiles_smallestkey
 import rocksdb.rocksdb_merge
 import rocksdb.rocksdb_merge_cf
 import rocksdb.rocksdb_multi_get
@@ -76,7 +88,9 @@ import rocksdb.rocksdb_sst_file_metadata_get_directory
 import rocksdb.rocksdb_sst_file_metadata_get_relative_filename
 import rocksdb.rocksdb_sst_file_metadata_get_size
 import rocksdb.rocksdb_sst_file_metadata_get_smallestkey
+import rocksdb.rocksdb_set_perf_level
 import rocksdb.rocksdb_write
+import rocksdb.rocksdb_try_catch_up_with_primary
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.math.min
 
@@ -90,6 +104,7 @@ internal constructor(
     : RocksObject() {
     private val defaultReadOptions = ReadOptions()
     private val defaultWriteOptions = WriteOptions()
+    private var perfLevel: PerfLevel = PerfLevel.UNINITIALIZED
 
     actual fun getName(): String {
         return rocksdb.rocksdb_get_name(native)!!.let { name ->
@@ -887,9 +902,14 @@ internal constructor(
                     errs = error,
                 )
 
-                buildList(keys.size) {
-                    keys.indices.forEach { index ->
-                        this += valueList[index]?.toByteArray(valueListSizes[index])
+                List(keys.size) { index ->
+                    val pointer = valueList[index]
+                    if (pointer != null) {
+                        val bytes = pointer.toByteArray(valueListSizes[index])
+                        rocksdb_free(pointer)
+                        bytes
+                    } else {
+                        null
                     }
                 }
             }
@@ -937,9 +957,14 @@ internal constructor(
                     errs = error,
                 )
 
-                buildList(keys.size) {
-                    keys.indices.forEach { index ->
-                        this += valueList[index]?.toByteArray(valueListSizes[index])
+                List(keys.size) { index ->
+                    val pointer = valueList[index]
+                    if (pointer != null) {
+                        val bytes = pointer.toByteArray(valueListSizes[index])
+                        rocksdb_free(pointer)
+                        bytes
+                    } else {
+                        null
                     }
                 }
             }
@@ -1323,6 +1348,10 @@ internal constructor(
         }
     }
 
+    actual fun cancelAllBackgroundWork(waitForExit: Boolean) {
+        rocksdb_cancel_all_background_work(native, waitForExit.toUByte())
+    }
+
     actual fun enableAutoCompaction(columnFamilyHandles: List<ColumnFamilyHandle>) {
         wrapWithErrorThrower { error ->
             memScoped {
@@ -1369,6 +1398,65 @@ internal constructor(
     actual fun getEnv(): Env {
         return getDefaultEnv()
     }
+
+    actual fun setPerfLevel(perfLevel: PerfLevel) {
+        rocksdb_set_perf_level(perfLevel.value.toInt())
+        this.perfLevel = perfLevel
+    }
+
+    actual fun getPerfLevel(): PerfLevel = perfLevel
+
+    actual fun getPerfContext(): PerfContext = PerfContext()
+
+    actual fun getLiveFilesMetaData(): List<LiveFileMetaData> = memScoped {
+        val liveFiles = rocksdb_livefiles(native) ?: return@memScoped emptyList()
+        try {
+            val count = rocksdb_livefiles_count(liveFiles)
+            buildList {
+                repeat(count) { index ->
+                    val cfNamePtr = rocksdb_livefiles_column_family_name(liveFiles, index)
+                    val cfName = cfNamePtr?.toKString()?.encodeToByteArray() ?: ByteArray(0)
+
+                    val namePtr = rocksdb_livefiles_name(liveFiles, index)
+                    val name = namePtr?.toKString() ?: ""
+
+                val smallestLen = alloc<size_tVar>()
+                val largestLen = alloc<size_tVar>()
+                val smallestPtr = rocksdb_livefiles_smallestkey(liveFiles, index, smallestLen.ptr)
+                val largestPtr = rocksdb_livefiles_largestkey(liveFiles, index, largestLen.ptr)
+
+                val smallestKey = smallestPtr?.toByteArray(smallestLen.value) ?: ByteArray(0)
+                val largestKey = largestPtr?.toByteArray(largestLen.value) ?: ByteArray(0)
+
+                    add(
+                        LiveFileMetaData(
+                            columnFamilyNameValue = cfName,
+                            levelValue = rocksdb_livefiles_level(liveFiles, index),
+                            fileName = name,
+                            path = name,
+                            size = rocksdb_livefiles_size(liveFiles, index).toULong(),
+                            smallestKey = smallestKey,
+                            largestKey = largestKey,
+                        )
+                    )
+
+                    cfNamePtr?.let { rocksdb_free(it) }
+                    namePtr?.let { rocksdb_free(it) }
+                    smallestPtr?.let { rocksdb_free(it) }
+                    largestPtr?.let { rocksdb_free(it) }
+                }
+            }
+        } finally {
+            rocksdb_livefiles_destroy(liveFiles)
+        }
+    }
+
+    actual fun getUpdatesSince(sequenceNumber: Long): TransactionLogIterator =
+        wrapWithErrorThrower { error ->
+            TransactionLogIterator(
+                rocksdb_get_updates_since(native, sequenceNumber.toULong(), null, error)!!,
+            )
+        }
 
     actual fun flushWal(sync: Boolean) {
         wrapWithErrorThrower { error ->
@@ -1519,6 +1607,12 @@ internal constructor(
     actual fun verifyChecksum() {
         wrapWithErrorThrower { error ->
             rocksdb.rocksdb_verify_checksum(native, error)
+        }
+    }
+
+    actual fun tryCatchUpWithPrimary() {
+        wrapWithErrorThrower { error ->
+            rocksdb_try_catch_up_with_primary(native, error)
         }
     }
 

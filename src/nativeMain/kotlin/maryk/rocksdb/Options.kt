@@ -3,6 +3,7 @@
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_options_t
+import cnames.structs.rocksdb_sst_file_manager_t
 import kotlinx.cinterop.CPointer
 import maryk.rocksdb.util.BytewiseComparator
 import maryk.rocksdb.util.ReverseBytewiseComparator
@@ -63,6 +64,7 @@ import rocksdb.rocksdb_options_set_plain_table_factory
 import rocksdb.rocksdb_options_set_num_levels
 import rocksdb.rocksdb_options_set_paranoid_checks
 import rocksdb.rocksdb_options_set_prefix_extractor
+import rocksdb.rocksdb_options_set_sst_file_manager
 import rocksdb.rocksdb_options_set_target_file_size_base
 import rocksdb.rocksdb_options_set_target_file_size_multiplier
 import rocksdb.rocksdb_options_set_use_fsync
@@ -91,6 +93,11 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
             else -> error("Unsupported table format config: ${tableFormatConfig::class.simpleName}")
         }
         this.tableFormatConfig = tableFormatConfig
+        return this
+    }
+
+    actual fun setSstFileManager(sstFileManager: SstFileManager): Options {
+        rocksdb_options_set_sst_file_manager(native, sstFileManager.native)
         return this
     }
 

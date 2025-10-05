@@ -47,6 +47,7 @@ val rocksDBJVMVersion = "10.4.2"
 val rocksDBAndroidVersion = "10.4.2"
 
 val kotlinXDateTimeVersion = "0.7.1"
+val kotlinXCoroutinesVersion = "1.10.2"
 val rocksdbPrebuiltBaseUrlValue = providers.gradleProperty("rocksdbPrebuiltBaseUrl").orElse("https://github.com/marykdb/build-rocksdb/releases/download").get()
 val rocksdbPrebuiltVersionValue = providers.gradleProperty("rocksdbPrebuiltVersion").get()
 val rocksdbSupportedNativeTargets = setOf(
@@ -466,7 +467,11 @@ kotlin {
                 optIn("kotlinx.cinterop.BetaInteropApi")
             }
         }
-        commonMain {}
+        nativeMain {
+            dependencies {
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinXCoroutinesVersion")
+            }
+        }
         commonTest {
             dependencies {
                 implementation(kotlin("test"))

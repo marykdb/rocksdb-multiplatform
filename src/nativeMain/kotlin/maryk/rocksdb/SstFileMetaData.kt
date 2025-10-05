@@ -1,19 +1,33 @@
 package maryk.rocksdb
 
-actual class SstFileMetaData(
-    val fileName: String,
-    val path: String,
-    val size: ULong,
-    val smallestKey: ByteArray,
-    val largestKey: ByteArray,
-) {
-    actual fun fileName() = fileName
+actual open class SstFileMetaData protected constructor() {
+    private lateinit var fileNameValue: String
+    private lateinit var pathValue: String
+    private var sizeValue: ULong = 0u
+    private lateinit var smallestKeyValue: ByteArray
+    private lateinit var largestKeyValue: ByteArray
 
-    actual fun path() = path
+    internal constructor(
+        fileName: String,
+        path: String,
+        size: ULong,
+        smallestKey: ByteArray,
+        largestKey: ByteArray,
+    ) : this() {
+        fileNameValue = fileName
+        pathValue = path
+        sizeValue = size
+        smallestKeyValue = smallestKey
+        largestKeyValue = largestKey
+    }
 
-    actual fun size() = size.toLong()
+    actual fun fileName(): String = fileNameValue
 
-    actual fun smallestKey(): ByteArray = smallestKey
+    actual fun path(): String = pathValue
 
-    actual fun largestKey(): ByteArray = largestKey
+    actual fun size(): Long = sizeValue.toLong()
+
+    actual fun smallestKey(): ByteArray = smallestKeyValue
+
+    actual fun largestKey(): ByteArray = largestKeyValue
 }

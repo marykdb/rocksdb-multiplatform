@@ -1640,6 +1640,13 @@ expect open class RocksDB : RocksObject {
     fun continueBackgroundWork()
 
     /**
+     * Requests RocksDB to cancel background work (flushes, compactions, etc.).
+     *
+     * @param waitForExit when true, waits for background threads to exit before returning.
+     */
+    fun cancelAllBackgroundWork(waitForExit: Boolean)
+
+    /**
      * Enable automatic compactions for the given column
      * families if they were previously disabled.
      *
@@ -1722,6 +1729,34 @@ expect open class RocksDB : RocksObject {
      * @return the env
      */
     fun getEnv(): Env
+
+    /**
+     * Adjusts the perf level controlling which counters are collected.
+     */
+    fun setPerfLevel(perfLevel: PerfLevel)
+
+    /**
+     * Returns the currently configured perf level for this database handle.
+     */
+    fun getPerfLevel(): PerfLevel
+
+    /**
+     * Returns the perf context that exposes collected counters.
+     */
+    fun getPerfContext(): PerfContext
+
+    /**
+     * Returns metadata for the SST files that are currently live.
+     */
+    fun getLiveFilesMetaData(): List<LiveFileMetaData>
+
+    /**
+     * Creates an iterator over the database write-ahead log starting at the
+     * specified sequence number.
+     *
+     * @param sequenceNumber the WAL sequence number to start streaming from.
+     */
+    fun getUpdatesSince(sequenceNumber: Long): TransactionLogIterator
 
     /**
      * Flush the WAL memory buffer to the file. If `sync` is true,
@@ -1830,6 +1865,13 @@ expect open class RocksDB : RocksObject {
      * @throws RocksDBException if the checksum is not valid
      */
     fun verifyChecksum()
+
+    /**
+     * When acting as a secondary instance, attempts to catch up with the primary.
+     *
+     * @throws RocksDBException if the catch-up operation fails.
+     */
+    fun tryCatchUpWithPrimary()
 
     /**
      * Gets the handle for the default column family

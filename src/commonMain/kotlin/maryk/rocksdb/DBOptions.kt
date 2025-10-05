@@ -1,5 +1,9 @@
 package maryk.rocksdb
 
+expect fun DBOptions.addEventListener(listener: EventListener): DBOptions
+
+expect fun Options.addEventListener(listener: EventListener): Options
+
 expect class DBOptions() : RocksObject {
     /**
      * If this value is set to true, then the database will be created
@@ -267,4 +271,14 @@ expect class DBOptions() : RocksObject {
      * @see .walSizeLimitMB
      */
     fun walSizeLimitMB(): Long
+
+    /**
+     * Sets the recovery policy when replaying the WAL during open.
+     */
+    fun setWalRecoveryMode(mode: WALRecoveryMode): DBOptions
+
+    /**
+     * Returns the configured recovery policy for WAL replay.
+     */
+    fun walRecoveryMode(): WALRecoveryMode
 }

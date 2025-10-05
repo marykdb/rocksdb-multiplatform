@@ -19,3 +19,7 @@ actual enum class CompactionReason(
     kFlush(0x0C),
     kExternalSstIngestion(0x0D);
 }
+
+internal fun compactionReasonFromValue(value: UInt): CompactionReason =
+    CompactionReason.entries.firstOrNull { it.value.toUByte().toUInt() == value }
+        ?: CompactionReason.kUnknown
