@@ -62,6 +62,16 @@ actual class ColumnFamilyOptions private constructor(
 
     actual constructor() : this(rocksdb_options_create()!!)
 
+    companion object {
+        internal fun wrap(native: CPointer<rocksdb_options_t>, owning: Boolean): ColumnFamilyOptions {
+            val options = ColumnFamilyOptions(native)
+            if (!owning) {
+                options.disownHandle()
+            }
+            return options
+        }
+    }
+
     override fun close() {
         if (isOwningHandle()) {
             rocksdb_options_destroy(native)

@@ -6,6 +6,9 @@ expect class Options() : RocksObject {
      */
     fun setTableFormatConfig(tableFormatConfig: TableFormatConfig): Options
 
+    /** Attach an [SstFileManager] so RocksDB can coordinate file deletion with other instances. */
+    fun setSstFileManager(sstFileManager: SstFileManager): Options
+
     /**
      * Number of open files that can be used by the DB.  You may need to
      * increase this if your database has a large working set. Value -1 means

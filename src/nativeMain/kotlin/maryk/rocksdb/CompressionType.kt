@@ -14,7 +14,7 @@ actual enum class CompressionType(
     LZ4HC_COMPRESSION(0x5, "lz4hc"),
     XPRESS_COMPRESSION(0x6, "xpress"),
     ZSTD_COMPRESSION(0x7, "zstd"),
-    DISABLE_COMPRESSION_OPTION(0x7f, null);
+    DISABLE_COMPRESSION_OPTION(0xff.toByte(), null); // rocksdb::CompressionType::kDisableCompressionOption
 
     actual fun getLibraryName() = libraryName
 }

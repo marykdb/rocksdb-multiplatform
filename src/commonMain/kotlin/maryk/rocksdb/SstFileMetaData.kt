@@ -1,6 +1,6 @@
 package maryk.rocksdb
 
-expect class SstFileMetaData {
+expect open class SstFileMetaData {
     /** Get the name of the file. */
     fun fileName(): String
 

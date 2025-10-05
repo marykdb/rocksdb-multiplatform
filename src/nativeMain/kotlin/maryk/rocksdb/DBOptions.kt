@@ -4,6 +4,7 @@ import cnames.structs.rocksdb_options_t
 import kotlinx.cinterop.CPointer
 import maryk.toBoolean
 import maryk.toUByte
+import rocksdb.rocksdb_options_add_eventlistener
 import rocksdb.rocksdb_options_create
 import rocksdb.rocksdb_options_destroy
 import rocksdb.rocksdb_options_get_WAL_size_limit_MB
@@ -15,6 +16,7 @@ import rocksdb.rocksdb_options_get_keep_log_file_num
 import rocksdb.rocksdb_options_get_log_file_time_to_roll
 import rocksdb.rocksdb_options_get_max_log_file_size
 import rocksdb.rocksdb_options_get_paranoid_checks
+import rocksdb.rocksdb_options_get_wal_recovery_mode
 import rocksdb.rocksdb_options_get_use_fsync
 import rocksdb.rocksdb_options_set_WAL_size_limit_MB
 import rocksdb.rocksdb_options_set_create_if_missing
@@ -25,7 +27,20 @@ import rocksdb.rocksdb_options_set_keep_log_file_num
 import rocksdb.rocksdb_options_set_log_file_time_to_roll
 import rocksdb.rocksdb_options_set_max_log_file_size
 import rocksdb.rocksdb_options_set_paranoid_checks
+import rocksdb.rocksdb_options_set_wal_recovery_mode
 import rocksdb.rocksdb_options_set_use_fsync
+
+actual fun DBOptions.addEventListener(listener: EventListener): DBOptions {
+    rocksdb_options_add_eventlistener(native, listener.native)
+    listener.disownHandle()
+    return this
+}
+
+actual fun Options.addEventListener(listener: EventListener): Options {
+    rocksdb_options_add_eventlistener(native, listener.native)
+    listener.disownHandle()
+    return this
+}
 
 actual class DBOptions internal constructor(
     internal val native: CPointer<rocksdb_options_t>
@@ -130,4 +145,12 @@ actual class DBOptions internal constructor(
 
     actual fun walSizeLimitMB(): Long =
         rocksdb_options_get_WAL_size_limit_MB(native).toLong()
+
+    actual fun setWalRecoveryMode(mode: WALRecoveryMode): DBOptions {
+        rocksdb_options_set_wal_recovery_mode(native, mode.getValue().toInt())
+        return this
+    }
+
+    actual fun walRecoveryMode(): WALRecoveryMode =
+        walRecoveryModeFromValue(rocksdb_options_get_wal_recovery_mode(native).toByte())
 }
