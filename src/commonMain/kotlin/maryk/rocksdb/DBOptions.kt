@@ -4,7 +4,7 @@ expect fun DBOptions.addEventListener(listener: EventListener): DBOptions
 
 expect fun Options.addEventListener(listener: EventListener): Options
 
-expect class DBOptions() : RocksObject {
+expect class DBOptions() : RocksObject, DBOptionsInterface<DBOptions> {
     /**
      * If this value is set to true, then the database will be created
      * if it is missing during `RocksDB.open()`.
@@ -139,6 +139,23 @@ expect class DBOptions() : RocksObject {
      * @see .setStatistics
      */
     fun statistics(): Statistics?
+
+    /**
+     * Use the specified environment implementation for interacting with the
+     * filesystem, scheduling background work and other OS dependent
+     * operations.
+     *
+     * Default: [getDefaultEnv]
+     *
+     * @param env the environment instance to use.
+     * @return the current options instance.
+     */
+    override fun setEnv(env: Env): DBOptions
+
+    /**
+     * Returns the environment configured on this options object.
+     */
+    override fun getEnv(): Env
 
     /**
      * If true, then every store to stable storage will issue a fsync.

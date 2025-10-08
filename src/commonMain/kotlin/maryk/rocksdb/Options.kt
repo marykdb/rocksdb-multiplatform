@@ -1,6 +1,6 @@
 package maryk.rocksdb
 
-expect class Options() : RocksObject {
+expect class Options() : RocksObject, DBOptionsInterface<Options> {
     /**
      * Configure the table factory backing SSTs written for this instance.
      */
@@ -764,12 +764,12 @@ expect class Options() : RocksObject {
      * @param env [Env] instance.
      * @return the instance of the current Options.
      */
-    fun setEnv(env: Env): Options
+    override fun setEnv(env: Env): Options
 
     /**
      * Returns the set RocksEnv instance.
      *
      * @return [RocksEnv] instance set in the options.
      */
-    fun getEnv(): Env
+    override fun getEnv(): Env
 }

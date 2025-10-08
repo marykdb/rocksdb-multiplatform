@@ -113,4 +113,7 @@ expect class ReadOptions() : RocksObject {
      * Enable a tailing iterator that can continue reading newly appended data.
      */
     fun setTailing(tailing: Boolean): ReadOptions
+
 }
+
+expect fun ReadOptions.setTableFilter(tableFilter: AbstractTableFilter): ReadOptions

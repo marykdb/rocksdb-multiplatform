@@ -27,8 +27,9 @@ import rocksdb.rocksdb_options_set_keep_log_file_num
 import rocksdb.rocksdb_options_set_log_file_time_to_roll
 import rocksdb.rocksdb_options_set_max_log_file_size
 import rocksdb.rocksdb_options_set_paranoid_checks
-import rocksdb.rocksdb_options_set_wal_recovery_mode
 import rocksdb.rocksdb_options_set_use_fsync
+import rocksdb.rocksdb_options_set_wal_recovery_mode
+import rocksdb.rocksdb_options_set_env
 
 actual fun DBOptions.addEventListener(listener: EventListener): DBOptions {
     rocksdb_options_add_eventlistener(native, listener.native)
@@ -44,8 +45,9 @@ actual fun Options.addEventListener(listener: EventListener): Options {
 
 actual class DBOptions internal constructor(
     internal val native: CPointer<rocksdb_options_t>
-) : RocksObject() {
+) : RocksObject(), DBOptionsInterface<DBOptions> {
     private var statistics: Statistics? = null
+    private var env: Env? = null
 
     actual constructor() : this(rocksdb_options_create()!!)
 
@@ -105,6 +107,19 @@ actual class DBOptions internal constructor(
 
     actual fun statistics(): Statistics? {
         return this.statistics
+    }
+
+    actual override fun setEnv(env: Env): DBOptions {
+        rocksdb_options_set_env(native, env.native)
+        this.env = env
+        return this
+    }
+
+    actual override fun getEnv(): Env {
+        if (env == null) {
+            env = getDefaultEnv()
+        }
+        return env!!
     }
 
     actual fun setUseFsync(useFsync: Boolean): DBOptions {

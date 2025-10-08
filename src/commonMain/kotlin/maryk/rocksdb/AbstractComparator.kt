@@ -83,3 +83,5 @@ expect abstract class AbstractComparator protected constructor() : RocksCallback
 
     override fun close()
 }
+
+expect fun AbstractComparator.getComparatorType(): ComparatorType

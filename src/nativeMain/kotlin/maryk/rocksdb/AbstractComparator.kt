@@ -17,6 +17,7 @@ import maryk.ByteBuffer
 import maryk.DirectByteBuffer
 import platform.posix.memcpy
 import rocksdb.rocksdb_comparator_destroy
+import rocksdb.rocksdb_comparator_get_comparator_type
 
 actual abstract class AbstractComparator
     protected actual constructor(val copt: ComparatorOptions?)
@@ -82,5 +83,14 @@ actual abstract class AbstractComparator
 
     actual open fun findShortSuccessor(key: ByteBuffer) {
         // no opp
+    }
+}
+
+actual fun AbstractComparator.getComparatorType(): ComparatorType {
+    val value = native?.let { rocksdb_comparator_get_comparator_type(it) } ?: 0
+    return when (value) {
+        0 -> ComparatorType.JAVA_COMPARATOR
+        1 -> ComparatorType.JAVA_NATIVE_COMPARATOR_WRAPPER
+        else -> ComparatorType.JAVA_COMPARATOR
     }
 }

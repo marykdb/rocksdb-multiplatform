@@ -72,7 +72,9 @@ import rocksdb.rocksdb_options_set_write_buffer_size
 import rocksdb.rocksdb_slicetransform_create_fixed_prefix
 import kotlin.experimental.ExperimentalNativeApi
 
-actual class Options private constructor(val native: CPointer<rocksdb_options_t>) : RocksObject() {
+actual class Options private constructor(val native: CPointer<rocksdb_options_t>) :
+    RocksObject(),
+    DBOptionsInterface<Options> {
     private var statistics: Statistics? = null
     private var env: Env? = null
     private var tableFormatConfig: TableFormatConfig? = null
@@ -355,13 +357,13 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
         return rocksdb_options_get_WAL_size_limit_MB(native).toLong()
     }
 
-    actual fun setEnv(env: Env): Options {
+    actual override fun setEnv(env: Env): Options {
         rocksdb.rocksdb_options_set_env(native, env.native)
         this.env = env
         return this
     }
 
-    actual fun getEnv(): Env {
+    actual override fun getEnv(): Env {
         if (this.env == null) {
             this.env = getDefaultEnv()
         }

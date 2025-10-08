@@ -24,6 +24,7 @@ import rocksdb.rocksdb_readoptions_set_tailing
 import rocksdb.rocksdb_readoptions_set_verify_checksums
 import rocksdb.rocksdb_readoptions_set_iterate_upper_bound
 import rocksdb.rocksdb_readoptions_set_iterate_lower_bound
+import rocksdb.rocksdb_readoptions_set_table_filter
 import kotlin.experimental.ExperimentalNativeApi
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.nativeHeap
@@ -34,6 +35,7 @@ actual class ReadOptions private constructor(val native: CPointer<rocksdb_readop
     private var snapshot: Snapshot? = null
     private var upperBound: BoundBuffer? = null
     private var lowerBound: BoundBuffer? = null
+    internal var tableFilterRef: AbstractTableFilter? = null
 
     actual constructor() : this(rocksdb_readoptions_create())
 
@@ -43,6 +45,8 @@ actual class ReadOptions private constructor(val native: CPointer<rocksdb_readop
             upperBound = null
             lowerBound?.free()
             lowerBound = null
+            tableFilterRef?.close()
+            tableFilterRef = null
             rocksdb_readoptions_destroy(native)
             super.close()
         }
@@ -175,4 +179,12 @@ private fun AbstractSlice<*>.copyBytes(): ByteArray = when (this) {
         is ByteBuffer -> raw.array()
         else -> error("Unsupported slice type: ${this::class.simpleName}")
     }
+}
+
+actual fun ReadOptions.setTableFilter(tableFilter: AbstractTableFilter): ReadOptions {
+    assert(isOwningHandle())
+    this.tableFilterRef?.close()
+    this.tableFilterRef = tableFilter
+    rocksdb_readoptions_set_table_filter(native, tableFilter.native)
+    return this
 }
