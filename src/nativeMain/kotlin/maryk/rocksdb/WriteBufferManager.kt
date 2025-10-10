@@ -1,7 +1,11 @@
+@file:OptIn(UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_write_buffer_manager_t
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.UnsafeNumber
+import maryk.asSizeT
 import rocksdb.rocksdb_write_buffer_manager_create_with_cache
 import rocksdb.rocksdb_write_buffer_manager_destroy
 
@@ -16,7 +20,7 @@ actual class WriteBufferManager internal constructor(
     ) : this(
         requireNotNull(
             rocksdb_write_buffer_manager_create_with_cache(
-                bufferSize.toULong(),
+                bufferSize.asSizeT(),
                 cache.native,
                 allowStall,
             ),

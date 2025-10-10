@@ -428,10 +428,10 @@ kotlin {
         publishLibraryVariantsGroupedByFlavor = true
     }
 
-//    androidNativeArm32()
+    androidNativeArm32()
     androidNativeArm64()
     androidNativeX64()
-//    androidNativeX86()
+    androidNativeX86()
 
     iosArm64()
     iosSimulatorArm64()
@@ -451,7 +451,7 @@ kotlin {
     tvosArm64()
     tvosSimulatorArm64()
 
-//    watchosArm64()
+    watchosArm64()
     watchosDeviceArm64()
     watchosSimulatorArm64()
 

@@ -1,7 +1,11 @@
+@file:OptIn(UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_options_t
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.UnsafeNumber
+import maryk.asSizeT
 import maryk.toUByte
 import rocksdb.rocksdb_options_set_plain_table_factory
 
@@ -77,8 +81,8 @@ actual class PlainTableConfig actual constructor() : TableFormatConfig() {
             keySize.toUInt(),
             bloomBitsPerKey,
             hashTableRatio,
-            indexSparseness.toULong(),
-            hugePageTlbSize.toULong(),
+            indexSparseness.asSizeT(),
+            hugePageTlbSize.asSizeT(),
             encodingType.value,
             fullScanMode.toUByte(),
             storeIndexInFile.toUByte()

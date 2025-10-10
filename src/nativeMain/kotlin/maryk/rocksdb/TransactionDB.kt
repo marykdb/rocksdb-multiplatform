@@ -1,9 +1,10 @@
-@file:OptIn(ExperimentalNativeApi::class)
+@file:OptIn(ExperimentalNativeApi::class, UnsafeNumber::class)
 
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_transactiondb_t
 import kotlinx.cinterop.*
+import maryk.asSizeT
 import platform.posix.size_tVar
 import kotlin.experimental.ExperimentalNativeApi
 
@@ -52,7 +53,7 @@ internal constructor(
 
             return buildList {
                 transactions?.let {
-                    for (index in 0uL until count.value) {
+                    for (index in 0.asSizeT() until count.value) {
                         add(
                             Transaction(
                                 transactions[index.toInt()]!!

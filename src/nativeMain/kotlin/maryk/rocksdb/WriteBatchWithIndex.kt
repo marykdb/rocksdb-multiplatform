@@ -1,16 +1,20 @@
+@file:OptIn(UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_writebatch_wi_t
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.toCValues
 import kotlinx.cinterop.value
+import maryk.asSizeT
 import maryk.toByteArray
 import maryk.wrapWithErrorThrower
-import platform.posix.uint64_tVar
+import platform.posix.size_tVar
 import rocksdb.rocksdb_writebatch_wi_create
 
 actual class WriteBatchWithIndex(
@@ -36,13 +40,13 @@ actual class WriteBatchWithIndex(
         var a: ByteArray? = null
         wrapWithErrorThrower { error ->
             memScoped {
-                val length = alloc<uint64_tVar>()
+                val length = alloc<size_tVar>()
                 a = rocksdb.rocksdb_writebatch_wi_get_from_batch_cf(
                     native,
                     options.native,
                     columnFamilyHandle.native,
                     key.toCValues(),
-                    key.size.toULong(),
+                    key.size.asSizeT(),
                     length.ptr,
                     error
                 )?.toByteArray(length.value)
@@ -55,12 +59,12 @@ actual class WriteBatchWithIndex(
         var a: ByteArray? = null
         memScoped {
             wrapWithErrorThrower { error ->
-                val length = alloc<uint64_tVar>()
+                val length = alloc<size_tVar>()
                 a = rocksdb.rocksdb_writebatch_wi_get_from_batch(
                     native,
                     options.native,
                     key.toCValues(),
-                    key.size.toULong(),
+                    key.size.asSizeT(),
                     length.ptr,
                     error
                 )?.toByteArray(length.value)
@@ -78,13 +82,13 @@ actual class WriteBatchWithIndex(
 
     override fun singleDelete(key: ByteArray) {
         wrapWithErrorThrower { error ->
-            rocksdb.rocksdb_writebatch_wi_singledelete(native, key.toCValues(), key.size.toULong(), error)
+            rocksdb.rocksdb_writebatch_wi_singledelete(native, key.toCValues(), key.size.asSizeT(), error)
         }
     }
 
     override fun singleDelete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray) {
         wrapWithErrorThrower { error ->
-            rocksdb.rocksdb_writebatch_wi_singledelete_cf(native, columnFamilyHandle.native, key.toCValues(), key.size.toULong(), error)
+            rocksdb.rocksdb_writebatch_wi_singledelete_cf(native, columnFamilyHandle.native, key.toCValues(), key.size.asSizeT(), error)
         }
     }
 
@@ -93,55 +97,55 @@ actual class WriteBatchWithIndex(
 
     override fun put(key: ByteArray, value: ByteArray) {
         wrapWithErrorThrower { error ->
-            rocksdb.rocksdb_writebatch_wi_put(native, key.toCValues(), key.size.toULong(), value.toCValues(), value.size.toULong(), error)
+            rocksdb.rocksdb_writebatch_wi_put(native, key.toCValues(), key.size.asSizeT(), value.toCValues(), value.size.asSizeT(), error)
         }
     }
 
     override fun put(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, value: ByteArray) {
         wrapWithErrorThrower { error ->
-            rocksdb.rocksdb_writebatch_wi_put_cf(native, columnFamilyHandle.native, key.toCValues(), key.size.toULong(), value.toCValues(), value.size.toULong(), error)
+            rocksdb.rocksdb_writebatch_wi_put_cf(native, columnFamilyHandle.native, key.toCValues(), key.size.asSizeT(), value.toCValues(), value.size.asSizeT(), error)
         }
     }
 
     override fun merge(key: ByteArray, value: ByteArray) {
         wrapWithErrorThrower { error ->
-            rocksdb.rocksdb_writebatch_wi_merge(native, key.toCValues(), key.size.toULong(), value.toCValues(), value.size.toULong(), error)
+            rocksdb.rocksdb_writebatch_wi_merge(native, key.toCValues(), key.size.asSizeT(), value.toCValues(), value.size.asSizeT(), error)
         }
     }
 
     override fun merge(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, value: ByteArray) {
         wrapWithErrorThrower { error ->
-            rocksdb.rocksdb_writebatch_wi_merge_cf(native, columnFamilyHandle.native, key.toCValues(), key.size.toULong(), value.toCValues(), value.size.toULong(), error)
+            rocksdb.rocksdb_writebatch_wi_merge_cf(native, columnFamilyHandle.native, key.toCValues(), key.size.asSizeT(), value.toCValues(), value.size.asSizeT(), error)
         }
     }
 
     override fun delete(key: ByteArray) {
         wrapWithErrorThrower { error ->
-            rocksdb.rocksdb_writebatch_wi_delete(native, key.toCValues(), key.size.toULong(), error)
+            rocksdb.rocksdb_writebatch_wi_delete(native, key.toCValues(), key.size.asSizeT(), error)
         }
     }
 
     override fun delete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray) {
         wrapWithErrorThrower { error ->
-            rocksdb.rocksdb_writebatch_wi_delete_cf(native, columnFamilyHandle.native, key.toCValues(), key.size.toULong(), error)
+            rocksdb.rocksdb_writebatch_wi_delete_cf(native, columnFamilyHandle.native, key.toCValues(), key.size.asSizeT(), error)
         }
     }
 
     override fun deleteRange(beginKey: ByteArray, endKey: ByteArray) {
         wrapWithErrorThrower { error ->
-            rocksdb.rocksdb_writebatch_wi_delete_range(native, beginKey.toCValues(), beginKey.size.toULong(), endKey.toCValues(), endKey.size.toULong(), error)
+            rocksdb.rocksdb_writebatch_wi_delete_range(native, beginKey.toCValues(), beginKey.size.asSizeT(), endKey.toCValues(), endKey.size.asSizeT(), error)
         }
     }
 
     override fun deleteRange(columnFamilyHandle: ColumnFamilyHandle, beginKey: ByteArray, endKey: ByteArray) {
         wrapWithErrorThrower { error ->
-            rocksdb.rocksdb_writebatch_wi_delete_range_cf(native, columnFamilyHandle.native, beginKey.toCValues(), beginKey.size.toULong(), endKey.toCValues(), endKey.size.toULong(), error)
+            rocksdb.rocksdb_writebatch_wi_delete_range_cf(native, columnFamilyHandle.native, beginKey.toCValues(), beginKey.size.asSizeT(), endKey.toCValues(), endKey.size.asSizeT(), error)
         }
     }
 
     override fun putLogData(blob: ByteArray) {
         wrapWithErrorThrower { error ->
-            rocksdb.rocksdb_writebatch_wi_put_log_data(native, blob.toCValues(), blob.size.toULong(), error)
+            rocksdb.rocksdb_writebatch_wi_put_log_data(native, blob.toCValues(), blob.size.asSizeT(), error)
         }
     }
 
@@ -168,7 +172,7 @@ actual class WriteBatchWithIndex(
     }
 
     override fun setMaxBytes(maxBytes: Long) {
-        rocksdb.rocksdb_writebatch_wi_set_max_bytes(native, maxBytes.toULong())
+        rocksdb.rocksdb_writebatch_wi_set_max_bytes(native, maxBytes.asSizeT())
     }
 
     override fun getWriteBatch(): WriteBatch = TODO()

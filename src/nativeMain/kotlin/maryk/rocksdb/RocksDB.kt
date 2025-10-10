@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalNativeApi::class)
+@file:OptIn(ExperimentalNativeApi::class, UnsafeNumber::class)
 
 package maryk.rocksdb
 
@@ -11,6 +11,7 @@ import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.CPointerVar
 import kotlinx.cinterop.CValuesRef
 import kotlinx.cinterop.UByteVar
+import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.cstr
@@ -20,6 +21,7 @@ import kotlinx.cinterop.set
 import kotlinx.cinterop.toCValues
 import kotlinx.cinterop.toKString
 import kotlinx.cinterop.value
+import maryk.asSizeT
 import maryk.byteArrayToCPointer
 import maryk.toBoolean
 import maryk.toByteArray
@@ -27,6 +29,7 @@ import maryk.toUByte
 import maryk.wrapWithErrorThrower
 import maryk.wrapWithMultiErrorThrower
 import maryk.wrapWithNullErrorThrower
+import platform.posix.size_t
 import platform.posix.size_tVar
 import platform.posix.uint64_tVar
 import rocksdb.rocksdb_cancel_all_background_work
@@ -109,7 +112,7 @@ internal constructor(
     actual fun getName(): String {
         return rocksdb.rocksdb_get_name(native)!!.let { name ->
             name.toKString().also {
-                rocksdb.rocksdb_free(name)
+                rocksdb_free(name)
             }
         }
     }
@@ -177,14 +180,14 @@ internal constructor(
                     cfHandles[index] = handle.native
                 }
 
-                rocksdb.rocksdb_drop_column_families(native, cfHandles, columnFamilies.size.toULong(), error)
+                rocksdb.rocksdb_drop_column_families(native, cfHandles, columnFamilies.size.asSizeT(), error)
             }
         }
     }
 
     actual fun put(key: ByteArray, value: ByteArray) {
         wrapWithErrorThrower { error ->
-            rocksdb_put(native, defaultWriteOptions.native, key.toCValues(), key.size.toULong(), value.toCValues(), value.size.toULong(), error)
+            rocksdb_put(native, defaultWriteOptions.native, key.toCValues(), key.size.asSizeT(), value.toCValues(), value.size.asSizeT(), error)
         }
     }
 
@@ -202,9 +205,9 @@ internal constructor(
                     native,
                     defaultWriteOptions.native,
                     byteArrayToCPointer(key, offset, len),
-                    len.toULong(),
+                    len.asSizeT(),
                     byteArrayToCPointer(value, vOffset, vLen),
-                    vLen.toULong(),
+                    vLen.asSizeT(),
                     error
                 )
             }
@@ -222,9 +225,9 @@ internal constructor(
                 defaultWriteOptions.native,
                 columnFamilyHandle.native,
                 key.toCValues(),
-                key.size.toULong(),
+                key.size.asSizeT(),
                 value.toCValues(),
-                value.size.toULong(),
+                value.size.asSizeT(),
                 error
             )
         }
@@ -248,9 +251,9 @@ internal constructor(
                 native,
                 writeOpts.native,
                 key.toCValues(),
-                key.size.toULong(),
+                key.size.asSizeT(),
                 value.toCValues(),
-                value.size.toULong(),
+                value.size.asSizeT(),
                 error
             )
         }
@@ -271,9 +274,9 @@ internal constructor(
                     native,
                     writeOpts.native,
                     byteArrayToCPointer(key, offset, len),
-                    len.toULong(),
+                    len.asSizeT(),
                     byteArrayToCPointer(value, vOffset, vLen),
-                    vLen.toULong(),
+                    vLen.asSizeT(),
                     error
                 )
             }
@@ -292,9 +295,9 @@ internal constructor(
                 writeOpts.native,
                 columnFamilyHandle.native,
                 key.toCValues(),
-                key.size.toULong(),
+                key.size.asSizeT(),
                 value.toCValues(),
-                value.size.toULong(),
+                value.size.asSizeT(),
                 error
             )
         }
@@ -317,9 +320,9 @@ internal constructor(
                     writeOpts.native,
                     columnFamilyHandle.native,
                     byteArrayToCPointer(key, offset, len),
-                    len.toULong(),
+                    len.asSizeT(),
                     byteArrayToCPointer(value, vOffset, vLen),
-                    vLen.toULong(),
+                    vLen.asSizeT(),
                     error
                 )
             }
@@ -353,7 +356,7 @@ internal constructor(
                 native,
                 writeOpt.native,
                 key.toCValues(),
-                key.size.toULong(),
+                key.size.asSizeT(),
                 error
             )
         }
@@ -371,7 +374,7 @@ internal constructor(
                     native,
                     writeOpt.native,
                     byteArrayToCPointer(key, offset, len),
-                    len.toULong(),
+                    len.asSizeT(),
                     error
                 )
             }
@@ -389,7 +392,7 @@ internal constructor(
                 writeOpt.native,
                 columnFamilyHandle.native,
                 key.toCValues(),
-                key.size.toULong(),
+                key.size.asSizeT(),
                 error
             )
         }
@@ -409,7 +412,7 @@ internal constructor(
                     writeOpt.native,
                     columnFamilyHandle.native,
                     byteArrayToCPointer(key, offset, len),
-                    len.toULong(),
+                    len.asSizeT(),
                     error
                 )
             }
@@ -436,9 +439,9 @@ internal constructor(
                 options = writeOpt.native,
                 column_family = default,
                 start_key = beginKey.toCValues(),
-                start_key_len = beginKey.size.toULong(),
+                start_key_len = beginKey.size.asSizeT(),
                 end_key = endKey.toCValues(),
-                end_key_len = endKey.size.toULong(),
+                end_key_len = endKey.size.asSizeT(),
                 errptr = error,
             )
             rocksdb.rocksdb_column_family_handle_destroy(default)
@@ -457,9 +460,9 @@ internal constructor(
                 options = writeOpt.native,
                 column_family = columnFamilyHandle.native,
                 start_key = beginKey.toCValues(),
-                start_key_len = beginKey.size.toULong(),
+                start_key_len = beginKey.size.asSizeT(),
                 end_key = endKey.toCValues(),
-                end_key_len = endKey.size.toULong(),
+                end_key_len = endKey.size.asSizeT(),
                 errptr = error,
             )
         }
@@ -506,9 +509,9 @@ internal constructor(
                 native,
                 writeOpts.native,
                 key.toCValues(),
-                key.size.toULong(),
+                key.size.asSizeT(),
                 value.toCValues(),
-                value.size.toULong(),
+                value.size.asSizeT(),
                 error,
             )
         }
@@ -529,9 +532,9 @@ internal constructor(
                     native,
                     writeOpts.native,
                     byteArrayToCPointer(key, offset, len),
-                    len.toULong(),
+                    len.asSizeT(),
                     byteArrayToCPointer(value, vOffset, vLen),
-                    vLen.toULong(),
+                    vLen.asSizeT(),
                     error,
                 )
             }
@@ -550,9 +553,9 @@ internal constructor(
                 writeOpts.native,
                 columnFamilyHandle.native,
                 key.toCValues(),
-                key.size.toULong(),
+                key.size.asSizeT(),
                 value.toCValues(),
-                value.size.toULong(),
+                value.size.asSizeT(),
                 error,
             )
         }
@@ -575,9 +578,9 @@ internal constructor(
                     writeOpts.native,
                     columnFamilyHandle.native,
                     byteArrayToCPointer(key, offset, len),
-                    len.toULong(),
+                    len.asSizeT(),
                     byteArrayToCPointer(value, vOffset, vLen),
-                    vLen.toULong(),
+                    vLen.asSizeT(),
                     error,
                 )
             }
@@ -593,7 +596,7 @@ internal constructor(
     actual fun get(key: ByteArray, value: ByteArray): Int = wrapWithNullErrorThrower { error ->
         memScoped {
             val valueLength = alloc<size_tVar>()
-            val result = rocksdb_get(native, defaultReadOptions.native, key.toCValues(), key.size.toULong(), valueLength.ptr, error)
+            val result = rocksdb_get(native, defaultReadOptions.native, key.toCValues(), key.size.asSizeT(), valueLength.ptr, error)
 
             val length = valueLength.value.toInt()
 
@@ -601,7 +604,7 @@ internal constructor(
                 for (index in 0 until min(length, value.size)) {
                     value[index] = result[index]
                 }
-                rocksdb.rocksdb_free(result)
+                rocksdb_free(result)
                 length
             }
         }
@@ -622,7 +625,7 @@ internal constructor(
                     native,
                     defaultReadOptions.native,
                     byteArrayToCPointer(key, offset, len),
-                    len.toULong(),
+                    len.asSizeT(),
                     valueLength.ptr,
                     error
                 )?.let {
@@ -632,7 +635,7 @@ internal constructor(
                         value[index + vOffset] = it[index]
                     }
 
-                    rocksdb.rocksdb_free(it)
+                    rocksdb_free(it)
                     length
                 }
             } ?: rocksDBNotFound
@@ -660,13 +663,13 @@ internal constructor(
     actual fun get(opt: ReadOptions, key: ByteArray, value: ByteArray): Int = wrapWithNullErrorThrower { error ->
         memScoped {
             val valueLength = alloc<size_tVar>()
-            rocksdb_get(native, opt.native, key.toCValues(), key.size.toULong(), valueLength.ptr, error)?.let {
+            rocksdb_get(native, opt.native, key.toCValues(), key.size.asSizeT(), valueLength.ptr, error)?.let {
                 val length = valueLength.value.toInt()
 
                 for (index in 0 until min(length, value.size)) {
                     value[index] = it[index]
                 }
-                rocksdb.rocksdb_free(it)
+                rocksdb_free(it)
                 length
             }
         }
@@ -688,7 +691,7 @@ internal constructor(
                     native,
                     opt.native,
                     byteArrayToCPointer(key, offset, len),
-                    len.toULong(),
+                    len.asSizeT(),
                     valueLength.ptr,
                     error
                 )?.let {
@@ -698,7 +701,7 @@ internal constructor(
                         value[index + vOffset] = it[index]
                     }
 
-                    rocksdb.rocksdb_free(it)
+                    rocksdb_free(it)
                     length
                 }
             } ?: rocksDBNotFound
@@ -719,7 +722,7 @@ internal constructor(
                     opt.native,
                     columnFamilyHandle.native,
                     key.toCValues(),
-                    key.size.toULong(),
+                    key.size.asSizeT(),
                     valueLength.ptr,
                     error
                 )?.let {
@@ -729,7 +732,7 @@ internal constructor(
                         value[index] = it[index]
                     }
 
-                    rocksdb.rocksdb_free(it)
+                    rocksdb_free(it)
                     length
                 }
             } ?: rocksDBNotFound
@@ -754,7 +757,7 @@ internal constructor(
                     opt.native,
                     columnFamilyHandle.native,
                     byteArrayToCPointer(key, offset, len),
-                    len.toULong(),
+                    len.asSizeT(),
                     valueLength.ptr,
                     error
                 )?.let {
@@ -764,7 +767,7 @@ internal constructor(
                         value[index + vOffset] = it[index]
                     }
 
-                    rocksdb.rocksdb_free(it)
+                    rocksdb_free(it)
                     length
                 }
             } ?: rocksDBNotFound
@@ -791,10 +794,10 @@ internal constructor(
         wrapWithNullErrorThrower { error ->
             memScoped {
                 val valueLength = alloc<size_tVar>()
-                val result = rocksdb_get(native, opt.native, key.toCValues(), key.size.toULong(), valueLength.ptr, error)
+                val result = rocksdb_get(native, opt.native, key.toCValues(), key.size.asSizeT(), valueLength.ptr, error)
 
                 result?.toByteArray(valueLength.value).also {
-                    rocksdb.rocksdb_free(result)
+                    rocksdb_free(result)
                 }
             }
         }
@@ -811,13 +814,13 @@ internal constructor(
                 native,
                 opt.native,
                 byteArrayToCPointer(key, offset, len),
-                len.toULong(),
+                len.asSizeT(),
                 valueLength.ptr,
                 error
             )
 
             result?.toByteArray(valueLength.value).also {
-                rocksdb.rocksdb_free(result)
+                rocksdb_free(result)
             }
         }
     }
@@ -829,10 +832,10 @@ internal constructor(
     ): ByteArray? = wrapWithNullErrorThrower { error ->
         memScoped {
             val valueLength = alloc<size_tVar>()
-            val result = rocksdb_get_cf(native, opt.native, columnFamilyHandle.native, key.toCValues(), key.size.toULong(), valueLength.ptr, error)
+            val result = rocksdb_get_cf(native, opt.native, columnFamilyHandle.native, key.toCValues(), key.size.asSizeT(), valueLength.ptr, error)
 
             result?.toByteArray(valueLength.value).also {
-                rocksdb.rocksdb_free(result)
+                rocksdb_free(result)
             }
         }
     }
@@ -852,13 +855,13 @@ internal constructor(
                     opt.native,
                     columnFamilyHandle.native,
                     byteArrayToCPointer(key, offset, len),
-                    len.toULong(),
+                    len.asSizeT(),
                     valueLength.ptr,
                     error
                 )
 
                 result?.toByteArray(valueLength.value).also {
-                    rocksdb.rocksdb_free(result)
+                    rocksdb_free(result)
                 }
             }
         }
@@ -885,7 +888,7 @@ internal constructor(
 
                 keys.forEachIndexed { index, bytes ->
                     keyList[index] = bytes.toCValues().ptr
-                    keyListSizes[index] = bytes.size.toULong()
+                    keyListSizes[index] = bytes.size.asSizeT()
                 }
 
                 val valueList = allocArray<CPointerVar<ByteVar>>(keys.size)
@@ -894,7 +897,7 @@ internal constructor(
                 rocksdb_multi_get(
                     db = native,
                     options = opt.native,
-                    num_keys = keys.size.toULong(),
+                    num_keys = keys.size.asSizeT(),
                     keys_list = keyList,
                     keys_list_sizes = keyListSizes,
                     values_list = valueList,
@@ -939,7 +942,7 @@ internal constructor(
 
                 keys.forEachIndexed { index, bytes ->
                     keyList[index] = bytes.toCValues().ptr
-                    keyListSizes[index] = bytes.size.toULong()
+                    keyListSizes[index] = bytes.size.asSizeT()
                 }
 
                 val valueList = allocArray<CPointerVar<ByteVar>>(keys.size)
@@ -949,7 +952,7 @@ internal constructor(
                     db = native,
                     options = opt.native,
                     column_families = columnFamilies,
-                    num_keys = keys.size.toULong(),
+                    num_keys = keys.size.asSizeT(),
                     keys_list = keyList,
                     keys_list_sizes = keyListSizes,
                     values_list = valueList,
@@ -1013,7 +1016,7 @@ internal constructor(
                 native,
                 readOptions.native,
                 key.toCValues(),
-                key.size.toULong(),
+                key.size.asSizeT(),
                 value.ptr,
                 valueLength.ptr,
                 timestamp.ptr,
@@ -1042,7 +1045,7 @@ internal constructor(
                 native,
                 readOptions.native,
                 byteArrayToCPointer(key, offset, len),
-                len.toULong(),
+                len.asSizeT(),
                 value.ptr,
                 valueLength.ptr,
                 timestamp.ptr,
@@ -1071,7 +1074,7 @@ internal constructor(
                 readOptions.native,
                 columnFamilyHandle.native,
                 key.toCValues(),
-                key.size.toULong(),
+                key.size.asSizeT(),
                 value.ptr,
                 valueLength.ptr,
                 timestamp.ptr,
@@ -1107,7 +1110,7 @@ internal constructor(
                 readOptions.native,
                 columnFamilyHandle.native,
                 cKey,
-                len.toULong(),
+                len.asSizeT(),
                 value.ptr,
                 valueLength.ptr,
                 timestamp.ptr,
@@ -1171,7 +1174,7 @@ internal constructor(
     ): String? {
         return rocksdb.rocksdb_property_value_cf(native, columnFamilyHandle.native, property)?.let { value ->
             value.toKString().also {
-                rocksdb.rocksdb_free(value)
+                rocksdb_free(value)
             }
         }
     }
@@ -1179,7 +1182,7 @@ internal constructor(
     actual fun getProperty(property: String): String? {
         return rocksdb.rocksdb_property_value(native, property)?.let { value ->
             value.toKString().also {
-                rocksdb.rocksdb_free(value)
+                rocksdb_free(value)
             }
         }
     }
@@ -1204,7 +1207,7 @@ internal constructor(
                     val value = mapInArray[i * 2 + 1]!!.toKString()
                     put(key, value)
                 }
-                rocksdb.rocksdb_free(mapInArray)
+                rocksdb_free(mapInArray)
             }
         }
     }
@@ -1234,7 +1237,7 @@ internal constructor(
                     val value = entriesPtr[i + 1]!!.toKString()
                     put(key, value)
                 }
-                rocksdb.rocksdb_free(entriesPtr)
+                rocksdb_free(entriesPtr)
             }
         }
     }
@@ -1298,9 +1301,9 @@ internal constructor(
         rocksdb_compact_range(
             native,
             begin.toCValues(),
-            begin.size.toULong(),
+            begin.size.asSizeT(),
             end.toCValues(),
-            end.size.toULong(),
+            end.size.asSizeT(),
         )
     }
 
@@ -1313,9 +1316,9 @@ internal constructor(
             native,
             columnFamilyHandle.native,
             begin.toCValues(),
-            begin.size.toULong(),
+            begin.size.asSizeT(),
             end.toCValues(),
-            end.size.toULong(),
+            end.size.asSizeT(),
         )
     }
 
@@ -1330,9 +1333,9 @@ internal constructor(
             columnFamilyHandle.native,
             compactRangeOptions.native,
             begin.toCValues(),
-            begin.size.toULong(),
+            begin.size.asSizeT(),
             end.toCValues(),
-            end.size.toULong(),
+            end.size.asSizeT(),
         )
     }
 
@@ -1364,7 +1367,7 @@ internal constructor(
                 rocksdb.rocksdb_enable_auto_compaction(
                     db = native,
                     column_family_handles = columnFamilyHandlePointers,
-                    num_handles = columnFamilyHandles.size.toULong(),
+                    num_handles = columnFamilyHandles.size.asSizeT(),
                     errptr = error
                 )
             }
@@ -1489,17 +1492,17 @@ internal constructor(
         val levelCount = rocksdb_column_family_metadata_get_level_count(metaData)
 
         val levels = memScoped {
-            buildList<LevelMetaData> {
-                for (i in 0uL until levelCount) {
+            buildList {
+                for (i in 0.asSizeT() until levelCount) {
                     val levelData = rocksdb_column_family_metadata_get_level_metadata(metaData, i)!!
                     val count = rocksdb_level_metadata_get_file_count(levelData)
 
                     val files =
-                        buildList<SstFileMetaData> {
-                            for (i in 0uL until count) {
+                        buildList {
+                            for (i in 0.asSizeT() until count) {
                                 val sstMetaData = rocksdb_level_metadata_get_sst_file_metadata(levelData, i)!!
-                                val smallestKeyLength = this@memScoped.alloc<uint64_tVar>()
-                                val largestKeyLength = this@memScoped.alloc<uint64_tVar>()
+                                val smallestKeyLength = this@memScoped.alloc<size_tVar>()
+                                val largestKeyLength = this@memScoped.alloc<size_tVar>()
 
                                 val fileName = rocksdb_sst_file_metadata_get_relative_filename(sstMetaData)
                                 val directory = rocksdb_sst_file_metadata_get_directory(sstMetaData)
@@ -1514,10 +1517,10 @@ internal constructor(
                                         largestKey = largestKey!!.toByteArray(largestKeyLength.value),
                                     )
                                 )
-                                rocksdb.rocksdb_free(fileName)
-                                rocksdb.rocksdb_free(directory)
-                                rocksdb.rocksdb_free(smallestKey)
-                                rocksdb.rocksdb_free(largestKey)
+                                rocksdb_free(fileName)
+                                rocksdb_free(directory)
+                                rocksdb_free(smallestKey)
+                                rocksdb_free(largestKey)
                                 rocksdb_sst_file_metadata_destroy(sstMetaData)
                             }
                         }
@@ -1538,11 +1541,11 @@ internal constructor(
 
         return ColumnFamilyMetaData(
             size = rocksdb.rocksdb_column_family_metadata_get_size(metaData),
-            fileCount = rocksdb.rocksdb_column_family_metadata_get_file_count(metaData),
+            fileCount = rocksdb.rocksdb_column_family_metadata_get_file_count(metaData).toULong(),
             name = name!!.toKString(),
             levels = levels
         ).also {
-            rocksdb.rocksdb_free(name)
+            rocksdb_free(name)
             rocksdb.rocksdb_column_family_metadata_destroy(metaData)
         }
     }
@@ -1562,7 +1565,7 @@ internal constructor(
     private inline fun ingestFiles(
         filePaths: List<String>,
         ingestOptions: IngestExternalFileOptions,
-        crossinline action: (CPointer<CPointerVar<ByteVar>>, ULong, CValuesRef<CPointerVar<ByteVar>>) -> Unit
+        crossinline action: (CPointer<CPointerVar<ByteVar>>, size_t, CValuesRef<CPointerVar<ByteVar>>) -> Unit
     ) {
         if (filePaths.isEmpty()) {
             return
@@ -1573,7 +1576,7 @@ internal constructor(
                 names[index] = path.cstr.ptr
             }
             wrapWithErrorThrower { error ->
-                action(names, filePaths.size.toULong(), error)
+                action(names, filePaths.size.asSizeT(), error)
             }
         }
     }
@@ -1658,9 +1661,9 @@ internal constructor(
                     db = native,
                     column_family = columnFamilyHandle.native,
                     start_key = begin.toCValues(),
-                    start_key_len = begin.size.toULong(),
+                    start_key_len = begin.size.asSizeT(),
                     limit_key = limit.toCValues(),
-                    limit_key_len = limit.size.toULong(),
+                    limit_key_len = limit.size.asSizeT(),
                     errptr = error,
                 )
             }
@@ -1686,7 +1689,7 @@ actual fun listColumnFamilies(
             val values = rocksdb_list_column_families(options.native, path, cfCount.ptr, error)!!
 
             buildList {
-                for (i in 0uL until cfCount.value) {
+                for (i in 0.asSizeT() until cfCount.value) {
                     values[i.toInt()]?.toKString()?.encodeToByteArray()?.let(::add)
                 }
                 rocksdb_list_column_families_destroy(values, cfCount.value)

@@ -1,7 +1,10 @@
+@file:OptIn(UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_tableproperties_t
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr

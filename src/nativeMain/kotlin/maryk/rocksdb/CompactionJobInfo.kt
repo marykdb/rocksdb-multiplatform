@@ -1,13 +1,18 @@
+@file:OptIn(UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_compactionjobinfo_t
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
+import maryk.asSizeT
 import maryk.toByteArray
+import platform.posix.size_t
 import platform.posix.size_tVar
 import rocksdb.rocksdb_compactionjobinfo_base_input_level
 import rocksdb.rocksdb_compactionjobinfo_compaction_reason
@@ -109,15 +114,15 @@ actual class CompactionJobInfo internal constructor(
 
 private fun collectPaths(
     native: CPointer<rocksdb_compactionjobinfo_t>,
-    count: (CPointer<rocksdb_compactionjobinfo_t>) -> ULong,
-    fetch: (CPointer<rocksdb_compactionjobinfo_t>, ULong, CPointer<size_tVar>) -> CPointer<ByteVar>?
+    count: (CPointer<rocksdb_compactionjobinfo_t>) -> size_t,
+    fetch: (CPointer<rocksdb_compactionjobinfo_t>, size_t, CPointer<size_tVar>) -> CPointer<ByteVar>?
 ): List<String> = buildList {
     val total = count(native).toInt()
     if (total == 0) return@buildList
     memScoped {
         val length = alloc<size_tVar>()
         repeat(total) { index ->
-            val ptr = fetch(native, index.toULong(), length.ptr) ?: return@repeat
+            val ptr = fetch(native, index.asSizeT(), length.ptr) ?: return@repeat
             add(ptr.toByteArray(length.value).decodeToString())
         }
     }

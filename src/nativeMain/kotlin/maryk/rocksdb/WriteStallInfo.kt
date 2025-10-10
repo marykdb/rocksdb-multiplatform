@@ -1,9 +1,12 @@
+@file:OptIn(UnsafeNumber::class)
+
 package maryk.rocksdb
 
-import cnames.structs.rocksdb_writestallinfo_t
 import cnames.structs.rocksdb_writestallcondition_t
+import cnames.structs.rocksdb_writestallinfo_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.UByteVar
+import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.pointed
@@ -12,9 +15,6 @@ import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.value
 import maryk.toByteArray
 import platform.posix.size_tVar
-import rocksdb.rocksdb_writestallinfo_cf_name
-import rocksdb.rocksdb_writestallinfo_cur
-import rocksdb.rocksdb_writestallinfo_prev
 
 actual class WriteStallInfo internal constructor(
     private val columnFamilyNameValue: String,

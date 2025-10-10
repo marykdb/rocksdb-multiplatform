@@ -1,18 +1,16 @@
+@file:OptIn(UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_memtableinfo_t
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
 import maryk.toByteArray
 import platform.posix.size_tVar
-import rocksdb.rocksdb_memtableinfo_cf_name
-import rocksdb.rocksdb_memtableinfo_earliest_seqno
-import rocksdb.rocksdb_memtableinfo_first_seqno
-import rocksdb.rocksdb_memtableinfo_num_deletes
-import rocksdb.rocksdb_memtableinfo_num_entries
 
 actual class MemTableInfo internal constructor(
     private val columnFamilyNameValue: String,

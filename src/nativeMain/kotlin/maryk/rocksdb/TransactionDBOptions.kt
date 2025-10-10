@@ -1,4 +1,9 @@
+@file:OptIn(UnsafeNumber::class)
+
 package maryk.rocksdb
+
+import kotlinx.cinterop.UnsafeNumber
+import maryk.asSizeT
 
 actual class TransactionDBOptions actual constructor(): RocksObject() {
     val native = rocksdb.rocksdb_transactiondb_options_create()
@@ -15,7 +20,7 @@ actual class TransactionDBOptions actual constructor(): RocksObject() {
     actual fun getNumStripes(): Long = rocksdb.rocksdb_transactiondb_options_get_num_stripes(native).toLong()
 
     actual fun setNumStripes(numStripes: Long): TransactionDBOptions {
-        rocksdb.rocksdb_transactiondb_options_set_num_stripes(native, numStripes.toULong())
+        rocksdb.rocksdb_transactiondb_options_set_num_stripes(native, numStripes.asSizeT())
         return this
     }
 
@@ -26,7 +31,7 @@ actual class TransactionDBOptions actual constructor(): RocksObject() {
         return this
     }
 
-    actual fun getDefaultLockTimeout(): Long = rocksdb.rocksdb_transactiondb_options_get_default_lock_timeout(native).toLong()
+    actual fun getDefaultLockTimeout(): Long = rocksdb.rocksdb_transactiondb_options_get_default_lock_timeout(native)
 
     actual fun setDefaultLockTimeout(defaultLockTimeout: Long): TransactionDBOptions {
         rocksdb.rocksdb_transactiondb_options_set_default_lock_timeout(native, defaultLockTimeout)

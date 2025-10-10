@@ -2,6 +2,7 @@ package maryk.rocksdb
 
 import kotlinx.cinterop.Arena
 import kotlinx.cinterop.ByteVar
+import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.allocArrayOf
 import kotlinx.cinterop.nativeHeap
@@ -9,6 +10,7 @@ import kotlinx.cinterop.plus
 import kotlinx.cinterop.ptr
 import maryk.ByteBuffer
 import maryk.DirectByteBuffer
+import maryk.asSizeT
 import maryk.toByteArray
 
 actual class DirectSlice() : AbstractSlice<ByteBuffer>() {
@@ -52,9 +54,9 @@ actual class DirectSlice() : AbstractSlice<ByteBuffer>() {
 
     override fun empty(): Boolean = data.capacity == 0
 
-    @OptIn(ExperimentalStdlibApi::class)
+    @OptIn(ExperimentalStdlibApi::class, UnsafeNumber::class)
     override fun toString(hex: Boolean): String {
-        return data.nativePointer.toByteArray(data.capacity.toULong()).let { bytes ->
+        return data.nativePointer.toByteArray(data.capacity.asSizeT()).let { bytes ->
             if (hex) bytes.toHexString() else bytes.decodeToString().replace("\u0000", "")
         }
     }

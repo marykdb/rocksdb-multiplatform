@@ -1,10 +1,13 @@
-@file:OptIn(ExperimentalNativeApi::class)
+@file:OptIn(ExperimentalNativeApi::class, UnsafeNumber::class)
 
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_mergeoperator_t
 import kotlinx.cinterop.*
+import maryk.asSizeT
 import platform.posix.memcpy
+import platform.posix.size_t
+import platform.posix.size_tVar
 import kotlin.experimental.ExperimentalNativeApi
 
 /**
@@ -55,11 +58,11 @@ actual abstract class MergeOperator : RocksObject() {
      * Full merge: by default returns a copy of the last operand (or the existing value).
      */
     open fun fullMerge(
-        key: CPointer<ByteVarOf<Byte>>?, keyLen: ULong,
-        existingValue: CPointer<ByteVarOf<Byte>>?, existingValueLen: ULong,
+        key: CPointer<ByteVarOf<Byte>>?, keyLen: size_t,
+        existingValue: CPointer<ByteVarOf<Byte>>?, existingValueLen: size_t,
         operands: CPointer<CPointerVarOf<CPointer<ByteVarOf<Byte>>>>?,
-        operandsLengths: CPointer<ULongVarOf<ULong>>?, numOperands: Int
-    ): Pair<Boolean, Pair<CPointer<ByteVarOf<Byte>>?, ULong>> {
+        operandsLengths: CPointer<size_tVar>?, numOperands: Int
+    ): Pair<Boolean, Pair<CPointer<ByteVarOf<Byte>>?, size_t>> {
         if (numOperands > 0 && operands != null && operandsLengths != null) {
             val lastIndex = numOperands - 1
             val operandPtr = (operands + lastIndex)!!.pointed.value
@@ -72,7 +75,7 @@ actual abstract class MergeOperator : RocksObject() {
             memcpy(merged, existingValue, existingValueLen)
             return Pair(true, Pair(merged, existingValueLen))
         } else {
-            return Pair(false, Pair(null, 0uL))
+            return Pair(false, Pair(null, 0.asSizeT()))
         }
     }
 
@@ -80,10 +83,10 @@ actual abstract class MergeOperator : RocksObject() {
      * Partial merge: by default returns a copy of the last operand.
      */
     open fun partialMerge(
-        key: CPointer<ByteVarOf<Byte>>?, keyLen: ULong,
+        key: CPointer<ByteVarOf<Byte>>?, keyLen: size_t,
         operands: CPointer<CPointerVarOf<CPointer<ByteVarOf<Byte>>>>?,
-        operandsLengths: CPointer<ULongVarOf<ULong>>?, numOperands: Int
-    ): Pair<Boolean, Pair<CPointer<ByteVarOf<Byte>>?, ULong>> {
+        operandsLengths: CPointer<size_tVar>?, numOperands: Int
+    ): Pair<Boolean, Pair<CPointer<ByteVarOf<Byte>>?, size_t>> {
         if (numOperands > 0 && operands != null && operandsLengths != null) {
             val lastIndex = numOperands - 1
             val operandPtr = (operands + lastIndex)!!.pointed.value
@@ -92,7 +95,7 @@ actual abstract class MergeOperator : RocksObject() {
             memcpy(merged, operandPtr, operandLen)
             return Pair(true, Pair(merged, operandLen))
         } else {
-            return Pair(false, Pair(null, 0uL))
+            return Pair(false, Pair(null, 0.asSizeT()))
         }
     }
 
@@ -113,7 +116,7 @@ actual abstract class MergeOperator : RocksObject() {
      * Called to delete a previously-merged value.
      * Default implementation frees the native heap allocation.
      */
-    open fun deleteValue(value: CPointer<ByteVarOf<Byte>>?, valueLen: ULong) {
+    open fun deleteValue(value: CPointer<ByteVarOf<Byte>>?, valueLen: size_t) {
         if (value != null) {
             nativeHeap.free(value)
         }
@@ -129,11 +132,11 @@ private fun mergeOperatorDestructor(state: CPointer<out CPointed>?) {
 
 private fun fullMergeCallback(
     state: CPointer<out CPointed>?,
-    key: CPointer<ByteVarOf<Byte>>?, keyLen: ULong,
-    existingValue: CPointer<ByteVarOf<Byte>>?, existingValueLen: ULong,
+    key: CPointer<ByteVarOf<Byte>>?, keyLen: size_t,
+    existingValue: CPointer<ByteVarOf<Byte>>?, existingValueLen: size_t,
     operands: CPointer<CPointerVarOf<CPointer<ByteVarOf<Byte>>>>?,
-    operandsLengths: CPointer<ULongVarOf<ULong>>?, numOperands: Int,
-    success: CPointer<UByteVarOf<UByte>>?, newValueLength: CPointer<ULongVarOf<ULong>>?
+    operandsLengths: CPointer<size_tVar>?, numOperands: Int,
+    success: CPointer<UByteVarOf<UByte>>?, newValueLength: CPointer<size_tVar>?
 ): CPointer<ByteVarOf<Byte>>? {
     val instance = state?.asStableRef<MergeOperator>()?.get() ?: return null
     val (succeeded, resultPair) = instance.fullMerge(key, keyLen, existingValue, existingValueLen, operands, operandsLengths, numOperands)
@@ -146,10 +149,10 @@ private fun fullMergeCallback(
 
 private fun partialMergeCallback(
     state: CPointer<out CPointed>?,
-    key: CPointer<ByteVarOf<Byte>>?, keyLen: ULong,
+    key: CPointer<ByteVarOf<Byte>>?, keyLen: size_t,
     operands: CPointer<CPointerVarOf<CPointer<ByteVarOf<Byte>>>>?,
-    operandsLengths: CPointer<ULongVarOf<ULong>>?, numOperands: Int,
-    success: CPointer<UByteVarOf<UByte>>?, newValueLength: CPointer<ULongVarOf<ULong>>?
+    operandsLengths: CPointer<size_tVar>?, numOperands: Int,
+    success: CPointer<UByteVarOf<UByte>>?, newValueLength: CPointer<size_tVar>?
 ): CPointer<ByteVarOf<Byte>>? {
     val instance = state?.asStableRef<MergeOperator>()?.get() ?: return null
     val (succeeded, resultPair) = instance.partialMerge(key, keyLen, operands, operandsLengths, numOperands)
@@ -169,7 +172,7 @@ private fun mergeOperatorNameCallback(state: CPointer<out CPointed>?): CPointer<
 private fun deleteValueCallback(
     state: CPointer<out CPointed>?,
     value: CPointer<ByteVarOf<Byte>>?,
-    valueLen: ULong
+    valueLen: size_t
 ) {
     state?.asStableRef<MergeOperator>()?.get()?.deleteValue(value, valueLen)
 }

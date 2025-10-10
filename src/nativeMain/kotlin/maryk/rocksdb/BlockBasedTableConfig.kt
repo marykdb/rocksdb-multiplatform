@@ -2,6 +2,8 @@ package maryk.rocksdb
 
 import cnames.structs.rocksdb_options_t
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.UnsafeNumber
+import maryk.asSizeT
 import maryk.toUByte
 import rocksdb.rocksdb_block_based_options_create
 import rocksdb.rocksdb_block_based_options_destroy
@@ -43,11 +45,12 @@ actual class BlockBasedTableConfig actual constructor() : TableFormatConfig() {
     private var dataBlockIndexType: DataBlockIndexType = DataBlockIndexType.kDataBlockBinarySearch
     private var dataBlockHashTableUtilRatio: Double = 0.0
 
+    @OptIn(UnsafeNumber::class)
     internal fun applyToOptions(options: CPointer<rocksdb_options_t>) {
         val native = rocksdb_block_based_options_create()!!
         try {
             rocksdb_block_based_options_set_no_block_cache(native, noBlockCache.toUByte())
-            rocksdb_block_based_options_set_block_size(native, blockSize.toULong())
+            rocksdb_block_based_options_set_block_size(native, blockSize.asSizeT())
             rocksdb_block_based_options_set_block_size_deviation(native, blockSizeDeviation)
             rocksdb_block_based_options_set_block_restart_interval(native, blockRestartInterval)
             rocksdb_block_based_options_set_metadata_block_size(native, metadataBlockSize.toULong())

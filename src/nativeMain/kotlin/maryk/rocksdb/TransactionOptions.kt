@@ -1,5 +1,9 @@
+@file:OptIn(UnsafeNumber::class)
+
 package maryk.rocksdb
 
+import kotlinx.cinterop.UnsafeNumber
+import maryk.asSizeT
 import maryk.toBoolean
 import maryk.toUByte
 
@@ -25,7 +29,7 @@ actual class TransactionOptions actual constructor(): RocksObject() {
     }
 
     actual fun getLockTimeout(): Long {
-        return rocksdb.rocksdb_transaction_options_get_lock_timeout(native).toLong()
+        return rocksdb.rocksdb_transaction_options_get_lock_timeout(native)
     }
 
     actual fun setLockTimeout(lockTimeout: Long): TransactionOptions {
@@ -34,7 +38,7 @@ actual class TransactionOptions actual constructor(): RocksObject() {
     }
 
     actual fun getExpiration(): Long {
-        return rocksdb.rocksdb_transaction_options_get_expiration(native).toLong()
+        return rocksdb.rocksdb_transaction_options_get_expiration(native)
     }
 
     actual fun setExpiration(expiration: Long): TransactionOptions {
@@ -43,7 +47,7 @@ actual class TransactionOptions actual constructor(): RocksObject() {
     }
 
     actual fun getDeadlockDetectDepth(): Long {
-        return rocksdb.rocksdb_transaction_options_get_deadlock_detect_depth(native).toLong()
+        return rocksdb.rocksdb_transaction_options_get_deadlock_detect_depth(native)
     }
 
     actual fun setDeadlockDetectDepth(deadlockDetectDepth: Long): TransactionOptions {
@@ -56,7 +60,7 @@ actual class TransactionOptions actual constructor(): RocksObject() {
     }
 
     actual fun setMaxWriteBatchSize(maxWriteBatchSize: Long): TransactionOptions {
-        rocksdb.rocksdb_transaction_options_set_max_write_batch_size(native, maxWriteBatchSize.toULong())
+        rocksdb.rocksdb_transaction_options_set_max_write_batch_size(native, maxWriteBatchSize.asSizeT())
         return this
     }
 

@@ -1,8 +1,11 @@
+@file:OptIn(UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_options_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.UIntVar
+import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.memScoped
@@ -10,6 +13,7 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.set
 import kotlinx.cinterop.value
 import kotlinx.cinterop.toKString
+import maryk.asSizeT
 import maryk.toByteArray
 import maryk.wrapWithErrorThrower
 import platform.posix.size_tVar
@@ -38,6 +42,7 @@ actual class Statistics internal constructor(
 
     private var statsLevel: StatsLevel? = null
 
+    @OptIn(UnsafeNumber::class)
     internal fun connectWithNative(native: CPointer<rocksdb_options_t>) {
         this.native = native
         rocksdb_options_enable_statistics(native)
@@ -51,7 +56,7 @@ actual class Statistics internal constructor(
                 rocksdb_options_statistics_set_histograms(
                     native,
                     histogramArray,
-                    enabledHistograms.size.toULong()
+                    enabledHistograms.size.asSizeT()
                 )
             }
         }

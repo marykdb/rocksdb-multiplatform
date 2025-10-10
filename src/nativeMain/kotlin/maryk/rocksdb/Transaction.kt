@@ -1,3 +1,5 @@
+@file:OptIn(UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_transaction_t
@@ -6,7 +8,7 @@ import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.UIntVar
-import kotlinx.cinterop.ULongVar
+import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.allocPointerTo
@@ -23,9 +25,11 @@ import kotlinx.cinterop.toKString
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
 import maryk.ByteBuffer
+import maryk.asSizeT
 import maryk.byteArrayToCPointer
 import maryk.toByteArray
 import maryk.wrapWithErrorThrower
+import platform.posix.size_tVar
 
 actual class Transaction(
     internal val native: CPointer<rocksdb_transaction_t>,
@@ -103,7 +107,7 @@ actual class Transaction(
     actual fun get(readOptions: ReadOptions, columnFamilyHandle: ColumnFamilyHandle, key: ByteArray): ByteArray? =
         memScoped {
             val errPtr = allocPointerTo<ByteVar>()
-            val valueLen = alloc<ULongVar>()
+            val valueLen = alloc<size_tVar>()
             val valuePtr = rocksdb.rocksdb_transaction_get_cf(
                 native,
                 readOptions.native,
@@ -122,7 +126,7 @@ actual class Transaction(
     actual fun get(readOptions: ReadOptions, key: ByteArray): ByteArray? =
         memScoped {
             val errPtr = allocPointerTo<ByteVar>()
-            val valueLen = alloc<ULongVar>()
+            val valueLen = alloc<size_tVar>()
             val valuePtr = rocksdb.rocksdb_transaction_get(
                 native,
                 readOptions.native,
@@ -227,7 +231,7 @@ actual class Transaction(
     ): ByteArray? = memScoped {
         // Allocate error pointer and length holder.
         val errPtr = allocPointerTo<ByteVar>()
-        val valueLen = alloc<ULongVar>()
+        val valueLen = alloc<size_tVar>()
         // Call the native function using the correct parameter ordering:
         // txn, options, column_family, key, klen, vlen, exclusive, errptr
         val valuePtr = rocksdb.rocksdb_transaction_get_for_update_cf(
@@ -252,7 +256,7 @@ actual class Transaction(
         exclusive: Boolean
     ): ByteArray? = memScoped {
         val errPtr = allocPointerTo<ByteVar>()
-        val valueLen = alloc<ULongVar>()
+        val valueLen = alloc<size_tVar>()
         // Call the native function using the correct parameter ordering:
         // txn, options, key, klen, vlen, exclusive, errptr
         val valuePtr = rocksdb.rocksdb_transaction_get_for_update(
@@ -758,7 +762,7 @@ actual class Transaction(
 
     @ExperimentalForeignApi
     actual fun getName(): String = memScoped {
-        val nameLenVar = alloc<ULongVar>()
+        val nameLenVar = alloc<size_tVar>()
         val namePtr = rocksdb.rocksdb_transaction_get_name(native, nameLenVar.ptr)
         namePtr?.toByteArray(nameLenVar.value)?.decodeToString() ?: ""
     }
@@ -782,8 +786,8 @@ actual class Transaction(
             keyBuffer[i] = 0
         }
 
-        val numTxnsVar = alloc<ULongVar>()
-        numTxnsVar.value = 0UL
+        val numTxnsVar = alloc<size_tVar>()
+        numTxnsVar.value = 0.asSizeT()
 
         val txnIdsPtr = rocksdb.rocksdb_transaction_get_waiting_txns(
             native,

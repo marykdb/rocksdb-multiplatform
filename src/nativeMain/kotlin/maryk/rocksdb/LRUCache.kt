@@ -1,7 +1,11 @@
+@file:OptIn(UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_lru_cache_options_t
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.UnsafeNumber
+import maryk.asSizeT
 
 actual class LRUCache private constructor() : Cache() {
     lateinit var options: CPointer<rocksdb_lru_cache_options_t>
@@ -27,7 +31,7 @@ actual class LRUCache private constructor() : Cache() {
         lowPriPoolRatio: Double
     ) : this() {
         options = rocksdb.rocksdb_lru_cache_options_create()!!.apply {
-            rocksdb.rocksdb_lru_cache_options_set_capacity(this, capacity.toULong())
+            rocksdb.rocksdb_lru_cache_options_set_capacity(this, capacity.asSizeT())
             rocksdb.rocksdb_lru_cache_options_set_num_shard_bits(this, numShardBits)
         }
 

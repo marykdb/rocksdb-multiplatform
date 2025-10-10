@@ -1,4 +1,4 @@
-@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
+@file:OptIn(ExperimentalForeignApi::class, UnsafeNumber::class)
 
 package maryk.rocksdb
 
@@ -9,14 +9,17 @@ import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.CPointerVar
 import kotlinx.cinterop.CValuesRef
-import kotlinx.cinterop.ULongVar
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.readBytes
 import kotlinx.cinterop.toKString
 import kotlinx.cinterop.value
+import maryk.asSizeT
 import maryk.wrapWithNullErrorThrower
+import platform.posix.size_tVar
 import rocksdb.rocksdb_free
 import rocksdb.rocksdb_optionsutil_descriptor_name
 import rocksdb.rocksdb_optionsutil_descriptor_options
@@ -94,11 +97,11 @@ actual object OptionsUtil {
         if (count == 0) return
         repeat(count) { index ->
             memScoped {
-                val length = alloc<ULongVar>()
-                val namePtr = rocksdb_optionsutil_descriptor_name(bundle, index.toULong(), length.ptr)
+                val length = alloc<size_tVar>()
+                val namePtr = rocksdb_optionsutil_descriptor_name(bundle, index.asSizeT(), length.ptr)
                 val name = namePtr?.readBytes(length.value.toInt()) ?: ByteArray(0)
                 namePtr?.let { rocksdb_free(it) }
-                val optionsPtr = rocksdb_optionsutil_descriptor_options(bundle, index.toULong())
+                val optionsPtr = rocksdb_optionsutil_descriptor_options(bundle, index.asSizeT())
                 requireNotNull(optionsPtr) { "Column family options pointer was null" }
                 val cfOptions = ColumnFamilyOptions.wrap(optionsPtr, owning = true)
                 columnFamilyDescriptors += ColumnFamilyDescriptor(name, cfOptions)

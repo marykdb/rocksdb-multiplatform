@@ -1,9 +1,11 @@
-@file:OptIn(ExperimentalNativeApi::class)
+@file:OptIn(ExperimentalNativeApi::class, UnsafeNumber::class)
 
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_options_t
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.UnsafeNumber
+import maryk.asSizeT
 import maryk.rocksdb.util.BytewiseComparator
 import maryk.rocksdb.util.ReverseBytewiseComparator
 import maryk.toBoolean
@@ -46,7 +48,6 @@ import rocksdb.rocksdb_options_set_max_write_buffer_number
 import rocksdb.rocksdb_options_set_memtable_huge_page_size
 import rocksdb.rocksdb_options_set_memtable_prefix_bloom_size_ratio
 import rocksdb.rocksdb_options_set_min_write_buffer_number_to_merge
-import rocksdb.rocksdb_options_set_plain_table_factory
 import rocksdb.rocksdb_options_set_num_levels
 import rocksdb.rocksdb_options_set_prefix_extractor
 import rocksdb.rocksdb_options_set_target_file_size_base
@@ -152,7 +153,7 @@ actual class ColumnFamilyOptions private constructor(
 
     actual fun useFixedLengthPrefixExtractor(n: Int): ColumnFamilyOptions {
         assert(isOwningHandle())
-        rocksdb_options_set_prefix_extractor(native, rocksdb_slicetransform_create_fixed_prefix(n.toULong()))
+        rocksdb_options_set_prefix_extractor(native, rocksdb_slicetransform_create_fixed_prefix(n.asSizeT()))
         return this
     }
 
@@ -166,7 +167,7 @@ actual class ColumnFamilyOptions private constructor(
 
     actual fun setWriteBufferSize(writeBufferSize: Long): ColumnFamilyOptions {
         assert(isOwningHandle())
-        rocksdb_options_set_write_buffer_size(native, writeBufferSize.toULong())
+        rocksdb_options_set_write_buffer_size(native, writeBufferSize.asSizeT())
         return this
     }
 
@@ -245,7 +246,7 @@ actual class ColumnFamilyOptions private constructor(
 
     actual fun setMemtableHugePageSize(memtableHugePageSize: Long): ColumnFamilyOptions {
         assert(isOwningHandle())
-        rocksdb_options_set_memtable_huge_page_size(native, memtableHugePageSize.toULong())
+        rocksdb_options_set_memtable_huge_page_size(native, memtableHugePageSize.asSizeT())
         return this
     }
 
@@ -256,7 +257,7 @@ actual class ColumnFamilyOptions private constructor(
 
     actual fun setArenaBlockSize(arenaBlockSize: Long): ColumnFamilyOptions {
         assert(isOwningHandle())
-        rocksdb_options_set_arena_block_size(native, arenaBlockSize.toULong())
+        rocksdb_options_set_arena_block_size(native, arenaBlockSize.asSizeT())
         return this
     }
 
@@ -322,7 +323,7 @@ actual class ColumnFamilyOptions private constructor(
 
     actual fun setMaxSuccessiveMerges(maxSuccessiveMerges: Long): ColumnFamilyOptions {
         assert(isOwningHandle())
-        rocksdb_options_set_max_successive_merges(native, maxSuccessiveMerges.toULong())
+        rocksdb_options_set_max_successive_merges(native, maxSuccessiveMerges.asSizeT())
         return this
     }
 

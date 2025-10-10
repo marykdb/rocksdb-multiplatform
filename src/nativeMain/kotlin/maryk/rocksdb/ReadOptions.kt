@@ -1,10 +1,11 @@
-@file:OptIn(ExperimentalNativeApi::class)
+@file:OptIn(ExperimentalNativeApi::class, UnsafeNumber::class)
 
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_readoptions_t
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
 import maryk.ByteBuffer
 import maryk.toBoolean
@@ -29,7 +30,9 @@ import kotlin.experimental.ExperimentalNativeApi
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.usePinned
+import maryk.asSizeT
 import platform.posix.memcpy
+import platform.posix.size_t
 
 actual class ReadOptions private constructor(val native: CPointer<rocksdb_readoptions_t>?) : RocksObject() {
     private var snapshot: Snapshot? = null
@@ -82,7 +85,7 @@ actual class ReadOptions private constructor(val native: CPointer<rocksdb_readop
     actual fun setPrefixSameAsStart(prefixSameAsStart: Boolean): ReadOptions {
         assert(isOwningHandle())
         rocksdb_readoptions_set_prefix_same_as_start(native, prefixSameAsStart.toUByte())
-        return this;
+        return this
     }
 
     actual fun snapshot(): Snapshot? = snapshot
@@ -158,16 +161,16 @@ private data class BoundBuffer(
 private inline fun updateBound(
     current: BoundBuffer?,
     slice: AbstractSlice<*>,
-    setter: (CPointer<ByteVar>?, ULong) -> Unit
+    setter: (CPointer<ByteVar>?, size_t) -> Unit
 ): BoundBuffer {
     current?.free()
 
     val bytes = slice.copyBytes()
     val buffer = nativeHeap.allocArray<ByteVar>(bytes.size)
     bytes.usePinned { pinned ->
-        memcpy(buffer, pinned.addressOf(0), bytes.size.toULong())
+        memcpy(buffer, pinned.addressOf(0), bytes.size.asSizeT())
     }
-    setter(buffer, bytes.size.toULong())
+    setter(buffer, bytes.size.asSizeT())
     return BoundBuffer(buffer, bytes)
 }
 

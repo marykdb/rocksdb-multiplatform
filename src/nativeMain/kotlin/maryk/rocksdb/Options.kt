@@ -1,10 +1,11 @@
-@file:OptIn(ExperimentalNativeApi::class)
+@file:OptIn(ExperimentalNativeApi::class, UnsafeNumber::class)
 
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_options_t
-import cnames.structs.rocksdb_sst_file_manager_t
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.UnsafeNumber
+import maryk.asSizeT
 import maryk.rocksdb.util.BytewiseComparator
 import maryk.rocksdb.util.ReverseBytewiseComparator
 import maryk.toBoolean
@@ -60,7 +61,6 @@ import rocksdb.rocksdb_options_set_max_log_file_size
 import rocksdb.rocksdb_options_set_max_open_files
 import rocksdb.rocksdb_options_set_max_write_buffer_number
 import rocksdb.rocksdb_options_set_min_write_buffer_number_to_merge
-import rocksdb.rocksdb_options_set_plain_table_factory
 import rocksdb.rocksdb_options_set_num_levels
 import rocksdb.rocksdb_options_set_paranoid_checks
 import rocksdb.rocksdb_options_set_prefix_extractor
@@ -162,7 +162,7 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
     )
 
     actual fun setWriteBufferSize(writeBufferSize: Long): Options {
-        rocksdb_options_set_write_buffer_size(native, writeBufferSize.toULong())
+        rocksdb_options_set_write_buffer_size(native, writeBufferSize.asSizeT())
         return this
     }
 
@@ -218,7 +218,7 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
 
     actual fun useFixedLengthPrefixExtractor(n: Int): Options {
         assert(isOwningHandle())
-        rocksdb_options_set_prefix_extractor(native, rocksdb_slicetransform_create_fixed_prefix(n.toULong()))
+        rocksdb_options_set_prefix_extractor(native, rocksdb_slicetransform_create_fixed_prefix(n.asSizeT()))
         return this
     }
 
@@ -324,7 +324,7 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
         rocksdb_options_get_use_fsync(native) == 1
 
     actual fun setMaxLogFileSize(maxLogFileSize: Long): Options {
-        rocksdb_options_set_max_log_file_size(native, maxLogFileSize.toULong())
+        rocksdb_options_set_max_log_file_size(native, maxLogFileSize.asSizeT())
         return this
     }
 
@@ -332,7 +332,7 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
         rocksdb_options_get_max_log_file_size(native).toLong()
 
     actual fun setLogFileTimeToRoll(logFileTimeToRoll: Long): Options {
-        rocksdb_options_set_log_file_time_to_roll(native, logFileTimeToRoll.toULong())
+        rocksdb_options_set_log_file_time_to_roll(native, logFileTimeToRoll.asSizeT())
         return this
     }
 
@@ -340,7 +340,7 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
         rocksdb_options_get_log_file_time_to_roll(native).toLong()
 
     actual fun setKeepLogFileNum(keepLogFileNum: Long): Options {
-        rocksdb_options_set_keep_log_file_num(native, keepLogFileNum.toULong())
+        rocksdb_options_set_keep_log_file_num(native, keepLogFileNum.asSizeT())
         return this
     }
 

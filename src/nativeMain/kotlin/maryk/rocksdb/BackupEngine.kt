@@ -1,18 +1,17 @@
 package maryk.rocksdb
 
-import kotlinx.cinterop.CPointer
-import maryk.toUByte
-import maryk.wrapWithErrorThrower
 import cnames.structs.rocksdb_backup_engine_t
-import kotlinx.cinterop.ByteVar
-import kotlinx.cinterop.CPointerVar
+import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.UIntVar
+import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.toKString
 import kotlinx.cinterop.value
+import maryk.toUByte
+import maryk.wrapWithErrorThrower
 import platform.posix.size_tVar
 import rocksdb.rocksdb_backup_engine_close
 import rocksdb.rocksdb_backup_engine_create_new_backup
@@ -29,6 +28,7 @@ import rocksdb.rocksdb_backup_engine_purge_old_backups
 import rocksdb.rocksdb_backup_engine_restore_db_from_backup
 import rocksdb.rocksdb_backup_engine_restore_db_from_latest_backup
 
+@OptIn(UnsafeNumber::class)
 actual class BackupEngine
 internal constructor(
     internal val native: CPointer<rocksdb_backup_engine_t>
@@ -55,7 +55,7 @@ internal constructor(
             val options = rocksdb.rocksdb_create_backup_options_create()
             rocksdb.rocksdb_create_backup_options_set_flush_before_backup(options, flushBeforeBackup)
             memScoped {
-                var backupId = alloc<UIntVar>()
+                val backupId = alloc<UIntVar>()
                 rocksdb.rocksdb_backup_engine_create_new_backup_with_options_with_metadata(native, db.native, options, metadata, backupId.ptr, error)
             }
             rocksdb.rocksdb_create_backup_options_destroy(options)
@@ -85,12 +85,12 @@ internal constructor(
 
     actual fun getCorruptedBackups(): IntArray {
         return memScoped {
-            wrapWithErrorThrower { error ->
+            wrapWithErrorThrower { _ ->
                 val size = alloc<size_tVar>()
                 val idsPtr = rocksdb.rocksdb_backup_engine_get_corrupted_backups(native, size.ptr)
 
                 IntArray(size.value.toInt()) { index ->
-                    idsPtr?.get(index)?.toInt()!!
+                    idsPtr?.get(index)!!
                 }.also {
                     rocksdb.rocksdb_free(idsPtr)
                 }

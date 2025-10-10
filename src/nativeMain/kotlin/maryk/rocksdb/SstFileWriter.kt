@@ -1,21 +1,24 @@
+@file:OptIn(UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_sstfilewriter_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ULongVar
+import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
-import kotlinx.cinterop.cstr
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
-import kotlinx.cinterop.value
 import kotlinx.cinterop.usePinned
+import kotlinx.cinterop.value
+import maryk.asSizeT
 import maryk.wrapWithErrorThrower
 import rocksdb.rocksdb_sstfilewriter_create
 import rocksdb.rocksdb_sstfilewriter_delete
 import rocksdb.rocksdb_sstfilewriter_destroy
-import rocksdb.rocksdb_sstfilewriter_finish
 import rocksdb.rocksdb_sstfilewriter_file_size
+import rocksdb.rocksdb_sstfilewriter_finish
 import rocksdb.rocksdb_sstfilewriter_merge
 import rocksdb.rocksdb_sstfilewriter_open
 import rocksdb.rocksdb_sstfilewriter_put
@@ -49,9 +52,9 @@ actual class SstFileWriter actual constructor(
                     rocksdb_sstfilewriter_put(
                         native,
                         keyPinned.addressOf(0),
-                        key.size.toULong(),
+                        key.size.asSizeT(),
                         valuePinned.addressOf(0),
-                        value.size.toULong(),
+                        value.size.asSizeT(),
                         error
                     )
                 }
@@ -66,9 +69,9 @@ actual class SstFileWriter actual constructor(
                     rocksdb_sstfilewriter_merge(
                         native,
                         keyPinned.addressOf(0),
-                        key.size.toULong(),
+                        key.size.asSizeT(),
                         valuePinned.addressOf(0),
-                        value.size.toULong(),
+                        value.size.asSizeT(),
                         error
                     )
                 }
@@ -82,7 +85,7 @@ actual class SstFileWriter actual constructor(
                 rocksdb_sstfilewriter_delete(
                     native,
                     keyPinned.addressOf(0),
-                    key.size.toULong(),
+                    key.size.asSizeT(),
                     error
                 )
             }
