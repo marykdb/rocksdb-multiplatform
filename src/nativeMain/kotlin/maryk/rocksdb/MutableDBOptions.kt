@@ -74,142 +74,132 @@ actual class MutableDBOptionsBuilder internal constructor(
         rocksdb_mutable_db_options_destroy(native)
     }
 
-    override fun setMaxBackgroundJobs(maxBackgroundJobs: Int): MutableDBOptionsBuilder {
+    actual override fun setMaxBackgroundJobs(maxBackgroundJobs: Int): MutableDBOptionsBuilder {
         rocksdb_mutable_db_options_set_max_background_jobs(native, maxBackgroundJobs)
         return this
     }
 
-    override fun maxBackgroundJobs(): Int =
+    actual override fun maxBackgroundJobs(): Int =
         rocksdb_mutable_db_options_get_max_background_jobs(native)
 
-    override fun setMaxBackgroundCompactions(
-        maxBackgroundCompactions: Int,
-    ): MutableDBOptionsBuilder {
-        rocksdb_mutable_db_options_set_max_background_compactions(native, maxBackgroundCompactions)
-        return this
-    }
-
-    override fun maxBackgroundCompactions(): Int =
-        rocksdb_mutable_db_options_get_max_background_compactions(native)
-
-    override fun setAvoidFlushDuringShutdown(
+    actual override fun setAvoidFlushDuringShutdown(
         avoidFlushDuringShutdown: Boolean,
     ): MutableDBOptionsBuilder {
         rocksdb_mutable_db_options_set_avoid_flush_during_shutdown(native, avoidFlushDuringShutdown.toUByte())
         return this
     }
 
-    override fun avoidFlushDuringShutdown(): Boolean =
+    actual override fun avoidFlushDuringShutdown(): Boolean =
         rocksdb_mutable_db_options_get_avoid_flush_during_shutdown(native).toBoolean()
 
-    override fun setWritableFileMaxBufferSize(
+    actual override fun setWritableFileMaxBufferSize(
         writableFileMaxBufferSize: Long,
     ): MutableDBOptionsBuilder {
         rocksdb_mutable_db_options_set_writable_file_max_buffer_size(native, writableFileMaxBufferSize.toULong())
         return this
     }
 
-    override fun writableFileMaxBufferSize(): Long =
+    actual override fun writableFileMaxBufferSize(): Long =
         rocksdb_mutable_db_options_get_writable_file_max_buffer_size(native).toLong()
 
-    override fun setDelayedWriteRate(delayedWriteRate: Long): MutableDBOptionsBuilder {
+    actual override fun setDelayedWriteRate(delayedWriteRate: Long): MutableDBOptionsBuilder {
         rocksdb_mutable_db_options_set_delayed_write_rate(native, delayedWriteRate.toULong())
         return this
     }
 
-    override fun delayedWriteRate(): Long =
+    actual override fun delayedWriteRate(): Long =
         rocksdb_mutable_db_options_get_delayed_write_rate(native).toLong()
 
-    override fun setMaxTotalWalSize(maxTotalWalSize: Long): MutableDBOptionsBuilder {
+    actual override fun setMaxTotalWalSize(maxTotalWalSize: Long): MutableDBOptionsBuilder {
         rocksdb_mutable_db_options_set_max_total_wal_size(native, maxTotalWalSize.toULong())
         return this
     }
 
-    override fun maxTotalWalSize(): Long =
+    actual override fun maxTotalWalSize(): Long =
         rocksdb_mutable_db_options_get_max_total_wal_size(native).toLong()
 
-    override fun setDeleteObsoleteFilesPeriodMicros(
+    actual override fun setDeleteObsoleteFilesPeriodMicros(
         micros: Long,
     ): MutableDBOptionsBuilder {
         rocksdb_mutable_db_options_set_delete_obsolete_files_period_micros(native, micros.toULong())
         return this
     }
 
-    override fun deleteObsoleteFilesPeriodMicros(): Long =
+    actual override fun deleteObsoleteFilesPeriodMicros(): Long =
         rocksdb_mutable_db_options_get_delete_obsolete_files_period_micros(native).toLong()
 
-    override fun setStatsDumpPeriodSec(statsDumpPeriodSec: Int): MutableDBOptionsBuilder {
+    actual override fun setStatsDumpPeriodSec(statsDumpPeriodSec: Int): MutableDBOptionsBuilder {
         rocksdb_mutable_db_options_set_stats_dump_period_sec(native, statsDumpPeriodSec)
         return this
     }
 
-    override fun statsDumpPeriodSec(): Int =
+    actual override fun statsDumpPeriodSec(): Int =
         rocksdb_mutable_db_options_get_stats_dump_period_sec(native)
 
-    override fun setStatsPersistPeriodSec(statsPersistPeriodSec: Int): MutableDBOptionsBuilder {
+    actual override fun setStatsPersistPeriodSec(statsPersistPeriodSec: Int): MutableDBOptionsBuilder {
         rocksdb_mutable_db_options_set_stats_persist_period_sec(native, statsPersistPeriodSec)
         return this
     }
 
-    override fun statsPersistPeriodSec(): Int =
+    actual override fun statsPersistPeriodSec(): Int =
         rocksdb_mutable_db_options_get_stats_persist_period_sec(native)
 
-    override fun setStatsHistoryBufferSize(statsHistoryBufferSize: Long): MutableDBOptionsBuilder {
+    actual override fun setStatsHistoryBufferSize(statsHistoryBufferSize: Long): MutableDBOptionsBuilder {
         rocksdb_mutable_db_options_set_stats_history_buffer_size(native, statsHistoryBufferSize.toULong())
         return this
     }
 
-    override fun statsHistoryBufferSize(): Long =
+    actual override fun statsHistoryBufferSize(): Long =
         rocksdb_mutable_db_options_get_stats_history_buffer_size(native).toLong()
 
-    override fun setMaxOpenFiles(maxOpenFiles: Int): MutableDBOptionsBuilder {
+    actual override fun setMaxOpenFiles(maxOpenFiles: Int): MutableDBOptionsBuilder {
         rocksdb_mutable_db_options_set_max_open_files(native, maxOpenFiles)
         return this
     }
 
-    override fun maxOpenFiles(): Int =
+    actual override fun maxOpenFiles(): Int =
         rocksdb_mutable_db_options_get_max_open_files(native)
 
-    override fun setBytesPerSync(bytesPerSync: Long): MutableDBOptionsBuilder {
+    actual override fun setBytesPerSync(bytesPerSync: Long): MutableDBOptionsBuilder {
         rocksdb_mutable_db_options_set_bytes_per_sync(native, bytesPerSync.toULong())
         return this
     }
 
-    override fun bytesPerSync(): Long =
+    actual override fun bytesPerSync(): Long =
         rocksdb_mutable_db_options_get_bytes_per_sync(native).toLong()
 
-    override fun setWalBytesPerSync(walBytesPerSync: Long): MutableDBOptionsBuilder {
+    actual override fun setWalBytesPerSync(walBytesPerSync: Long): MutableDBOptionsBuilder {
         rocksdb_mutable_db_options_set_wal_bytes_per_sync(native, walBytesPerSync.toULong())
         return this
     }
 
-    override fun walBytesPerSync(): Long =
+    actual override fun walBytesPerSync(): Long =
         rocksdb_mutable_db_options_get_wal_bytes_per_sync(native).toLong()
 
-    override fun setStrictBytesPerSync(strictBytesPerSync: Boolean): MutableDBOptionsBuilder {
+    actual override fun setStrictBytesPerSync(strictBytesPerSync: Boolean): MutableDBOptionsBuilder {
         rocksdb_mutable_db_options_set_strict_bytes_per_sync(native, strictBytesPerSync.toUByte())
         return this
     }
 
-    override fun strictBytesPerSync(): Boolean =
+    actual override fun strictBytesPerSync(): Boolean =
         rocksdb_mutable_db_options_get_strict_bytes_per_sync(native).toBoolean()
 
-    override fun setCompactionReadaheadSize(
+    actual override fun setCompactionReadaheadSize(
         compactionReadaheadSize: Long,
     ): MutableDBOptionsBuilder {
         rocksdb_mutable_db_options_set_compaction_readahead_size(native, compactionReadaheadSize.toULong())
         return this
     }
 
-    override fun compactionReadaheadSize(): Long =
+    actual override fun compactionReadaheadSize(): Long =
         rocksdb_mutable_db_options_get_compaction_readahead_size(native).toLong()
 
-    override fun setDailyOffpeakTimeUTC(offpeakTimeUTC: String): MutableDBOptionsBuilder {
+    actual override fun setDailyOffpeakTimeUTC(offpeakTimeUTC: String): MutableDBOptionsBuilder {
         rocksdb_mutable_db_options_set_daily_offpeak_time_utc(native, offpeakTimeUTC)
         return this
     }
 
-    override fun dailyOffpeakTimeUTC(): String =
+    actual override fun dailyOffpeakTimeUTC(): String =
         rocksdb_mutable_db_options_get_daily_offpeak_time_utc(native)?.toKString().orEmpty()
 
     actual fun build(): MutableDBOptions {

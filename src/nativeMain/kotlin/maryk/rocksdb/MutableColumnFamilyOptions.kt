@@ -54,58 +54,58 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
         rocksdb_mutable_cf_options_destroy(native)
     }
 
-    override fun setWriteBufferSize(writeBufferSize: Long): MutableColumnFamilyOptionsBuilder {
+    actual override fun setWriteBufferSize(writeBufferSize: Long): MutableColumnFamilyOptionsBuilder {
         rocksdb_mutable_cf_options_set_write_buffer_size(native, writeBufferSize.toULong())
         return this
     }
 
-    override fun writeBufferSize(): Long =
+    actual override fun writeBufferSize(): Long =
         rocksdb_mutable_cf_options_get_write_buffer_size(native).toLong()
 
-    override fun setDisableAutoCompactions(
+    actual override fun setDisableAutoCompactions(
         disableAutoCompactions: Boolean,
     ): MutableColumnFamilyOptionsBuilder {
         rocksdb_mutable_cf_options_set_disable_auto_compactions(native, disableAutoCompactions.toUByte())
         return this
     }
 
-    override fun disableAutoCompactions(): Boolean =
+    actual override fun disableAutoCompactions(): Boolean =
         rocksdb_mutable_cf_options_get_disable_auto_compactions(native).toBoolean()
 
-    override fun setLevel0FileNumCompactionTrigger(
+    actual override fun setLevel0FileNumCompactionTrigger(
         level0FileNumCompactionTrigger: Int,
     ): MutableColumnFamilyOptionsBuilder {
         rocksdb_mutable_cf_options_set_level0_file_num_compaction_trigger(native, level0FileNumCompactionTrigger)
         return this
     }
 
-    override fun level0FileNumCompactionTrigger(): Int =
+    actual override fun level0FileNumCompactionTrigger(): Int =
         rocksdb_mutable_cf_options_get_level0_file_num_compaction_trigger(native)
 
-    override fun setMaxCompactionBytes(maxCompactionBytes: Long): MutableColumnFamilyOptionsBuilder {
+    actual override fun setMaxCompactionBytes(maxCompactionBytes: Long): MutableColumnFamilyOptionsBuilder {
         rocksdb_mutable_cf_options_set_max_compaction_bytes(native, maxCompactionBytes.toULong())
         return this
     }
 
-    override fun maxCompactionBytes(): Long =
+    actual override fun maxCompactionBytes(): Long =
         rocksdb_mutable_cf_options_get_max_compaction_bytes(native).toLong()
 
-    override fun setMaxBytesForLevelBase(maxBytesForLevelBase: Long): MutableColumnFamilyOptionsBuilder {
+    actual override fun setMaxBytesForLevelBase(maxBytesForLevelBase: Long): MutableColumnFamilyOptionsBuilder {
         rocksdb_mutable_cf_options_set_max_bytes_for_level_base(native, maxBytesForLevelBase.toULong())
         return this
     }
 
-    override fun maxBytesForLevelBase(): Long =
+    actual override fun maxBytesForLevelBase(): Long =
         rocksdb_mutable_cf_options_get_max_bytes_for_level_base(native).toLong()
 
-    override fun setCompressionType(
+    actual override fun setCompressionType(
         compressionType: CompressionType,
     ): MutableColumnFamilyOptionsBuilder {
         rocksdb_mutable_cf_options_set_compression(native, compressionType.value.toInt())
         return this
     }
 
-    override fun compressionType(): CompressionType =
+    actual override fun compressionType(): CompressionType =
         getCompressionType(rocksdb_mutable_cf_options_get_compression(native).toByte())
 
     actual fun build(): MutableColumnFamilyOptions {

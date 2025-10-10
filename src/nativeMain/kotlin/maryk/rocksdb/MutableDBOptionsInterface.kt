@@ -3,8 +3,6 @@ package maryk.rocksdb
 actual interface MutableDBOptionsInterface<T : MutableDBOptionsInterface<T>> {
     actual fun setMaxBackgroundJobs(maxBackgroundJobs: Int): T
     actual fun maxBackgroundJobs(): Int
-    actual fun setMaxBackgroundCompactions(maxBackgroundCompactions: Int): T
-    actual fun maxBackgroundCompactions(): Int
     actual fun setAvoidFlushDuringShutdown(avoidFlushDuringShutdown: Boolean): T
     actual fun avoidFlushDuringShutdown(): Boolean
     actual fun setWritableFileMaxBufferSize(writableFileMaxBufferSize: Long): T

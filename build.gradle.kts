@@ -23,6 +23,7 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.withType
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBinary
 import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
@@ -41,7 +42,7 @@ plugins {
 }
 
 group = "io.maryk.rocksdb"
-version = "10.4.2"
+version = "10.4.3"
 
 val rocksDBJVMVersion = "10.4.2"
 val rocksDBAndroidVersion = "10.4.2"
@@ -416,16 +417,21 @@ kotlin {
             }
         }
     }
-    jvm()
+    jvm {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_11)
+            freeCompilerArgs.add("-Xjdk-release=11")
+        }
+    }
     androidTarget {
         publishLibraryVariants("release")
         publishLibraryVariantsGroupedByFlavor = true
     }
 
-    androidNativeArm32()
+//    androidNativeArm32()
     androidNativeArm64()
     androidNativeX64()
-    androidNativeX86()
+//    androidNativeX86()
 
     iosArm64()
     iosSimulatorArm64()
@@ -445,7 +451,7 @@ kotlin {
     tvosArm64()
     tvosSimulatorArm64()
 
-    watchosArm64()
+//    watchosArm64()
     watchosDeviceArm64()
     watchosSimulatorArm64()
 

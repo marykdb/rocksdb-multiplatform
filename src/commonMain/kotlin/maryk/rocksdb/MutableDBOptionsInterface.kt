@@ -5,12 +5,6 @@ expect interface MutableDBOptionsInterface<T : MutableDBOptionsInterface<T>> {
     fun setMaxBackgroundJobs(maxBackgroundJobs: Int): T
     fun maxBackgroundJobs(): Int
 
-    @Deprecated("Use setMaxBackgroundJobs instead")
-    fun setMaxBackgroundCompactions(maxBackgroundCompactions: Int): T
-
-    @Deprecated("Use maxBackgroundJobs instead")
-    fun maxBackgroundCompactions(): Int
-
     fun setAvoidFlushDuringShutdown(avoidFlushDuringShutdown: Boolean): T
     fun avoidFlushDuringShutdown(): Boolean
 

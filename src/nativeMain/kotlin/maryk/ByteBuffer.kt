@@ -12,7 +12,7 @@ import kotlinx.cinterop.toCValues
 
 private val MAX_BYTE = 0b1111_1111.toUByte()
 
-actual sealed class ByteBuffer(
+actual abstract class ByteBuffer(
     internal val nativePointer: CPointer<ByteVar>,
     capacity: Int
 ) : Buffer(capacity, capacity) {
