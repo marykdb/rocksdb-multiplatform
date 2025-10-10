@@ -29,17 +29,11 @@ them by creating an issue or submitting a merge request.
 Kotlin Native:
 - **macOS**: macosArm64 & macosX64
 - **iOS**: iosArm64 & iosSimulatorArm64
-- **watchOS**: watchosDeviceArm64 & watchosSimulatorArm64
+- **watchOS**: watchosArm64, watchosDeviceArm64 & watchosSimulatorArm64
 - **tvOS**: tvosArm64 & tvosSimulatorArm64
 - **Linux**: linuxX64 & linuxArm64
-- **Windows**: mingwX64
-- **Android**: androidNativeArm64 & androidNativeX64
-
-Since the implementation is based on the RocksDB C API,
-other native platforms should be able to be added in the future if RocksDB can be compiled to that platform.
-
-Unfortunately tvOS and watchOS cannot be supported yet. No tvOS because it blocks certain calls RocksDB needs, and no watchOS
-because it needs specific arm64_32 support.
+- **Windows**: mingwX64 (Experimental)
+- **Android**: androidNativeArm32, androidNativeArm64, androidNativeX86 & androidNativeX64
 
 ## Reference
 
