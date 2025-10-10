@@ -9,7 +9,7 @@ import platform.posix.rmdir
 
 @OptIn(UnsafeNumber::class)
 actual fun createFolder(path: String): Boolean {
-    return mkdir(path, S_IRWXU.toUShort()) == 0
+    return mkdir(path, S_IRWXU.toUInt()) == 0
 }
 
 actual fun deleteFolder(path: String): Boolean {

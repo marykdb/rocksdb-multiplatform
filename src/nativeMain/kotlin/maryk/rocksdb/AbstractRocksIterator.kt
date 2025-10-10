@@ -1,10 +1,11 @@
+@file:OptIn(UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_iterator_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.UnsafeNumber
-import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.usePinned
+import kotlinx.cinterop.toCValues
 import maryk.asSizeT
 import maryk.toBoolean
 import maryk.wrapWithErrorThrower
@@ -19,10 +20,10 @@ import rocksdb.rocksdb_iter_seek_to_last
 import rocksdb.rocksdb_iter_valid
 
 actual abstract class AbstractRocksIterator<P : RocksObject>
-    protected constructor(
-        internal val native: CPointer<rocksdb_iterator_t>
-    )
-: RocksObject(), RocksIteratorInterface {
+protected constructor(
+    internal val native: CPointer<rocksdb_iterator_t>
+)
+    : RocksObject(), RocksIteratorInterface {
     /**
      * An iterator is either positioned at an entry, or
      * not valid.  This method returns true if the iterator is valid.
@@ -58,11 +59,8 @@ actual abstract class AbstractRocksIterator<P : RocksObject>
      * @param target byte array describing a key or a
      * key prefix to seek for.
      */
-    @OptIn(UnsafeNumber::class)
     actual override fun seek(target: ByteArray) {
-        target.usePinned { pin ->
-            rocksdb_iter_seek(native, pin.addressOf(0), target.size.asSizeT())
-        }
+        rocksdb_iter_seek(native, target.toCValues(), target.size.asSizeT())
     }
 
     /**
@@ -75,11 +73,8 @@ actual abstract class AbstractRocksIterator<P : RocksObject>
      * @param target byte array describing a key or a
      * key prefix to seek for.
      */
-    @OptIn(UnsafeNumber::class)
     actual override fun seekForPrev(target: ByteArray) {
-        target.usePinned { pin ->
-            rocksdb_iter_seek_for_prev(native, pin.addressOf(0), target.size.asSizeT())
-        }
+        rocksdb_iter_seek_for_prev(native, target.toCValues(), target.size.asSizeT())
     }
 
     /**
