@@ -42,10 +42,17 @@ plugins {
 }
 
 group = "io.maryk.rocksdb"
-version = "10.4.4"
+version = "10.4.5-SNAPSHOT"
 
 val rocksDBJVMVersion = "10.4.2"
 val rocksDBAndroidVersion = "10.4.2"
+val rocksDBJvmRuntimeClassifiers = listOf(
+    "osx",
+    "linux64",
+    "linux64-musl",
+    "linux32",
+    "win64"
+)
 
 val kotlinXDateTimeVersion = "0.7.1"
 val kotlinXCoroutinesVersion = "1.10.2"
@@ -487,12 +494,6 @@ kotlin {
         jvmMain {
             dependencies {
                 api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion")
-                // Temp because 10.4.2 does not contain the needed JNI files within root jar
-                // https://github.com/facebook/rocksdb/issues/13893#issuecomment-3240464232
-                api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:osx")
-                api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:linux64")
-                api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:linux32")
-                api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:win64")
             }
         }
         jvmTest {
@@ -512,6 +513,15 @@ kotlin {
 
     targets.withType<KotlinNativeTarget>().configureEach {
         configureRocksdbPrebuilt(rocksdbPrebuiltVersionValue, rocksdbPrebuiltBaseUrlValue)
+    }
+}
+
+configurations.named("jvmRuntimeElements").configure {
+    withDependencies {
+        // Ensure native classifier jars remain runtime-only, but are still published for consumers.
+        rocksDBJvmRuntimeClassifiers.forEach { classifier ->
+            add(project.dependencies.create("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:$classifier"))
+        }
     }
 }
 
