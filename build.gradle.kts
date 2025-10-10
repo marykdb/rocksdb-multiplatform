@@ -489,10 +489,11 @@ kotlin {
                 api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion")
                 // Temp because 10.4.2 does not contain the needed JNI files within root jar
                 // https://github.com/facebook/rocksdb/issues/13893#issuecomment-3240464232
-                api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:osx")
-                api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:linux64")
-                api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:linux32")
-                api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:win64")
+                runtimeOnly("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:osx")
+                runtimeOnly("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:linux64")
+                runtimeOnly("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:linux64-musl")
+                runtimeOnly("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:linux32")
+                runtimeOnly("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:win64")
             }
         }
         jvmTest {
