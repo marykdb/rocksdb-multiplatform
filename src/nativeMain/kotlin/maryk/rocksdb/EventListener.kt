@@ -4,12 +4,17 @@ import cnames.structs.rocksdb_compactionjobinfo_t
 import cnames.structs.rocksdb_eventlistener_t
 import cnames.structs.rocksdb_externalfileingestioninfo_t
 import cnames.structs.rocksdb_flushjobinfo_t
+import cnames.structs.rocksdb_memtableinfo_t
 import cnames.structs.rocksdb_t
+import cnames.structs.rocksdb_writestallinfo_t
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.asStableRef
 import kotlinx.cinterop.staticCFunction
+import kotlinx.cinterop.toKString
+import kotlinx.cinterop.ByteVar
+import maryk.convertToStatus
 import rocksdb.rocksdb_eventlistener_create
 import rocksdb.rocksdb_eventlistener_destroy
 
@@ -28,9 +33,9 @@ actual abstract class EventListener : RocksCallbackObject() {
             null,
             null,
             staticCFunction(::eventListenerOnExternalFileIngested),
-            null,
-            null,
-            null
+            staticCFunction(::eventListenerOnBackgroundError),
+            staticCFunction(::eventListenerOnStallConditionsChanged),
+            staticCFunction(::eventListenerOnMemTableSealed)
         ) ?: error("Failed to allocate RocksDB event listener")
     }
 
@@ -43,6 +48,12 @@ actual abstract class EventListener : RocksCallbackObject() {
     actual open fun onCompactionCompletedEvent(db: RocksDB, compactionJobInfo: CompactionJobInfo) {}
 
     actual open fun onExternalFileIngested(db: RocksDB, ingestionInfo: ExternalFileIngestionInfo) {}
+
+    actual open fun onBackgroundErrorEvent(reason: BackgroundErrorReason, status: Status?) {}
+
+    actual open fun onStallConditionsChanged(info: WriteStallInfo) {}
+
+    actual open fun onMemTableSealed(info: MemTableInfo) {}
 
     override fun close() {
         if (isOwningHandle()) {
@@ -115,6 +126,35 @@ private fun eventListenerOnExternalFileIngested(
     val info = infoPtr?.let(::ExternalFileIngestionInfo) ?: return
     listener.onExternalFileIngested(db, info)
     db.close()
+}
+
+private fun eventListenerOnBackgroundError(
+    state: COpaquePointer?,
+    reasonValue: UInt,
+    statusPointer: CPointer<ByteVar>?,
+) {
+    val listener = state?.asStableRef<EventListener>()?.get() ?: return
+    val reason = backgroundErrorReasonFromValue(reasonValue)
+    val status = statusPointer?.toKString()?.let(::convertToStatus)
+    listener.onBackgroundErrorEvent(reason, status)
+}
+
+private fun eventListenerOnStallConditionsChanged(
+    state: COpaquePointer?,
+    infoPtr: CPointer<rocksdb_writestallinfo_t>?,
+) {
+    val listener = state?.asStableRef<EventListener>()?.get() ?: return
+    val info = infoPtr?.let(::WriteStallInfo) ?: return
+    listener.onStallConditionsChanged(info)
+}
+
+private fun eventListenerOnMemTableSealed(
+    state: COpaquePointer?,
+    infoPtr: CPointer<rocksdb_memtableinfo_t>?,
+) {
+    val listener = state?.asStableRef<EventListener>()?.get() ?: return
+    val info = infoPtr?.let(::MemTableInfo) ?: return
+    listener.onMemTableSealed(info)
 }
 
 private fun wrapDb(native: CPointer<rocksdb_t>): RocksDB {

@@ -25,7 +25,10 @@ expect class OptimisticTransactionDB : RocksDB {
      * @param transactionOptions Any options for the transaction.
      * @return A new [Transaction] instance.
      */
-    fun beginTransaction(writeOptions: WriteOptions, transactionOptions: OptimisticTransactionOptions): Transaction
+    fun beginTransaction(
+        writeOptions: WriteOptions,
+        transactionOptions: OptimisticTransactionOptions
+    ): Transaction
 
     /**
      * Starts a new Transaction by reusing an existing transaction.

@@ -6,7 +6,6 @@ import maryk.toUByte
 actual class TransactionOptions actual constructor(): RocksObject() {
     val native = rocksdb.rocksdb_transaction_options_create()
 
-
     actual fun isSetSnapshot(): Boolean {
         return rocksdb.rocksdb_transaction_options_get_set_snapshot(native).toBoolean()
     }

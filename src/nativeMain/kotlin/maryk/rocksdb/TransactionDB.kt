@@ -24,7 +24,10 @@ internal constructor(
         return rocksdb.rocksdb_transaction_begin(tnative, writeOptions.native, defaultTransactionOptions.native, null)!!.let(::Transaction)
     }
 
-    actual fun beginTransaction(writeOptions: WriteOptions, transactionOptions: TransactionOptions): Transaction {
+    actual fun beginTransaction(
+        writeOptions: WriteOptions,
+        transactionOptions: TransactionOptions
+    ): Transaction {
         return rocksdb.rocksdb_transaction_begin(tnative, writeOptions.native, transactionOptions.native, null)!!.let(::Transaction)
     }
 
@@ -33,7 +36,11 @@ internal constructor(
         return oldTransaction
     }
 
-    actual fun beginTransaction(writeOptions: WriteOptions, transactionOptions: TransactionOptions, oldTransaction: Transaction): Transaction {
+    actual fun beginTransaction(
+        writeOptions: WriteOptions,
+        transactionOptions: TransactionOptions,
+        oldTransaction: Transaction
+    ): Transaction {
         rocksdb.rocksdb_transaction_begin(tnative, writeOptions.native, transactionOptions.native, oldTransaction.native)
         return oldTransaction
     }

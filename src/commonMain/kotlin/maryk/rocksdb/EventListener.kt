@@ -16,4 +16,13 @@ expect abstract class EventListener : RocksCallbackObject {
 
     /** Invoked after an external SST file has been ingested into the database. */
     open fun onExternalFileIngested(db: RocksDB, ingestionInfo: ExternalFileIngestionInfo)
+
+    /** Invoked when RocksDB reports a background error condition. */
+    open fun onBackgroundErrorEvent(reason: BackgroundErrorReason, status: Status?)
+
+    /** Invoked when the write controller transitions between stall conditions. */
+    open fun onStallConditionsChanged(info: WriteStallInfo)
+
+    /** Invoked when a memtable has been sealed. */
+    open fun onMemTableSealed(info: MemTableInfo)
 }

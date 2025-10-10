@@ -5,8 +5,7 @@ package maryk.rocksdb
  *
  * `TransactionDB` extends the functionality of `RocksDB` by providing
  * transactional capabilities, allowing for atomic operations across multiple
- * key-value pairs. It implements the [TransactionalDB] interface, parameterized
- * with [TransactionOptions], to facilitate transaction management.
+ * key-value pairs.
  *
  * **Example Usage:**
  *
@@ -52,7 +51,10 @@ expect class TransactionDB : RocksDB {
      * @param transactionOptions Any options for the transaction.
      * @return A new [Transaction] instance.
      */
-    fun beginTransaction(writeOptions: WriteOptions, transactionOptions: TransactionOptions): Transaction
+    fun beginTransaction(
+        writeOptions: WriteOptions,
+        transactionOptions: TransactionOptions
+    ): Transaction
 
     /**
      * Starts a new Transaction by reusing an existing transaction.
