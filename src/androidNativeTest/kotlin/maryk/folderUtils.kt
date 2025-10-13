@@ -1,6 +1,7 @@
 package maryk
 
 import kotlinx.cinterop.UnsafeNumber
+import kotlinx.cinterop.convert
 import platform.posix.S_IRWXU
 import platform.posix.closedir
 import platform.posix.mkdir
@@ -9,7 +10,7 @@ import platform.posix.rmdir
 
 @OptIn(UnsafeNumber::class)
 actual fun createFolder(path: String): Boolean {
-    return mkdir(path, S_IRWXU.toUInt()) == 0
+    return mkdir(path, S_IRWXU.convert()) == 0
 }
 
 actual fun deleteFolder(path: String): Boolean {
