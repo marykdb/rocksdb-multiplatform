@@ -42,7 +42,7 @@ plugins {
 }
 
 group = "io.maryk.rocksdb"
-version = "10.4.5-SNAPSHOT"
+version = "10.4.5"
 
 val rocksDBJVMVersion = "10.4.2"
 val rocksDBAndroidVersion = "10.4.2"
