@@ -516,9 +516,14 @@ kotlin {
     }
 }
 
-configurations.named("jvmRuntimeElements").configure {
-    withDependencies {
-        // Ensure native classifier jars remain runtime-only, but are still published for consumers.
+listOf(
+    "jvmRuntimeElements",
+    "jvmRuntimeClasspath",
+    "jvmTestRuntimeOnly"
+).forEach { configurationName ->
+    configurations.findByName(configurationName)?.withDependencies {
+        // Ensure native classifier jars remain runtime-only, but are still published and
+        // available on the local runtime/test classpaths so RocksDB can load its native libs.
         rocksDBJvmRuntimeClassifiers.forEach { classifier ->
             add(project.dependencies.create("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:$classifier"))
         }
