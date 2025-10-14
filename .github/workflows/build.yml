@@ -15,10 +15,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14
+          - os: macos-latest
             display-name: macOS Arm & Simulators
             gradle-tasks: macosArm64Test iosSimulatorArm64Test tvosSimulatorArm64Test watchosSimulatorArm64Test
-          - os: macos-13
+          - os: macos-15-intel
             display-name: macOS Intel
             gradle-tasks: macosX64Test
           - os: ubuntu-latest
