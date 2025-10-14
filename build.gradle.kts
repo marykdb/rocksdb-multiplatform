@@ -29,6 +29,7 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBinary
 import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeHostTest
+import org.jetbrains.kotlin.konan.target.Family
 
 repositories {
     google()
@@ -334,6 +335,12 @@ fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String
         linkerOpts("-L${libDir.absolutePath}")
     }
 
+    if (konanTarget.family == Family.MINGW) {
+        binaries.all {
+            linkerOpts("-lrpcrt4")
+        }
+    }
+
     binaries.withType<NativeBinary>().configureEach {
         linkTaskProvider.configure {
             dependsOn(downloadTask)
@@ -447,13 +454,7 @@ kotlin {
     macosArm64()
     linuxX64()
     linuxArm64()
-    mingwX64 {
-        binaries.all {
-            linkerOpts(
-                "-lrpcrt4"
-            )
-        }
-    }
+    mingwX64()
 
     tvosArm64()
     tvosSimulatorArm64()
