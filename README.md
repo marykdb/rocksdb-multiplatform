@@ -32,7 +32,7 @@ Kotlin Native:
 - **watchOS**: watchosArm64, watchosDeviceArm64 & watchosSimulatorArm64
 - **tvOS**: tvosArm64 & tvosSimulatorArm64
 - **Linux**: linuxX64 & linuxArm64
-- **Windows**: mingwX64 (Experimental)
+- **Windows**: mingwX64
 - **Android**: androidNativeArm32, androidNativeArm64, androidNativeX86 & androidNativeX64
 
 ## Reference
@@ -44,7 +44,7 @@ You can refer to the [API reference](src/commonMain/kotlin/maryk/rocksdb) or the
 The dependency is published in Maven Central, so you can easily add it to your project:
 
 ```kotlin
-implementation("io.maryk.rocksdb:rocksdb-multiplatform:10.4.5")
+implementation("io.maryk.rocksdb:rocksdb-multiplatform:10.4.6")
 ```
 
 ## Usage Example
