@@ -28,7 +28,6 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBinary
 import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
-import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeHostTest
 import org.jetbrains.kotlin.konan.target.Family
 
 repositories {
@@ -527,16 +526,6 @@ listOf(
         // available on the local runtime/test classpaths so RocksDB can load its native libs.
         rocksDBJvmRuntimeClassifiers.forEach { classifier ->
             add(project.dependencies.create("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:$classifier"))
-        }
-    }
-}
-
-// Ensure Windows-specific ignored tests are skipped on any mingw environment (no Wine)
-tasks.withType(KotlinNativeHostTest::class).configureEach {
-    if (name.startsWith("mingw", ignoreCase = true)) {
-        val existing = args.toList()
-        doFirst {
-            this@configureEach.args = existing + listOf("--ktest_negative_gradle_filter=maryk.rocksdb.*")
         }
     }
 }
