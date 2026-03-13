@@ -6,7 +6,7 @@ pluginManagement {
     }
     resolutionStrategy {
         eachPlugin {
-            if(requested.id.namespace == "com.android") {
+            if (requested.id.namespace?.startsWith("com.android") == true) {
                 useModule("com.android.tools.build:gradle:${requested.version}")
             }
             if (requested.id.id == "kotlin-multiplatform") {

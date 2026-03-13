@@ -36,23 +36,16 @@ repositories {
 }
 
 plugins {
-    id("com.android.library") version "8.13.0"
-    kotlin("multiplatform") version "2.2.20"
-    id("com.vanniktech.maven.publish") version "0.34.0"
+    kotlin("multiplatform") version "2.3.10"
+    id("com.android.kotlin.multiplatform.library") version "9.1.0"
+    id("com.vanniktech.maven.publish") version "0.36.0"
 }
 
 group = "io.maryk.rocksdb"
-version = "10.4.6"
+version = "10.5.5"
 
-val rocksDBJVMVersion = "10.4.2"
-val rocksDBAndroidVersion = "10.4.2"
-val rocksDBJvmRuntimeClassifiers = listOf(
-    "osx",
-    "linux64",
-    "linux64-musl",
-    "linux32",
-    "win64"
-)
+val rocksDBJVMVersion = "10.5.1"
+val rocksDBAndroidVersion = "10.5.5"
 
 val kotlinXDateTimeVersion = "0.7.1"
 val kotlinXCoroutinesVersion = "1.10.2"
@@ -112,7 +105,7 @@ abstract class DownloadRocksdbTask : DefaultTask() {
 
     @get:Input
     @get:Optional
-    abstract val sha256: Property<String?>
+    abstract val sha256: Property<String>
 
     @get:OutputDirectory
     abstract val destinationDir: DirectoryProperty
@@ -401,23 +394,6 @@ private fun fetchSha256WithRetry(url: String): String {
     throw GradleException("Unable to download RocksDB archive from $url", lastFailure ?: IllegalStateException("Unknown failure"))
 }
 
-android {
-    namespace = "io.maryk.rocksdb"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 21
-        multiDexEnabled = true
-        testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
-    }
-
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-        }
-    }
-}
-
 kotlin {
     val toolchainVersion = JavaVersion.current().majorVersion.toInt()
     jvmToolchain(toolchainVersion)
@@ -436,9 +412,11 @@ kotlin {
             freeCompilerArgs.add("-Xjdk-release=11")
         }
     }
-    androidTarget {
-        publishLibraryVariants("release")
-        publishLibraryVariantsGroupedByFlavor = true
+    android {
+        namespace = "io.maryk.rocksdb"
+        compileSdk = 36
+        minSdk = 21
+        withHostTestBuilder {}.configure {}
     }
 
     androidNativeArm32()
@@ -473,8 +451,8 @@ kotlin {
     sourceSets {
         all {
             languageSettings.apply {
-                languageVersion = "2.2"
-                apiVersion = "2.2"
+                languageVersion = "2.3"
+                apiVersion = "2.3"
                 progressiveMode = true
                 optIn("kotlinx.cinterop.ExperimentalForeignApi")
                 optIn("kotlinx.cinterop.BetaInteropApi")
@@ -506,27 +484,13 @@ kotlin {
                 api("io.maryk.rocksdb:rocksdb-android:$rocksDBAndroidVersion")
             }
         }
-        androidUnitTest {
-            kotlin.srcDir("src/jvmTest/kotlin")
+        getByName("androidHostTest") {
+            kotlin.srcDirs("src/jvmTest/kotlin")
         }
     }
 
     targets.withType<KotlinNativeTarget>().configureEach {
         configureRocksdbPrebuilt(rocksdbPrebuiltVersionValue, rocksdbPrebuiltBaseUrlValue)
-    }
-}
-
-listOf(
-    "jvmRuntimeElements",
-    "jvmRuntimeClasspath",
-    "jvmTestRuntimeOnly"
-).forEach { configurationName ->
-    configurations.findByName(configurationName)?.withDependencies {
-        // Ensure native classifier jars remain runtime-only, but are still published and
-        // available on the local runtime/test classpaths so RocksDB can load its native libs.
-        rocksDBJvmRuntimeClassifiers.forEach { classifier ->
-            add(project.dependencies.create("org.rocksdb:rocksdbjni:$rocksDBJVMVersion:$classifier"))
-        }
     }
 }
 
