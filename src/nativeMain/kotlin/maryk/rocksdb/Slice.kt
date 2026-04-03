@@ -20,7 +20,7 @@ actual class Slice actual constructor(
     }
 
     override fun size(): Int {
-        return data.size.toInt()
+        return data.size
     }
 
     override fun empty(): Boolean {

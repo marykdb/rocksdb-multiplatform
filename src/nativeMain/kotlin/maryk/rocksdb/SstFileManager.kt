@@ -5,7 +5,7 @@ package maryk.rocksdb
 import cnames.structs.rocksdb_sst_file_manager_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
-import maryk.toBoolean
+import kotlinx.cinterop.convert
 import rocksdb.rocksdb_sst_file_manager_create
 import rocksdb.rocksdb_sst_file_manager_destroy
 import rocksdb.rocksdb_sst_file_manager_get_delete_rate_bytes_per_second
@@ -41,7 +41,7 @@ actual class SstFileManager internal constructor(
     actual fun getTotalSize(): Long = rocksdb_sst_file_manager_get_total_size(native).toLong()
 
     actual fun getDeleteRateBytesPerSecond(): Long =
-        rocksdb_sst_file_manager_get_delete_rate_bytes_per_second(native).toLong()
+        rocksdb_sst_file_manager_get_delete_rate_bytes_per_second(native).convert()
 
     actual fun setDeleteRateBytesPerSecond(deleteRate: Long) {
         rocksdb_sst_file_manager_set_delete_rate_bytes_per_second(native, deleteRate)

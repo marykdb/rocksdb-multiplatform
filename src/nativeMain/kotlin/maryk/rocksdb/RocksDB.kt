@@ -1,4 +1,5 @@
 @file:OptIn(ExperimentalNativeApi::class, UnsafeNumber::class)
+@file:Suppress("unused")
 
 package maryk.rocksdb
 
@@ -14,6 +15,7 @@ import kotlinx.cinterop.UByteVar
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.allocArray
+import kotlinx.cinterop.convert
 import kotlinx.cinterop.cstr
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
@@ -1437,7 +1439,7 @@ internal constructor(
                             levelValue = rocksdb_livefiles_level(liveFiles, index),
                             fileName = name,
                             path = name,
-                            size = rocksdb_livefiles_size(liveFiles, index).toULong(),
+                            size = rocksdb_livefiles_size(liveFiles, index).convert(),
                             smallestKey = smallestKey,
                             largestKey = largestKey,
                         )
@@ -1541,7 +1543,7 @@ internal constructor(
 
         return ColumnFamilyMetaData(
             size = rocksdb.rocksdb_column_family_metadata_get_size(metaData),
-            fileCount = rocksdb.rocksdb_column_family_metadata_get_file_count(metaData).toULong(),
+            fileCount = rocksdb.rocksdb_column_family_metadata_get_file_count(metaData).convert(),
             name = name!!.toKString(),
             levels = levels
         ).also {
