@@ -44,10 +44,8 @@ You can refer to the [API reference](src/commonMain/kotlin/maryk/rocksdb) or the
 The dependency is published in Maven Central, so you can easily add it to your project:
 
 ```kotlin
-implementation("io.maryk.rocksdb:rocksdb-multiplatform:10.5.5")
+implementation("io.maryk.rocksdb:rocksdb-multiplatform:10.6.2")
 ```
-
-Build note: this project now uses `com.android.kotlin.multiplatform.library` (AGP `9.1.0`) with Kotlin `2.3.10`.
 
 ## Usage Example
 

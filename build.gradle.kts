@@ -36,16 +36,16 @@ repositories {
 }
 
 plugins {
-    kotlin("multiplatform") version "2.3.10"
+    kotlin("multiplatform") version "2.3.20"
     id("com.android.kotlin.multiplatform.library") version "9.1.0"
     id("com.vanniktech.maven.publish") version "0.36.0"
 }
 
 group = "io.maryk.rocksdb"
-version = "10.5.5"
+version = "10.6.2"
 
-val rocksDBJVMVersion = "10.5.1"
-val rocksDBAndroidVersion = "10.5.5"
+val rocksDBJVMVersion = "10.6.2.1"
+val rocksDBAndroidVersion = "10.6.2"
 
 val kotlinXDateTimeVersion = "0.7.1"
 val kotlinXCoroutinesVersion = "1.10.2"
