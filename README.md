@@ -1,24 +1,25 @@
 [![GitHub license](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Download](https://img.shields.io/maven-central/v/io.maryk.rocksdb/rocksdb-multiplatform)](https://central.sonatype.com/artifact/io.maryk.rocksdb/rocksdb-multiplatform)
 
-# Kotlin Multiplatform RocksDB implementation
+# Kotlin Multiplatform bindings for RocksDB
 
-This project provides a multiplatform Kotlin implementation for RocksDB, a high-performance embedded key-value store for 
-storage of data on disk. RocksDB is widely used in many industries for various applications, including database management 
-systems, big data systems, and storage engines for other distributed systems.
+This project provides Kotlin Multiplatform bindings for RocksDB, a high-performance embedded key-value store for
+storage of data on disk. It uses the official native RocksDB
+implementation and exposes it through a Kotlin API, with prebuilt native binaries for the supported targets. Those
+native binaries are built separately in [build-rocksdb](https://github.com/marykdb/build-rocksdb).
 
-The aim of this project is to provide a multiplatform RocksDB implementation that can be used across different platforms,
-including JVM, Android, and native Linux/macOS/iOS/tvOS/watchOS/Windows. This allows developers to write applications that can run on different platforms 
-without having to rewrite the codebase.
+The aim of this project is to make RocksDB usable from shared Kotlin code across JVM, Android, and native
+Linux/macOS/iOS/tvOS/watchOS/Windows targets. On JVM and Android it bridges the RocksDB Java API. On Kotlin/Native
+targets it calls the native RocksDB library through Kotlin/Native interop.
 
 This project is useful for developers who want to build multiplatform applications that require high-performance disk-based
-storage. By using this implementation of RocksDB in their codebase, developers can ensure that their application is portable 
-across different platforms while maintaining a high level of performance and reliability.
+storage. Because the storage engine is still upstream RocksDB, performance should be close to RocksDB itself, apart from
+the expected JNI or native interop overhead depending on the target and usage pattern.
 
 ## RocksDB API Support
 
-The project supports the full RocksDB Java interfaces on the JVM and Android platforms. 
-This common library includes most common operations, but if you need additional features, you can request 
+The project supports the full RocksDB Java interfaces on the JVM and Android platforms.
+The common Kotlin API includes most common operations, but if you need additional features, you can request
 them by creating an issue or submitting a merge request.
 
 ## Supported platforms 

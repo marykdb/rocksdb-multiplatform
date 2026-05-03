@@ -611,7 +611,7 @@ mavenPublishing {
 
     pom {
         name.set("rocksdb-multiplatform")
-        description.set("Kotlin Multiplatform RocksDB interface")
+        description.set("Kotlin Multiplatform bindings for the native RocksDB library")
         inceptionYear.set("2019")
         url.set("https://github.com/marykdb/rocksdb-multiplatform")
         licenses {
