@@ -190,9 +190,8 @@ actual class WriteBatchWithIndex(
         rocksdb.rocksdb_writebatch_wi_set_max_bytes(native, maxBytes.asSizeT())
     }
 
-    override fun getWriteBatch(): WriteBatch = memScoped {
-        val length = alloc<size_tVar>()
-        val data = rocksdb.rocksdb_writebatch_wi_data(native, length.ptr)!!
-        WriteBatch(rocksdb.rocksdb_writebatch_create_from(data, length.value)!!)
-    }
+    override fun getWriteBatch(): WriteBatch =
+        WriteBatch(rocksdb.rocksdb_writebatch_wi_get_write_batch(native)!!).also {
+            it.disownHandle()
+        }
 }
