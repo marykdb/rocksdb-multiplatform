@@ -38,13 +38,16 @@ actual abstract class ByteBuffer(
     }
 
     actual operator fun get(dst: ByteArray, offset: Int, length: Int): ByteBuffer {
+        if (offset < 0 || length < 0 || offset + length > dst.size) {
+            throw IndexOutOfBoundsException("offset=$offset, length=$length, destination size=${dst.size}")
+        }
         if (length > capacity - position) {
             throw Exception("Not enough bytes left to fill destination byte array")
         }
         for (index in 0 until length) {
             dst[index + offset] = nativePointer[index + position]
         }
-        position += dst.size
+        position += length
         return this
     }
 
@@ -91,19 +94,39 @@ class DirectByteBuffer internal constructor(
         return this
     }
 }
+
+class HeapByteBuffer internal constructor(
+    nativePointer: CPointer<ByteVar>,
+    capacity: Int
+) : ByteBuffer(nativePointer, capacity) {
+    override fun get(index: Int) = nativePointer[index]
+
+    override fun getInt() = readInt()
+
+    override fun put(index: Int, byte: Byte): ByteBuffer {
+        nativePointer[index] = byte
+        return this
+    }
+}
+
 actual fun duplicateByteBuffer(byteBuffer: ByteBuffer, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit) {
     memScoped {
         val pointer = allocArray<ByteVar>(byteBuffer.capacity) { i ->
             byteBuffer.nativePointer[i]
         }
 
-        memSafeByteBuffer(DirectByteBuffer(pointer, byteBuffer.capacity))
+        val duplicate = if (byteBuffer is DirectByteBuffer) {
+            DirectByteBuffer(pointer, byteBuffer.capacity)
+        } else {
+            HeapByteBuffer(pointer, byteBuffer.capacity)
+        }
+        memSafeByteBuffer(duplicate)
     }
 }
 
 actual fun allocateByteBuffer(capacity: Int, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit) {
     memScoped {
-        memSafeByteBuffer(DirectByteBuffer(allocArray(capacity), capacity))
+        memSafeByteBuffer(HeapByteBuffer(allocArray(capacity), capacity))
     }
 }
 
@@ -115,7 +138,7 @@ actual fun allocateDirectByteBuffer(capacity: Int, memSafeByteBuffer: (buffer: B
 
 actual fun wrapByteBuffer(bytes: ByteArray, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit) {
     memScoped {
-        DirectByteBuffer(bytes.toCValues().getPointer(this), bytes.size)
+        memSafeByteBuffer(HeapByteBuffer(bytes.toCValues().getPointer(this), bytes.size))
     }
 }
 

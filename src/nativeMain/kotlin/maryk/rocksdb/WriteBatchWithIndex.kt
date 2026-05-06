@@ -15,6 +15,7 @@ import maryk.asSizeT
 import maryk.toByteArray
 import maryk.wrapWithErrorThrower
 import platform.posix.size_tVar
+import rocksdb.rocksdb_free
 import rocksdb.rocksdb_writebatch_wi_create
 
 actual class WriteBatchWithIndex(
@@ -41,7 +42,7 @@ actual class WriteBatchWithIndex(
         wrapWithErrorThrower { error ->
             memScoped {
                 val length = alloc<size_tVar>()
-                a = rocksdb.rocksdb_writebatch_wi_get_from_batch_cf(
+                val value = rocksdb.rocksdb_writebatch_wi_get_from_batch_cf(
                     native,
                     options.native,
                     columnFamilyHandle.native,
@@ -49,7 +50,14 @@ actual class WriteBatchWithIndex(
                     key.size.asSizeT(),
                     length.ptr,
                     error
-                )?.toByteArray(length.value)
+                )
+                a = value?.let {
+                    try {
+                        it.toByteArray(length.value)
+                    } finally {
+                        rocksdb_free(it)
+                    }
+                }
             }
         }
         return a
@@ -60,14 +68,21 @@ actual class WriteBatchWithIndex(
         memScoped {
             wrapWithErrorThrower { error ->
                 val length = alloc<size_tVar>()
-                a = rocksdb.rocksdb_writebatch_wi_get_from_batch(
+                val value = rocksdb.rocksdb_writebatch_wi_get_from_batch(
                     native,
                     options.native,
                     key.toCValues(),
                     key.size.asSizeT(),
                     length.ptr,
                     error
-                )?.toByteArray(length.value)
+                )
+                a = value?.let {
+                    try {
+                        it.toByteArray(length.value)
+                    } finally {
+                        rocksdb_free(it)
+                    }
+                }
             }
         }
         return a
@@ -175,5 +190,8 @@ actual class WriteBatchWithIndex(
         rocksdb.rocksdb_writebatch_wi_set_max_bytes(native, maxBytes.asSizeT())
     }
 
-    override fun getWriteBatch(): WriteBatch = TODO()
+    override fun getWriteBatch(): WriteBatch =
+        WriteBatch(rocksdb.rocksdb_writebatch_wi_get_write_batch(native)!!).also {
+            it.disownHandle()
+        }
 }

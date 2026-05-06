@@ -28,11 +28,14 @@ actual class DirectSlice() : AbstractSlice<ByteBuffer>() {
     }
 
     actual constructor(data: ByteBuffer) : this() {
+        require(data is DirectByteBuffer) { "DirectSlice requires a direct ByteBuffer" }
         this.data = data
     }
 
     actual constructor(data: ByteBuffer, length: Int) : this(
-        DirectByteBuffer(data.nativePointer, length)
+        data.also {
+            require(it is DirectByteBuffer) { "DirectSlice requires a direct ByteBuffer" }
+        }.let { DirectByteBuffer(it.nativePointer, length) }
     )
 
     override fun getData(): ByteBuffer = data

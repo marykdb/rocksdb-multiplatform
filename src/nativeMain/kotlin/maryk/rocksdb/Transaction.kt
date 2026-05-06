@@ -117,10 +117,18 @@ actual class Transaction(
                 valueLen.ptr,
                 errPtr.ptr
             )
-            if (errPtr.value != null) {
-                throw RocksDBException(errPtr.value!!.toKString())
+            errPtr.value?.let { error ->
+                val message = error.toKString()
+                rocksdb.rocksdb_free(error)
+                throw RocksDBException(message)
             }
-            valuePtr?.readBytes(valueLen.value.convert())
+            valuePtr?.let {
+                try {
+                    it.readBytes(valueLen.value.convert())
+                } finally {
+                    rocksdb.rocksdb_free(it)
+                }
+            }
         }
 
     actual fun get(readOptions: ReadOptions, key: ByteArray): ByteArray? =
@@ -135,10 +143,18 @@ actual class Transaction(
                 valueLen.ptr,
                 errPtr.ptr
             )
-            if (errPtr.value != null) {
-                throw RocksDBException(errPtr.value!!.toKString())
+            errPtr.value?.let { error ->
+                val message = error.toKString()
+                rocksdb.rocksdb_free(error)
+                throw RocksDBException(message)
             }
-            valuePtr?.readBytes(valueLen.value.convert())
+            valuePtr?.let {
+                try {
+                    it.readBytes(valueLen.value.convert())
+                } finally {
+                    rocksdb.rocksdb_free(it)
+                }
+            }
         }
 
     actual fun get(opt: ReadOptions, key: ByteArray, value: ByteArray): GetStatus = memScoped {
@@ -244,10 +260,18 @@ actual class Transaction(
             if (exclusive) 1.toUByte() else 0.toUByte(),
             errPtr.ptr
         )
-        if (errPtr.value != null) {
-            throw RocksDBException(errPtr.value!!.toKString())
+        errPtr.value?.let { error ->
+            val message = error.toKString()
+            rocksdb.rocksdb_free(error)
+            throw RocksDBException(message)
         }
-        valuePtr?.readBytes(valueLen.value.convert())
+        valuePtr?.let {
+            try {
+                it.readBytes(valueLen.value.convert())
+            } finally {
+                rocksdb.rocksdb_free(it)
+            }
+        }
     }
 
     actual fun getForUpdate(
@@ -268,10 +292,18 @@ actual class Transaction(
             if (exclusive) 1.toUByte() else 0.toUByte(),
             errPtr.ptr
         )
-        if (errPtr.value != null) {
-            throw RocksDBException(errPtr.value!!.toKString())
+        errPtr.value?.let { error ->
+            val message = error.toKString()
+            rocksdb.rocksdb_free(error)
+            throw RocksDBException(message)
         }
-        valuePtr?.readBytes(valueLen.value.convert())
+        valuePtr?.let {
+            try {
+                it.readBytes(valueLen.value.convert())
+            } finally {
+                rocksdb.rocksdb_free(it)
+            }
+        }
     }
 
     actual fun getForUpdate(

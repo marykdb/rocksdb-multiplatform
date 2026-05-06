@@ -12,9 +12,15 @@ import maryk.rocksdb.RocksDBException
 import maryk.rocksdb.Status
 import maryk.rocksdb.StatusCode
 import maryk.rocksdb.StatusSubCode
+import rocksdb.rocksdb_free
 
 private fun checkAndThrowError(errorRef: CPointerVar<ByteVar>) {
-    val error = errorRef.value?.toKString()
+    val errorPtr = errorRef.value
+    val error = errorPtr?.toKString()
+    if (errorPtr != null) {
+        rocksdb_free(errorPtr)
+        errorRef.value = null
+    }
 
     if (error != null) {
         throw RocksDBException(error, convertToStatus(error))
@@ -28,6 +34,9 @@ fun <T: Any, R: Any> T.wrapWithErrorThrower(runnable: T.(CValuesRef<CPointerVar<
             val result = runnable(errorRef.ptr)
             checkAndThrowError(errorRef)
             return result
+        } catch (e: RocksDBException) {
+            checkAndThrowError(errorRef)
+            throw e
         } catch (e: Throwable) {
             checkAndThrowError(errorRef)
             throw RocksDBException(e.toString(), Status(StatusCode.Undefined, StatusSubCode.None, e.toString()))
@@ -42,10 +51,12 @@ fun <T: Any, R: Any> T.wrapWithNullErrorThrower(runnable: T.(CValuesRef<CPointer
             val result = runnable(errorRef.ptr)
             checkAndThrowError(errorRef)
             return result
+        } catch (e: RocksDBException) {
+            checkAndThrowError(errorRef)
+            throw e
         } catch (e: Throwable) {
             checkAndThrowError(errorRef)
             throw RocksDBException(e.toString(), Status(StatusCode.Undefined, StatusSubCode.None, e.toString()))
         }
     }
 }
-

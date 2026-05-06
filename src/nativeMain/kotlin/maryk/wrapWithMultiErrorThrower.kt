@@ -8,6 +8,7 @@ import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.toKString
 import maryk.rocksdb.RocksDBException
+import rocksdb.rocksdb_free
 
 fun <T : Any, R : Any> T.wrapWithMultiErrorThrower(
     numKeys: Int,
@@ -22,6 +23,7 @@ fun <T : Any, R : Any> T.wrapWithMultiErrorThrower(
         val singleErrorPtr = errsArray[i]
         if (singleErrorPtr != null) {
             val errMsg = singleErrorPtr.toKString()
+            rocksdb_free(singleErrorPtr)
 
             throw RocksDBException(
                 errMsg,
