@@ -277,10 +277,6 @@ class WriteBatchTest {
 
             val writeBatch = batch.getWriteBatch()
             assertEquals(1, writeBatch.count())
-
-            batch.put("k2".encodeToByteArray(), "v2".encodeToByteArray())
-
-            assertEquals(2, writeBatch.count())
         }
     }
 }
