@@ -78,12 +78,19 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
     private var statistics: Statistics? = null
     private var env: Env? = null
     private var tableFormatConfig: TableFormatConfig? = null
+    private var ownedComparator: AbstractComparator? = null
 
     actual constructor() : this(rocksdb_options_create()!!)
 
     override fun close() {
         if (isOwningHandle()) {
+            val comparator = ownedComparator
+            ownedComparator = null
+            if (comparator != null) {
+                rocksdb_options_set_comparator(native, null)
+            }
             rocksdb_options_destroy(native)
+            comparator?.close()
             super.close()
         }
     }
@@ -208,11 +215,18 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
             BuiltinComparator.REVERSE_BYTEWISE_COMPARATOR -> ReverseBytewiseComparator(null)
         }
         rocksdb_options_set_comparator(native, comparator.native)
+        ownedComparator?.close()
+        ownedComparator = comparator
         return this
     }
 
     actual fun setComparator(comparator: AbstractComparator): Options {
+        ownedComparator?.let {
+            rocksdb_options_set_comparator(native, null)
+            it.close()
+        }
         rocksdb_options_set_comparator(native, comparator.native)
+        ownedComparator = null
         return this
     }
 

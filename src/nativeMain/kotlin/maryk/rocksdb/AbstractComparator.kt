@@ -6,7 +6,6 @@ import cnames.structs.rocksdb_comparator_t
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointer
-import kotlinx.cinterop.Pinned
 import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
@@ -27,27 +26,34 @@ actual abstract class AbstractComparator
 : RocksCallbackObject() {
     protected actual constructor() : this(null)
 
-    private val pinnedName: CPointer<ByteVar> by lazy {
+    private var pinnedName: CPointer<ByteVar>? = null
+
+    private fun pinnedName(): CPointer<ByteVar> {
+        pinnedName?.let { return it }
         val actualName = name()
         val nameBytes = (actualName + "\u0000").encodeToByteArray()
         val mem = nativeHeap.allocArray<ByteVar>(nameBytes.size)
 
-        nameBytes.usePinned { pinned: Pinned<ByteArray> ->
+        nameBytes.usePinned { pinned ->
             memcpy(mem, pinned.addressOf(0), nameBytes.size.convert())
         }
-        mem
+        pinnedName = mem
+        return mem
     }
 
     private val nameCallback = staticCFunction<COpaquePointer?, CPointer<ByteVar>?> { statePtr ->
         val comparator = statePtr?.asStableRef<AbstractComparator>()?.get()
             ?: return@staticCFunction null
-        comparator.pinnedName
+        comparator.pinnedName()
     }
 
     private val stableRef = StableRef.create(this)
 
     private val destructorCallback = staticCFunction<COpaquePointer?, Unit> { ref ->
-        ref?.asStableRef<AbstractComparator>()?.dispose()
+        ref?.asStableRef<AbstractComparator>()?.let { stableRef ->
+            stableRef.get().destroyFromNative()
+            stableRef.dispose()
+        }
     }
 
     val native: CPointer<rocksdb_comparator_t>? by lazy {
@@ -70,9 +76,16 @@ actual abstract class AbstractComparator
 
     actual override fun close() {
         if (isOwningHandle()) {
-            nativeHeap.free(pinnedName.rawValue)
+            destroyFromNative()
             rocksdb_comparator_destroy(native)
             super.close()
+        }
+    }
+
+    internal fun destroyFromNative() {
+        pinnedName?.let {
+            nativeHeap.free(it.rawValue)
+            pinnedName = null
         }
     }
 

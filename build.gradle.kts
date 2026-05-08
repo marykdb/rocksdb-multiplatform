@@ -257,11 +257,16 @@ abstract class DownloadRocksdbTask : DefaultTask() {
     }
 
     private fun unzip(zipFile: File, destination: File) {
+        val destinationPath = destination.toPath().toAbsolutePath().normalize()
         ZipFile(zipFile).use { archive ->
             val entries = archive.entries()
             while (entries.hasMoreElements()) {
                 val entry = entries.nextElement()
-                val outputFile = File(destination, entry.name)
+                val outputPath = destinationPath.resolve(entry.name).normalize()
+                if (!outputPath.startsWith(destinationPath)) {
+                    throw GradleException("Archive entry escapes destination: ${entry.name}")
+                }
+                val outputFile = outputPath.toFile()
                 if (entry.isDirectory) {
                     outputFile.mkdirs()
                 } else {

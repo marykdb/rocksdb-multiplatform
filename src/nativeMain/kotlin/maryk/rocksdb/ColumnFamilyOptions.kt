@@ -60,6 +60,7 @@ actual class ColumnFamilyOptions private constructor(
     internal val native: CPointer<rocksdb_options_t>
 ) : RocksObject() {
     private var tableFormatConfig: TableFormatConfig? = null
+    private var ownedComparator: AbstractComparator? = null
 
     actual constructor() : this(rocksdb_options_create()!!)
 
@@ -75,7 +76,13 @@ actual class ColumnFamilyOptions private constructor(
 
     override fun close() {
         if (isOwningHandle()) {
+            val comparator = ownedComparator
+            ownedComparator = null
+            if (comparator != null) {
+                rocksdb_options_set_comparator(native, null)
+            }
             rocksdb_options_destroy(native)
+            comparator?.close()
             super.close()
         }
     }
@@ -138,16 +145,24 @@ actual class ColumnFamilyOptions private constructor(
             BuiltinComparator.REVERSE_BYTEWISE_COMPARATOR -> ReverseBytewiseComparator(null)
         }
         rocksdb_options_set_comparator(native, comparator.native)
+        ownedComparator?.close()
+        ownedComparator = comparator
         return this
     }
 
     actual fun setComparator(comparator: AbstractComparator): ColumnFamilyOptions {
+        ownedComparator?.let {
+            rocksdb_options_set_comparator(native, null)
+            it.close()
+        }
         rocksdb_options_set_comparator(native, comparator.native)
+        ownedComparator = null
         return this
     }
 
     actual fun setMergeOperator(mergeOperator: MergeOperator): ColumnFamilyOptions {
         rocksdb.rocksdb_options_set_merge_operator(native, mergeOperator.native)
+        mergeOperator.transferOwnershipToNative()
         return this
     }
 

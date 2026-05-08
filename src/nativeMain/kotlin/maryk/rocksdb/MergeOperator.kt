@@ -17,7 +17,10 @@ import kotlin.experimental.ExperimentalNativeApi
  */
 actual abstract class MergeOperator : RocksObject() {
     // Allocate and persist the operator's name on the native heap.
-    internal val pinnedName: CPointer<ByteVar> by lazy {
+    private var pinnedName: CPointer<ByteVar>? = null
+
+    internal fun pinnedName(): CPointer<ByteVar> {
+        pinnedName?.let { return it }
         val actualName = name()
         // Append a null terminator.
         val nameBytes = (actualName + "\u0000").encodeToByteArray()
@@ -25,7 +28,8 @@ actual abstract class MergeOperator : RocksObject() {
         nameBytes.usePinned { pinned ->
             memcpy(mem, pinned.addressOf(0), nameBytes.size.convert())
         }
-        mem
+        pinnedName = mem
+        return mem
     }
 
     val native: CPointer<rocksdb_mergeoperator_t>
@@ -46,12 +50,22 @@ actual abstract class MergeOperator : RocksObject() {
     // Override close() to free our pinned name and destroy the native object.
     override fun close() {
         if (isOwningHandle()) {
-            // Free the memory allocated for the merge operator's name.
-            nativeHeap.free(pinnedName.rawValue)
             // Destroy the native merge operator. Adjust this function call if needed.
             rocksdb.rocksdb_mergeoperator_destroy(native)
             super.close()
         }
+    }
+
+    internal fun transferOwnershipToNative() {
+        disownHandle()
+    }
+
+    internal fun destroyFromNative() {
+        pinnedName?.let {
+            nativeHeap.free(it.rawValue)
+            pinnedName = null
+        }
+        disownHandle()
     }
 
     /**
@@ -126,8 +140,13 @@ actual abstract class MergeOperator : RocksObject() {
 // --- C Callback Implementations ---
 
 private fun mergeOperatorDestructor(state: CPointer<out CPointed>?) {
-    state?.asStableRef<MergeOperator>()?.get()?.destructor()
-    state?.asStableRef<MergeOperator>()?.dispose()
+    state?.asStableRef<MergeOperator>()?.let { stableRef ->
+        stableRef.get().run {
+            destructor()
+            destroyFromNative()
+        }
+        stableRef.dispose()
+    }
 }
 
 private fun fullMergeCallback(
@@ -166,7 +185,7 @@ private fun partialMergeCallback(
 // Updated callback: now simply returns the persistent pinnedName.
 private fun mergeOperatorNameCallback(state: CPointer<out CPointed>?): CPointer<ByteVarOf<Byte>>? {
     val instance = state?.asStableRef<MergeOperator>()?.get()
-    return instance?.pinnedName
+    return instance?.pinnedName()
 }
 
 private fun deleteValueCallback(

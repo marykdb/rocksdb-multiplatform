@@ -1014,6 +1014,8 @@ internal constructor(
             val timestamp = alloc<ByteVar>()
             val timestampLength = alloc<size_tVar>()
             val valueFound = alloc<UByteVar>()
+            value.value = null
+            timestampLength.value = 0u
             rocksdb_key_may_exist(
                 native,
                 readOptions.native,
@@ -1026,6 +1028,7 @@ internal constructor(
                 valueFound.ptr,
             )
             valueHolder?.setValue(value.value?.toByteArray(valueLength.value))
+            value.value?.let { rocksdb_free(it) }
             return valueFound.value.toBoolean()
         }
     }
@@ -1043,6 +1046,8 @@ internal constructor(
             val timestamp = alloc<ByteVar>()
             val timestampLength = alloc<size_tVar>()
             val valueFound = alloc<UByteVar>()
+            value.value = null
+            timestampLength.value = 0u
             rocksdb_key_may_exist(
                 native,
                 readOptions.native,
@@ -1055,6 +1060,7 @@ internal constructor(
                 valueFound.ptr,
             )
             valueHolder?.setValue(value.value?.toByteArray(valueLength.value))
+            value.value?.let { rocksdb_free(it) }
             return valueFound.value.toBoolean()
         }
     }
@@ -1071,6 +1077,8 @@ internal constructor(
             val timestamp = alloc<ByteVar>()
             val timestampLength = alloc<size_tVar>()
             val valueFound = alloc<UByteVar>()
+            value.value = null
+            timestampLength.value = 0u
             val mayExist = rocksdb_key_may_exist_cf(
                 native,
                 readOptions.native,
@@ -1084,6 +1092,7 @@ internal constructor(
                 valueFound.ptr,
             )
             valueHolder?.setValue(value.value?.toByteArray(valueLength.value))
+            value.value?.let { rocksdb_free(it) }
             return mayExist > 0uL
         }
     }
@@ -1107,6 +1116,8 @@ internal constructor(
             val timestamp = alloc<ByteVar>()
             val timestampLength = alloc<size_tVar>()
             val valueFound = alloc<UByteVar>()
+            value.value = null
+            timestampLength.value = 0u
             val mayExist = rocksdb_key_may_exist_cf(
                 native,
                 readOptions.native,
@@ -1120,6 +1131,7 @@ internal constructor(
                 valueFound.ptr,
             )
             valueHolder?.setValue(value.value?.toByteArray(valueLength.value))
+            value.value?.let { rocksdb_free(it) }
             return mayExist > 0uL
         }
     }
@@ -1162,12 +1174,13 @@ internal constructor(
 
     actual fun getSnapshot(): Snapshot? {
         return Snapshot(
-            rocksdb.rocksdb_create_snapshot(native)!!
+            rocksdb.rocksdb_create_snapshot(native)!!,
+            this,
         )
     }
 
     actual fun releaseSnapshot(snapshot: Snapshot) {
-        rocksdb.rocksdb_release_snapshot(native, snapshot.native)
+        snapshot.releaseFrom(this)
     }
 
     actual fun getProperty(
@@ -1633,7 +1646,12 @@ internal constructor(
 
     actual fun promoteL0(targetLevel: Int) {
         wrapWithErrorThrower { error ->
-            rocksdb.rocksdb_promote_l0(native, getDefaultColumnFamily().native, targetLevel, error)
+            val defaultColumnFamily = getDefaultColumnFamily()
+            try {
+                rocksdb.rocksdb_promote_l0(native, defaultColumnFamily.native, targetLevel, error)
+            } finally {
+                defaultColumnFamily.close()
+            }
         }
     }
 
