@@ -219,6 +219,22 @@ class RocksDBTest {
         }
     }
 
+    @Test
+    fun segmentedPutChecksBounds() {
+        openRocksDB(createTestFolder()).use { db ->
+            val key = "key".encodeToByteArray()
+            val value = "value".encodeToByteArray()
+
+            assertFailsWith<IndexOutOfBoundsException> {
+                db.put(key, key.size + 1, 1, value, 0, value.size)
+            }
+
+            assertFailsWith<IndexOutOfBoundsException> {
+                db.put(key, 0, key.size, value, value.size + 1, 1)
+            }
+        }
+    }
+
     private class Segment(val data: ByteArray, val offset: Int, val len: Int) {
         fun isSamePayload(value: ByteArray?): Boolean {
             if (value == null) {

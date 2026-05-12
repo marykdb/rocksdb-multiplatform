@@ -17,8 +17,8 @@ actual abstract class ByteBuffer(
     capacity: Int
 ) : Buffer(capacity, capacity) {
     internal fun checkIndex(index: Int) {
-        if (index < 0 || index >= capacity) {
-            throw IndexOutOfBoundsException("Index $index out of bounds for buffer of capacity $capacity")
+        if (index < 0 || index >= limit) {
+            throw IndexOutOfBoundsException("Index $index out of bounds for buffer limit $limit")
         }
     }
 
@@ -27,6 +27,9 @@ actual abstract class ByteBuffer(
     }
 
     actual fun put(src: ByteArray): ByteBuffer {
+        if (src.size > remaining()) {
+            throw IndexOutOfBoundsException("source size=${src.size}, remaining=${remaining()}")
+        }
         for (byte in src) {
             nativePointer[position++] = byte
         }
@@ -41,8 +44,8 @@ actual abstract class ByteBuffer(
         if (offset < 0 || length < 0 || offset + length > dst.size) {
             throw IndexOutOfBoundsException("offset=$offset, length=$length, destination size=${dst.size}")
         }
-        if (length > capacity - position) {
-            throw Exception("Not enough bytes left to fill destination byte array")
+        if (length > remaining()) {
+            throw IndexOutOfBoundsException("length=$length, remaining=${remaining()}")
         }
         for (index in 0 until length) {
             dst[index + offset] = nativePointer[index + position]
@@ -69,7 +72,7 @@ actual abstract class ByteBuffer(
     actual abstract fun getInt(): Int
 
     internal fun readInt(): Int {
-        if (position + 4 > capacity) {
+        if (position + 4 > limit) {
             throw IllegalStateException("Not enough bytes left for int")
         }
         var int = 0 xor (this[position++].toInt() and 0xFF)
@@ -85,11 +88,15 @@ class DirectByteBuffer internal constructor(
     nativePointer: CPointer<ByteVar>,
     capacity: Int
 ) : ByteBuffer(nativePointer, capacity) {
-    override fun get(index: Int) = nativePointer[index]
+    override fun get(index: Int): Byte {
+        checkIndex(index)
+        return nativePointer[index]
+    }
 
     override fun getInt() = readInt()
 
     override fun put(index: Int, byte: Byte): ByteBuffer {
+        checkIndex(index)
         nativePointer[index] = byte
         return this
     }
@@ -99,11 +106,15 @@ class HeapByteBuffer internal constructor(
     nativePointer: CPointer<ByteVar>,
     capacity: Int
 ) : ByteBuffer(nativePointer, capacity) {
-    override fun get(index: Int) = nativePointer[index]
+    override fun get(index: Int): Byte {
+        checkIndex(index)
+        return nativePointer[index]
+    }
 
     override fun getInt() = readInt()
 
     override fun put(index: Int, byte: Byte): ByteBuffer {
+        checkIndex(index)
         nativePointer[index] = byte
         return this
     }

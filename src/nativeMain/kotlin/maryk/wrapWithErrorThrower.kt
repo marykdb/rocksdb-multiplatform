@@ -9,12 +9,9 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.toKString
 import kotlinx.cinterop.value
 import maryk.rocksdb.RocksDBException
-import maryk.rocksdb.Status
-import maryk.rocksdb.StatusCode
-import maryk.rocksdb.StatusSubCode
 import rocksdb.rocksdb_free
 
-private fun checkAndThrowError(errorRef: CPointerVar<ByteVar>) {
+private fun consumeError(errorRef: CPointerVar<ByteVar>): RocksDBException? {
     val errorPtr = errorRef.value
     val error = errorPtr?.toKString()
     if (errorPtr != null) {
@@ -22,9 +19,11 @@ private fun checkAndThrowError(errorRef: CPointerVar<ByteVar>) {
         errorRef.value = null
     }
 
-    if (error != null) {
-        throw RocksDBException(error, convertToStatus(error))
-    }
+    return error?.let { RocksDBException(it, convertToStatus(it)) }
+}
+
+private fun checkAndThrowError(errorRef: CPointerVar<ByteVar>) {
+    consumeError(errorRef)?.let { throw it }
 }
 
 fun <T: Any, R: Any> T.wrapWithErrorThrower(runnable: T.(CValuesRef<CPointerVar<ByteVar>>) -> R): R {
@@ -38,8 +37,7 @@ fun <T: Any, R: Any> T.wrapWithErrorThrower(runnable: T.(CValuesRef<CPointerVar<
             checkAndThrowError(errorRef)
             throw e
         } catch (e: Throwable) {
-            checkAndThrowError(errorRef)
-            throw RocksDBException(e.toString(), Status(StatusCode.Undefined, StatusSubCode.None, e.toString()))
+            throw consumeError(errorRef) ?: e
         }
     }
 }
@@ -55,8 +53,7 @@ fun <T: Any, R: Any> T.wrapWithNullErrorThrower(runnable: T.(CValuesRef<CPointer
             checkAndThrowError(errorRef)
             throw e
         } catch (e: Throwable) {
-            checkAndThrowError(errorRef)
-            throw RocksDBException(e.toString(), Status(StatusCode.Undefined, StatusSubCode.None, e.toString()))
+            throw consumeError(errorRef) ?: e
         }
     }
 }

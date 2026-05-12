@@ -60,7 +60,11 @@ actual class DirectSlice() : AbstractSlice<ByteBuffer>() {
     @OptIn(ExperimentalStdlibApi::class, UnsafeNumber::class)
     override fun toString(hex: Boolean): String {
         return data.nativePointer.toByteArray(data.capacity.asSizeT()).let { bytes ->
-            if (hex) bytes.toHexString() else bytes.decodeToString().replace("\u0000", "")
+            if (hex) {
+                bytes.toHexString()
+            } else {
+                bytes.takeWhile { it != 0.toByte() }.toByteArray().decodeToString()
+            }
         }
     }
 }

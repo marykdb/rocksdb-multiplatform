@@ -43,6 +43,18 @@ class DirectSliceTest {
     }
 
     @Test
+    fun directSliceStringStopsAtFirstNullByte() {
+        val data = byteArrayOf('a'.code.toByte(), 0, 'b'.code.toByte(), 0)
+        allocateDirectByteBuffer(data.size) { buffer ->
+            buffer.put(data)
+
+            DirectSlice(buffer).use { directSlice ->
+                assertEquals("a", directSlice.toString())
+            }
+        }
+    }
+
+    @Test
     fun directSliceWithByteBufferAndLength() {
         val data = "Some text".encodeToByteArray()
         allocateDirectByteBuffer(data.size) { buffer ->
