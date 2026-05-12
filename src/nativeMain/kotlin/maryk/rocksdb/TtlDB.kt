@@ -13,7 +13,7 @@ import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.set
-import kotlinx.cinterop.toCValues
+import maryk.byteArrayToCPointer
 import maryk.toUByte
 import maryk.wrapWithErrorThrower
 import maryk.wrapWithNullErrorThrower
@@ -79,7 +79,8 @@ actual fun openTtlDB(
         val namesArray = allocArray<CPointerVar<ByteVar>>(count)
         val ttlArray = allocArray<IntVar>(count)
         columnFamilyDescriptors.forEachIndexed { index, descriptor ->
-            namesArray[index] = descriptor.getName().toCValues().ptr
+            val name = descriptor.getName()
+            namesArray[index] = byteArrayToCPointer(name, 0, name.size)
             optionsArray[index] = descriptor.getOptions().native
             ttlArray[index] = ttlValues[index]
         }

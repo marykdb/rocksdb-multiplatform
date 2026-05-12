@@ -48,7 +48,6 @@ actual class ReadOptions private constructor(val native: CPointer<rocksdb_readop
             upperBound = null
             lowerBound?.free()
             lowerBound = null
-            tableFilterRef?.close()
             tableFilterRef = null
             rocksdb_readoptions_destroy(native)
             super.close()
@@ -186,7 +185,6 @@ private fun AbstractSlice<*>.copyBytes(): ByteArray = when (this) {
 
 actual fun ReadOptions.setTableFilter(tableFilter: AbstractTableFilter): ReadOptions {
     assert(isOwningHandle())
-    this.tableFilterRef?.close()
     this.tableFilterRef = tableFilter
     rocksdb_readoptions_set_table_filter(native, tableFilter.native)
     return this

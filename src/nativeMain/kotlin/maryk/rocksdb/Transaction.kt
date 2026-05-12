@@ -223,10 +223,14 @@ actual class Transaction(
         readOptions: ReadOptions,
         columnFamilyHandles: List<ColumnFamilyHandle>,
         keys: List<ByteArray>
-    ): List<ByteArray?> =
-        keys.mapIndexed { index, key ->
+    ): List<ByteArray?> {
+        if (columnFamilyHandles.size != keys.size) {
+            throw IllegalArgumentException("For each key there must be a related column family handle.")
+        }
+        return keys.mapIndexed { index, key ->
             get(readOptions, columnFamilyHandles[index], key)
         }
+    }
 
     actual fun multiGetAsList(readOptions: ReadOptions, keys: List<ByteArray>): List<ByteArray?> =
         keys.map { key -> get(readOptions, key) }

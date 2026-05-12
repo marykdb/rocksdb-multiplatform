@@ -8,7 +8,7 @@ import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.set
-import kotlinx.cinterop.toCValues
+import maryk.byteArrayToCPointer
 import maryk.wrapWithNullErrorThrower
 import kotlin.collections.plusAssign
 
@@ -30,7 +30,8 @@ actual fun openTransactionDB(
             val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
 
             columnFamilyDescriptors.forEachIndexed { index, cfDesc ->
-                namesArray[index] = cfDesc.getName().toCValues().ptr
+                val name = cfDesc.getName()
+                namesArray[index] = byteArrayToCPointer(name, 0, name.size)
                 optionsArray[index] = cfDesc.getOptions().native
             }
 

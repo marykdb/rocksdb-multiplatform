@@ -52,6 +52,23 @@ class SliceTest {
     }
 
     @Test
+    fun directSliceUtf8StringUsesByteLength() {
+        DirectSlice("é").use { slice ->
+            assertEquals("é".encodeToByteArray().size, slice.size())
+            assertEquals("é", slice.toString())
+        }
+    }
+
+    @Test
+    fun directSliceRemoveFullPrefix() {
+        DirectSlice("abc").use { slice ->
+            slice.removePrefix(3)
+            assertTrue(slice.empty())
+            assertEquals("", slice.toString())
+        }
+    }
+
+    @Test
     fun sliceEquals() {
         Slice("abc").use { slice ->
             Slice("abc").use { slice2 ->

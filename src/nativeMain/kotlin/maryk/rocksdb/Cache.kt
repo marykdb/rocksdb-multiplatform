@@ -24,7 +24,7 @@ actual abstract class Cache() : RocksObject() {
 
     override fun close() {
         if (isOwningHandle()) {
-            rocksdb.rocksdb_free(native)
+            rocksdb.rocksdb_cache_destroy(native)
         }
         super.close()
     }

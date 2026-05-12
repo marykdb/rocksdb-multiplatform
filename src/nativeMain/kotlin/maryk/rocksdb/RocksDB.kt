@@ -78,6 +78,7 @@ import rocksdb.rocksdb_livefiles_destroy
 import rocksdb.rocksdb_livefiles_largestkey
 import rocksdb.rocksdb_livefiles_level
 import rocksdb.rocksdb_livefiles_name
+import rocksdb.rocksdb_livefiles_path
 import rocksdb.rocksdb_livefiles_size
 import rocksdb.rocksdb_livefiles_smallestkey
 import rocksdb.rocksdb_merge
@@ -881,7 +882,7 @@ internal constructor(
         opt: ReadOptions,
         keys: List<ByteArray>
     ): List<ByteArray?> {
-        assert(keys.isNotEmpty())
+        if (keys.isEmpty()) return emptyList()
 
         return wrapWithMultiErrorThrower(keys.size) { error ->
             memScoped {
@@ -889,7 +890,7 @@ internal constructor(
                 val keyListSizes = allocArray<size_tVar>(keys.size)
 
                 keys.forEachIndexed { index, bytes ->
-                    keyList[index] = bytes.toCValues().ptr
+                    keyList[index] = byteArrayToCPointer(bytes, 0, bytes.size)
                     keyListSizes[index] = bytes.size.asSizeT()
                 }
 
@@ -927,10 +928,10 @@ internal constructor(
         columnFamilyHandleList: List<ColumnFamilyHandle>,
         keys: List<ByteArray>
     ): List<ByteArray?> {
-        if (columnFamilyHandleList.isEmpty()) {
-            throw IllegalArgumentException("columnFamilyHandleList is empty")
+        if (keys.isEmpty()) return emptyList()
+        if (columnFamilyHandleList.size != keys.size) {
+            throw IllegalArgumentException("For each key there must be a related column family handle.")
         }
-        assert(keys.isNotEmpty())
 
         return wrapWithMultiErrorThrower(keys.size) { error ->
             memScoped {
@@ -943,7 +944,7 @@ internal constructor(
                 val keyListSizes = allocArray<size_tVar>(keys.size)
 
                 keys.forEachIndexed { index, bytes ->
-                    keyList[index] = bytes.toCValues().ptr
+                    keyList[index] = byteArrayToCPointer(bytes, 0, bytes.size)
                     keyListSizes[index] = bytes.size.asSizeT()
                 }
 
@@ -1016,7 +1017,7 @@ internal constructor(
             val valueFound = alloc<UByteVar>()
             value.value = null
             timestampLength.value = 0u
-            rocksdb_key_may_exist(
+            val mayExist = rocksdb_key_may_exist(
                 native,
                 readOptions.native,
                 key.toCValues(),
@@ -1029,7 +1030,7 @@ internal constructor(
             )
             valueHolder?.setValue(value.value?.toByteArray(valueLength.value))
             value.value?.let { rocksdb_free(it) }
-            return valueFound.value.toBoolean()
+            return mayExist.toBoolean()
         }
     }
 
@@ -1048,7 +1049,7 @@ internal constructor(
             val valueFound = alloc<UByteVar>()
             value.value = null
             timestampLength.value = 0u
-            rocksdb_key_may_exist(
+            val mayExist = rocksdb_key_may_exist(
                 native,
                 readOptions.native,
                 byteArrayToCPointer(key, offset, len),
@@ -1061,7 +1062,7 @@ internal constructor(
             )
             valueHolder?.setValue(value.value?.toByteArray(valueLength.value))
             value.value?.let { rocksdb_free(it) }
-            return valueFound.value.toBoolean()
+            return mayExist.toBoolean()
         }
     }
 
@@ -1437,31 +1438,28 @@ internal constructor(
 
                     val namePtr = rocksdb_livefiles_name(liveFiles, index)
                     val name = namePtr?.toKString() ?: ""
+                    val pathPtr = rocksdb_livefiles_path(liveFiles, index)
+                    val path = pathPtr?.toKString() ?: ""
 
-                val smallestLen = alloc<size_tVar>()
-                val largestLen = alloc<size_tVar>()
-                val smallestPtr = rocksdb_livefiles_smallestkey(liveFiles, index, smallestLen.ptr)
-                val largestPtr = rocksdb_livefiles_largestkey(liveFiles, index, largestLen.ptr)
+                    val smallestLen = alloc<size_tVar>()
+                    val largestLen = alloc<size_tVar>()
+                    val smallestPtr = rocksdb_livefiles_smallestkey(liveFiles, index, smallestLen.ptr)
+                    val largestPtr = rocksdb_livefiles_largestkey(liveFiles, index, largestLen.ptr)
 
-                val smallestKey = smallestPtr?.toByteArray(smallestLen.value) ?: ByteArray(0)
-                val largestKey = largestPtr?.toByteArray(largestLen.value) ?: ByteArray(0)
+                    val smallestKey = smallestPtr?.toByteArray(smallestLen.value) ?: ByteArray(0)
+                    val largestKey = largestPtr?.toByteArray(largestLen.value) ?: ByteArray(0)
 
                     add(
                         LiveFileMetaData(
                             columnFamilyNameValue = cfName,
                             levelValue = rocksdb_livefiles_level(liveFiles, index),
                             fileName = name,
-                            path = name,
+                            path = path,
                             size = rocksdb_livefiles_size(liveFiles, index).convert(),
                             smallestKey = smallestKey,
                             largestKey = largestKey,
                         )
                     )
-
-                    cfNamePtr?.let { rocksdb_free(it) }
-                    namePtr?.let { rocksdb_free(it) }
-                    smallestPtr?.let { rocksdb_free(it) }
-                    largestPtr?.let { rocksdb_free(it) }
                 }
             }
         } finally {

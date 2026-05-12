@@ -40,7 +40,7 @@ actual class LRUCache private constructor() : Cache() {
 
     override fun close() {
         if (isOwningHandle()) {
-            rocksdb.rocksdb_free(options)
+            rocksdb.rocksdb_lru_cache_options_destroy(options)
         }
         super.close()
     }

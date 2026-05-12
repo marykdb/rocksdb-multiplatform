@@ -8,7 +8,7 @@ import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.set
-import kotlinx.cinterop.toCValues
+import maryk.byteArrayToCPointer
 import maryk.wrapWithNullErrorThrower
 import rocksdb.rocksdb_open
 import rocksdb.rocksdb_open_column_families
@@ -51,7 +51,8 @@ actual fun openRocksDB(
             val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
 
             columnFamilyDescriptors.forEachIndexed { index, cfDesc ->
-                namesArray[index] = cfDesc.getName().toCValues().ptr
+                val name = cfDesc.getName()
+                namesArray[index] = byteArrayToCPointer(name, 0, name.size)
                 optionsArray[index] = cfDesc.getOptions().native
             }
 
@@ -79,9 +80,7 @@ actual fun openReadOnlyRocksDB(path: String): RocksDB =
     }
 
 actual fun openReadOnlyRocksDB(options: Options, path: String): RocksDB = Unit.wrapWithNullErrorThrower { error ->
-    Options().use {
-        rocksdb_open_for_read_only(options.native, path, 0u, error)?.let(::RocksDB)
-    }
+    rocksdb_open_for_read_only(options.native, path, 0u, error)?.let(::RocksDB)
 } ?: throw RocksDBException("No Database could be opened at $path")
 
 actual fun openReadOnlyRocksDB(
@@ -106,7 +105,8 @@ actual fun openReadOnlyRocksDB(
                 val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
 
                 columnFamilyDescriptors.forEachIndexed { index, cfDesc ->
-                    namesArray[index] = cfDesc.getName().toCValues().ptr
+                    val name = cfDesc.getName()
+                    namesArray[index] = byteArrayToCPointer(name, 0, name.size)
                     optionsArray[index] = cfDesc.getOptions().native
                 }
 

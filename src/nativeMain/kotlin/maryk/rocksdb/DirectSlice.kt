@@ -24,7 +24,7 @@ actual class DirectSlice() : AbstractSlice<ByteBuffer>() {
     actual constructor(str: String) : this() {
         val bytes = str.encodeToByteArray()
         val pointer = scope.allocArrayOf(bytes)
-        data = DirectByteBuffer(pointer, str.length)
+        data = DirectByteBuffer(pointer, bytes.size)
     }
 
     actual constructor(data: ByteBuffer) : this() {
@@ -49,7 +49,7 @@ actual class DirectSlice() : AbstractSlice<ByteBuffer>() {
     }
 
     actual override fun removePrefix(n: Int) {
-        require(n < data.capacity)
+        require(n <= data.capacity)
         data = DirectByteBuffer(data.nativePointer.plus(n)!!, data.capacity - n)
     }
 
