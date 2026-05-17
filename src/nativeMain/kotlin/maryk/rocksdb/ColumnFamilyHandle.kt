@@ -19,7 +19,7 @@ internal constructor(
 )
     : RocksObject() {
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_column_family_handle_destroy(native)
             super.close()
         }
@@ -29,7 +29,9 @@ internal constructor(
     actual fun getName(): ByteArray = memScoped {
         val length = alloc<size_tVar>()
         rocksdb_column_family_handle_get_name(native, length.ptr)?.let { name ->
-            name.toByteArray(length.value).also {
+            try {
+                name.toByteArray(length.value)
+            } finally {
                 rocksdb.rocksdb_free(name)
             }
         } ?: throw RocksDBException("Missing Column Family Name")

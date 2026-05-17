@@ -8,7 +8,9 @@ import maryk.toBoolean
 import maryk.toUByte
 
 actual class TransactionOptions actual constructor(): RocksObject() {
-    val native = rocksdb.rocksdb_transaction_options_create()
+    val native = requireNotNull(rocksdb.rocksdb_transaction_options_create()) {
+        "Unable to allocate RocksDB transaction options"
+    }
 
     actual fun isSetSnapshot(): Boolean {
         return rocksdb.rocksdb_transaction_options_get_set_snapshot(native).toBoolean()
@@ -65,7 +67,7 @@ actual class TransactionOptions actual constructor(): RocksObject() {
     }
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb.rocksdb_transaction_options_destroy(native)
             super.close()
         }

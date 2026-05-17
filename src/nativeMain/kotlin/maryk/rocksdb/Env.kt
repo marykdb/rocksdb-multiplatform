@@ -34,7 +34,7 @@ protected constructor(internal val native: CPointer<rocksdb_env_t>?)
     }
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb.rocksdb_env_destroy(native)
         }
         super.close()

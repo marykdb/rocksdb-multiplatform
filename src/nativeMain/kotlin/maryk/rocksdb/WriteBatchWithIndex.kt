@@ -19,22 +19,43 @@ import rocksdb.rocksdb_free
 import rocksdb.rocksdb_writebatch_wi_create
 
 actual class WriteBatchWithIndex(
-    internal val native: CPointer<rocksdb_writebatch_wi_t>
+    internal val native: CPointer<rocksdb_writebatch_wi_t>,
+    private var ownedComparator: AbstractComparator? = null,
+    private val ownsNative: Boolean = true,
 ) : AbstractWriteBatch() {
+    init {
+        if (!ownsNative) {
+            borrowHandle()
+        }
+    }
+
     actual constructor() : this(false)
 
-    actual constructor(overwriteKey: Boolean) : this(rocksdb_writebatch_wi_create(0.convert(), if(overwriteKey) 1.convert() else 0.convert())!!)
+    actual constructor(overwriteKey: Boolean) : this(
+        rocksdb_writebatch_wi_create(0.convert(), if (overwriteKey) 1.convert() else 0.convert())!!
+    )
 
     actual constructor(fallbackIndexComparator: AbstractComparator, reservedBytes: Int, overwriteKey: Boolean) : this(
-        rocksdb.rocksdb_writebatch_wi_create_with_params(fallbackIndexComparator.native, reservedBytes.convert(), if(overwriteKey) 1.convert() else 0.convert(), 0.convert(), 0.convert())!!
+        createWithComparator(fallbackIndexComparator, reservedBytes, overwriteKey),
+        fallbackIndexComparator,
     )
 
     actual fun newIteratorWithBase(columnFamilyHandle: ColumnFamilyHandle, baseIterator: RocksIterator): RocksIterator {
-        return rocksdb.rocksdb_writebatch_wi_create_iterator_with_base_cf(native, baseIterator.native, columnFamilyHandle.native)!!.let(::RocksIterator)
+        check(baseIterator.isOwningHandle()) { "Base iterator is already closed or transferred." }
+        val iterator = rocksdb.rocksdb_writebatch_wi_create_iterator_with_base_cf(
+            native,
+            baseIterator.native,
+            columnFamilyHandle.native
+        )
+        baseIterator.transferWrapperOwnershipToNative()
+        return RocksIterator(iterator!!)
     }
 
     actual fun newIteratorWithBase(baseIterator: RocksIterator): RocksIterator {
-        return rocksdb.rocksdb_writebatch_wi_create_iterator_with_base(native, baseIterator.native)!!.let(::RocksIterator)
+        check(baseIterator.isOwningHandle()) { "Base iterator is already closed or transferred." }
+        val iterator = rocksdb.rocksdb_writebatch_wi_create_iterator_with_base(native, baseIterator.native)
+        baseIterator.transferWrapperOwnershipToNative()
+        return RocksIterator(iterator!!)
     }
 
     actual fun getFromBatch(columnFamilyHandle: ColumnFamilyHandle, options: DBOptions, key: ByteArray): ByteArray? {
@@ -89,8 +110,13 @@ actual class WriteBatchWithIndex(
     }
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (ownsNative && tryClose()) {
             rocksdb.rocksdb_writebatch_wi_destroy(native)
+            ownedComparator?.closeFromOptions()
+            ownedComparator = null
+            super.close()
+        } else if (!ownsNative && tryCloseBorrowed()) {
+            rocksdb_free(native)
             super.close()
         }
     }
@@ -194,4 +220,26 @@ actual class WriteBatchWithIndex(
         WriteBatch(rocksdb.rocksdb_writebatch_wi_get_write_batch(native)!!).also {
             it.disownHandle()
         }
+
+    companion object {
+        private fun createWithComparator(
+            fallbackIndexComparator: AbstractComparator,
+            reservedBytes: Int,
+            overwriteKey: Boolean,
+        ): CPointer<rocksdb_writebatch_wi_t> {
+            val comparatorNative = fallbackIndexComparator.transferOwnershipToOptions()
+            try {
+                return rocksdb.rocksdb_writebatch_wi_create_with_params(
+                    comparatorNative,
+                    reservedBytes.convert(),
+                    if (overwriteKey) 1.convert() else 0.convert(),
+                    0.convert(),
+                    0.convert()
+                )!!
+            } catch (throwable: Throwable) {
+                fallbackIndexComparator.closeFromOptions()
+                throw throwable
+            }
+        }
+    }
 }

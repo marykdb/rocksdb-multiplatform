@@ -75,15 +75,26 @@ actual class ColumnFamilyOptions private constructor(
     }
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             val comparator = ownedComparator
             ownedComparator = null
             if (comparator != null) {
                 rocksdb_options_set_comparator(native, null)
             }
             rocksdb_options_destroy(native)
-            comparator?.close()
+            comparator?.closeFromOptions()
+            tableFormatConfig = null
             super.close()
+        }
+    }
+
+    internal fun releaseOwnedComparator(): AbstractComparator? {
+        val comparator = ownedComparator
+        if (comparator != null) {
+            rocksdb_options_set_comparator(native, null)
+        }
+        return comparator.also {
+            ownedComparator = null
         }
     }
 
@@ -98,35 +109,35 @@ actual class ColumnFamilyOptions private constructor(
     }
 
     actual fun setMinWriteBufferNumberToMerge(minWriteBufferNumberToMerge: Int): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_min_write_buffer_number_to_merge(native, minWriteBufferNumberToMerge)
         return this
     }
 
     actual fun minWriteBufferNumberToMerge(): Int {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_min_write_buffer_number_to_merge(native)
     }
 
     actual fun setBloomLocality(bloomLocality: Int): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_bloom_locality(native, bloomLocality.toUInt())
         return this
     }
 
     actual fun bloomLocality(): Int {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_bloom_locality(native).toInt()
     }
 
     actual fun setNumLevels(numLevels: Int): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_num_levels(native, numLevels)
         return this
     }
 
     actual fun numLevels(): Int {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_num_levels(native)
     }
 
@@ -144,30 +155,34 @@ actual class ColumnFamilyOptions private constructor(
             BuiltinComparator.BYTEWISE_COMPARATOR -> BytewiseComparator(null)
             BuiltinComparator.REVERSE_BYTEWISE_COMPARATOR -> ReverseBytewiseComparator(null)
         }
-        rocksdb_options_set_comparator(native, comparator.native)
-        ownedComparator?.close()
+        val previous = ownedComparator
+        val comparatorNative = comparator.transferOwnershipToOptions()
+        rocksdb_options_set_comparator(native, comparatorNative)
         ownedComparator = comparator
+        previous?.closeFromOptions()
         return this
     }
 
     actual fun setComparator(comparator: AbstractComparator): ColumnFamilyOptions {
-        ownedComparator?.let {
-            rocksdb_options_set_comparator(native, null)
-            it.close()
+        if (ownedComparator === comparator) {
+            return this
         }
-        rocksdb_options_set_comparator(native, comparator.native)
-        ownedComparator = null
+        val previous = ownedComparator
+        val comparatorNative = comparator.transferOwnershipToOptions()
+        rocksdb_options_set_comparator(native, comparatorNative)
+        ownedComparator = comparator
+        previous?.closeFromOptions()
         return this
     }
 
     actual fun setMergeOperator(mergeOperator: MergeOperator): ColumnFamilyOptions {
-        rocksdb.rocksdb_options_set_merge_operator(native, mergeOperator.native)
         mergeOperator.transferOwnershipToNative()
+        rocksdb.rocksdb_options_set_merge_operator(native, mergeOperator.native)
         return this
     }
 
     actual fun useFixedLengthPrefixExtractor(n: Int): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_prefix_extractor(native, rocksdb_slicetransform_create_fixed_prefix(n.asSizeT()))
         return this
     }
@@ -181,169 +196,169 @@ actual class ColumnFamilyOptions private constructor(
         rocksdb_options_get_max_bytes_for_level_multiplier(native)
 
     actual fun setWriteBufferSize(writeBufferSize: Long): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_write_buffer_size(native, writeBufferSize.asSizeT())
         return this
     }
 
     actual fun writeBufferSize(): Long {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_write_buffer_size(native).toLong()
     }
 
     actual fun setDisableAutoCompactions(disableAutoCompactions: Boolean): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_disable_auto_compactions(native, if (disableAutoCompactions) 1 else 0)
         return this
     }
 
     actual fun disableAutoCompactions(): Boolean {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_disable_auto_compactions(native).toBoolean()
     }
 
     actual fun setLevel0FileNumCompactionTrigger(level0FileNumCompactionTrigger: Int): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_level0_file_num_compaction_trigger(native, level0FileNumCompactionTrigger)
         return this
     }
 
     actual fun level0FileNumCompactionTrigger(): Int {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_level0_file_num_compaction_trigger(native)
     }
 
     actual fun setMaxBytesForLevelBase(maxBytesForLevelBase: Long): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_max_bytes_for_level_base(native, maxBytesForLevelBase.toULong())
         return this
     }
 
     actual fun maxBytesForLevelBase(): Long {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_max_bytes_for_level_base(native).toLong()
     }
 
     actual fun setCompressionType(compressionType: CompressionType): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_compression(native, compressionType.value.toInt())
         return this
     }
 
     actual fun compressionType(): CompressionType {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return getCompressionType(
             rocksdb_options_get_compression(native).toByte()
         )
     }
 
     actual fun setMaxWriteBufferNumber(maxWriteBufferNumber: Int): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_max_write_buffer_number(native, maxWriteBufferNumber)
         return this
     }
 
     actual fun maxWriteBufferNumber(): Int {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_max_write_buffer_number(native)
     }
 
     actual fun setMemtablePrefixBloomSizeRatio(memtablePrefixBloomSizeRatio: Double): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_memtable_prefix_bloom_size_ratio(native, memtablePrefixBloomSizeRatio)
         return this
     }
 
     actual fun memtablePrefixBloomSizeRatio(): Double {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_memtable_prefix_bloom_size_ratio(native)
     }
 
     actual fun setMemtableHugePageSize(memtableHugePageSize: Long): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_memtable_huge_page_size(native, memtableHugePageSize.asSizeT())
         return this
     }
 
     actual fun memtableHugePageSize(): Long {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_memtable_huge_page_size(native).toLong()
     }
 
     actual fun setArenaBlockSize(arenaBlockSize: Long): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_arena_block_size(native, arenaBlockSize.asSizeT())
         return this
     }
 
     actual fun arenaBlockSize(): Long {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_arena_block_size(native).toLong()
     }
 
     actual fun setLevel0SlowdownWritesTrigger(level0SlowdownWritesTrigger: Int): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_level0_slowdown_writes_trigger(native, level0SlowdownWritesTrigger)
         return this
     }
 
     actual fun level0SlowdownWritesTrigger(): Int {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_level0_slowdown_writes_trigger(native)
     }
 
     actual fun setLevel0StopWritesTrigger(level0StopWritesTrigger: Int): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_level0_stop_writes_trigger(native, level0StopWritesTrigger)
         return this
     }
 
     actual fun level0StopWritesTrigger(): Int {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_level0_stop_writes_trigger(native)
     }
 
     actual fun setTargetFileSizeBase(targetFileSizeBase: Long): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_target_file_size_base(native, targetFileSizeBase.toULong())
         return this
     }
 
     actual fun targetFileSizeBase(): Long {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_target_file_size_base(native).toLong()
     }
 
     actual fun setTargetFileSizeMultiplier(multiplier: Int): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_target_file_size_multiplier(native, multiplier)
         return this
     }
 
     actual fun targetFileSizeMultiplier(): Int {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_target_file_size_multiplier(native)
     }
 
     actual fun setMaxSequentialSkipInIterations(maxSequentialSkipInIterations: Long): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_max_sequential_skip_in_iterations(native, maxSequentialSkipInIterations.toULong())
         return this
     }
 
     actual fun maxSequentialSkipInIterations(): Long {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_max_sequential_skip_in_iterations(native).toLong()
     }
 
     actual fun setMaxSuccessiveMerges(maxSuccessiveMerges: Long): ColumnFamilyOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_max_successive_merges(native, maxSuccessiveMerges.asSizeT())
         return this
     }
 
     actual fun maxSuccessiveMerges(): Long {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_options_get_max_successive_merges(native).toLong()
     }
 }

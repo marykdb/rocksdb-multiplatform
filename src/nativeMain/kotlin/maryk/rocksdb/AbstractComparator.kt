@@ -44,10 +44,14 @@ actual abstract class AbstractComparator
     private val nameCallback = staticCFunction<COpaquePointer?, CPointer<ByteVar>?> { statePtr ->
         val comparator = statePtr?.asStableRef<AbstractComparator>()?.get()
             ?: return@staticCFunction null
-        comparator.pinnedName()
+        try {
+            comparator.pinnedName()
+        } catch (_: Throwable) {
+            null
+        }
     }
 
-    private val stableRef = StableRef.create(this)
+    private var stableRef: StableRef<AbstractComparator>? = null
 
     private val destructorCallback = staticCFunction<COpaquePointer?, Unit> { ref ->
         ref?.asStableRef<AbstractComparator>()?.let { stableRef ->
@@ -56,29 +60,69 @@ actual abstract class AbstractComparator
         }
     }
 
-    val native: CPointer<rocksdb_comparator_t>? by lazy {
-        rocksdb.rocksdb_comparator_create(
-            name = nameCallback,
-            state = stableRef.asCPointer(),
-            compare = staticCFunction { statePtr, aPtr, aLen, bPtr, bLen ->
-                val comparator = statePtr?.asStableRef<AbstractComparator>()?.get()
-                    ?: return@staticCFunction 0
+    private val nativeRef = lazy {
+        val ref = StableRef.create(this)
+        try {
+            val created = rocksdb.rocksdb_comparator_create(
+                name = nameCallback,
+                state = ref.asCPointer(),
+                compare = staticCFunction { statePtr, aPtr, aLen, bPtr, bLen ->
+                    val comparator = statePtr?.asStableRef<AbstractComparator>()?.get()
+                        ?: return@staticCFunction 0
 
-                if (aPtr == null || bPtr == null) {
-                    return@staticCFunction 0
-                }
+                    if (aPtr == null || bPtr == null) {
+                        return@staticCFunction 0
+                    }
 
-                comparator.compare(DirectByteBuffer(aPtr, aLen.toInt()), DirectByteBuffer(bPtr, bLen.toInt()))
-            },
-            destructor = destructorCallback,
-        )
+                    try {
+                        comparator.compare(DirectByteBuffer(aPtr, aLen.toInt()), DirectByteBuffer(bPtr, bLen.toInt()))
+                    } catch (_: Throwable) {
+                        0
+                    }
+                },
+                destructor = destructorCallback,
+            ) ?: error("Unable to create RocksDB comparator")
+            stableRef = ref
+            created
+        } catch (throwable: Throwable) {
+            ref.dispose()
+            throw throwable
+        }
     }
 
+    // This intentionally does not check ownership: option/DB cleanup still needs
+    // the initialized pointer after ownership has moved out of the user object.
+    val native: CPointer<rocksdb_comparator_t>
+        get() = nativeRef.value
+
     actual override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             destroyFromNative()
-            rocksdb_comparator_destroy(native)
+            if (nativeRef.isInitialized()) {
+                rocksdb_comparator_destroy(native)
+            } else {
+                stableRef?.dispose()
+                stableRef = null
+            }
             super.close()
+        }
+    }
+
+    internal fun transferOwnershipToOptions(): CPointer<rocksdb_comparator_t> {
+        checkOwningHandle()
+        val nativeHandle = native
+        check(disownHandle()) { "Comparator is already closed or registered." }
+        return nativeHandle
+    }
+
+    internal fun closeFromOptions() {
+        if (tryCloseTransferred()) {
+            if (nativeRef.isInitialized()) {
+                rocksdb_comparator_destroy(native)
+            } else {
+                stableRef?.dispose()
+                stableRef = null
+            }
         }
     }
 
@@ -103,7 +147,8 @@ actual abstract class AbstractComparator
 }
 
 actual fun AbstractComparator.getComparatorType(): ComparatorType {
-    val value = native?.let { rocksdb_comparator_get_comparator_type(it) } ?: 0
+    checkOwningHandle()
+    val value = rocksdb_comparator_get_comparator_type(native)
     return when (value) {
         0 -> ComparatorType.JAVA_COMPARATOR
         1 -> ComparatorType.JAVA_NATIVE_COMPARATOR_WRAPPER

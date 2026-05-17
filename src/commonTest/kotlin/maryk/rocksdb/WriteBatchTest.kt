@@ -283,4 +283,30 @@ class WriteBatchTest {
             assertEquals(2, writeBatch.count())
         }
     }
+
+    @Test
+    fun newIteratorWithBaseTransfersBaseIteratorOwnership() {
+        openRocksDB(createTestFolder()).use { db ->
+            db.put("a".encodeToByteArray(), "db".encodeToByteArray())
+
+            WriteBatchWithIndex().use { batch ->
+                batch.put("b".encodeToByteArray(), "batch".encodeToByteArray())
+
+                val baseIterator = db.newIterator()
+                batch.newIteratorWithBase(baseIterator).use { iterator ->
+                    baseIterator.close()
+
+                    iterator.seekToFirst()
+                    assertTrue(iterator.isValid())
+                    assertContentEquals("a".encodeToByteArray(), iterator.key())
+                    assertContentEquals("db".encodeToByteArray(), iterator.value())
+
+                    iterator.next()
+                    assertTrue(iterator.isValid())
+                    assertContentEquals("b".encodeToByteArray(), iterator.key())
+                    assertContentEquals("batch".encodeToByteArray(), iterator.value())
+                }
+            }
+        }
+    }
 }

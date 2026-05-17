@@ -7,14 +7,16 @@ import rocksdb.rocksdb_restore_options_set_keep_log_files
 actual class RestoreOptions actual constructor(
     val keepLogFiles: Boolean
 ) : RocksObject() {
-    val native = rocksdb_restore_options_create()
+    val native = requireNotNull(rocksdb_restore_options_create()) {
+        "Unable to allocate RocksDB restore options"
+    }
 
     init {
         rocksdb_restore_options_set_keep_log_files(native, if (keepLogFiles) 1 else 0)
     }
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_restore_options_destroy(native)
             super.close()
         }

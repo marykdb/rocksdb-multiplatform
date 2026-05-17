@@ -23,7 +23,7 @@ actual class WriteOptions internal constructor(
     actual constructor() : this(rocksdb_writeoptions_create()!!)
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_writeoptions_destroy(native)
             super.close()
         }

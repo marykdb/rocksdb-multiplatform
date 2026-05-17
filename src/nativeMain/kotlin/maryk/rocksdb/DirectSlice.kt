@@ -2,12 +2,15 @@ package maryk.rocksdb
 
 import kotlinx.cinterop.Arena
 import kotlinx.cinterop.ByteVar
+import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.alloc
+import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.allocArrayOf
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.plus
 import kotlinx.cinterop.ptr
+import kotlinx.cinterop.set
 import maryk.ByteBuffer
 import maryk.DirectByteBuffer
 import maryk.asSizeT
@@ -29,14 +32,14 @@ actual class DirectSlice() : AbstractSlice<ByteBuffer>() {
 
     actual constructor(data: ByteBuffer) : this() {
         require(data is DirectByteBuffer) { "DirectSlice requires a direct ByteBuffer" }
-        this.data = data
+        this.data = scope.copyBuffer(data, data.capacity)
     }
 
-    actual constructor(data: ByteBuffer, length: Int) : this(
-        data.also {
-            require(it is DirectByteBuffer) { "DirectSlice requires a direct ByteBuffer" }
-        }.let { DirectByteBuffer(it.nativePointer, length) }
-    )
+    actual constructor(data: ByteBuffer, length: Int) : this() {
+        require(data is DirectByteBuffer) { "DirectSlice requires a direct ByteBuffer" }
+        require(length <= data.capacity) { "length must not exceed buffer capacity" }
+        this.data = scope.copyBuffer(data, length)
+    }
 
     override fun getData(): ByteBuffer = data
 
@@ -70,3 +73,15 @@ actual class DirectSlice() : AbstractSlice<ByteBuffer>() {
 }
 private val emptyByte = nativeHeap.alloc<ByteVar>()
 actual val DirectSliceNone = DirectSlice(DirectByteBuffer(emptyByte.ptr, 0))
+
+private fun Arena.copyBuffer(buffer: ByteBuffer, length: Int): DirectByteBuffer {
+    if (length == 0) {
+        return DirectByteBuffer(emptyByte.ptr, 0)
+    }
+
+    val pointer: CPointer<ByteVar> = allocArray(length)
+    for (index in 0 until length) {
+        pointer[index] = buffer[index]
+    }
+    return DirectByteBuffer(pointer, length)
+}

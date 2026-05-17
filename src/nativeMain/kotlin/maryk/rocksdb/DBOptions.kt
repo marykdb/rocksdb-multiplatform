@@ -36,14 +36,14 @@ import rocksdb.rocksdb_options_set_wal_recovery_mode
 import rocksdb.rocksdb_options_set_env
 
 actual fun DBOptions.addEventListener(listener: EventListener): DBOptions {
+    check(listener.disownHandle()) { "EventListener is already closed or registered." }
     rocksdb_options_add_eventlistener(native, listener.native)
-    listener.disownHandle()
     return this
 }
 
 actual fun Options.addEventListener(listener: EventListener): Options {
+    check(listener.disownHandle()) { "EventListener is already closed or registered." }
     rocksdb_options_add_eventlistener(native, listener.native)
-    listener.disownHandle()
     return this
 }
 
@@ -56,8 +56,11 @@ actual class DBOptions internal constructor(
     actual constructor() : this(rocksdb_options_create()!!)
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
+            statistics?.disconnectFromNative(native)
             rocksdb_options_destroy(native)
+            statistics = null
+            env = null
             super.close()
         }
     }
@@ -104,6 +107,7 @@ actual class DBOptions internal constructor(
     )
 
     actual fun setStatistics(statistics: Statistics): DBOptions {
+        this.statistics?.disconnectFromNative(native)
         this.statistics = statistics
         statistics.connectWithNative(native)
         return this
@@ -125,6 +129,9 @@ actual class DBOptions internal constructor(
         }
         return env!!
     }
+
+    internal fun retainedNativeReferences(): List<Any> =
+        listOfNotNull(env, statistics)
 
     actual fun setUseFsync(useFsync: Boolean): DBOptions {
         rocksdb_options_set_use_fsync(native, if (useFsync) 1 else 0)

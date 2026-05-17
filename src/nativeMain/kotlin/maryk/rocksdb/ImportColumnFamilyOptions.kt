@@ -30,7 +30,7 @@ actual class ImportColumnFamilyOptions internal constructor(
     }
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_import_column_family_options_destroy(native)
             super.close()
         }

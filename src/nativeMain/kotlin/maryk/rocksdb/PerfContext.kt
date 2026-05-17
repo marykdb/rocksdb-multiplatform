@@ -19,7 +19,7 @@ actual class PerfContext internal constructor(
     constructor() : this(rocksdb_perfcontext_create()!!)
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_perfcontext_destroy(native)
             super.close()
         }
@@ -244,7 +244,13 @@ actual class PerfContext internal constructor(
 
     actual fun toString(excludeZeroCounters: Boolean): String {
         val raw = rocksdb_perfcontext_report(native, if (excludeZeroCounters) 1u else 0u)
-        return raw?.toKString().also { rocksdb_free(raw) } ?: ""
+        return raw?.let {
+            try {
+                it.toKString()
+            } finally {
+                rocksdb_free(it)
+            }
+        } ?: ""
     }
 
     private enum class PerfContextMetric(val id: Int) {

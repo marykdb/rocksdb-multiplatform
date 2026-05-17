@@ -21,6 +21,7 @@ import maryk.asSizeT
 import maryk.wrapWithNullErrorThrower
 import platform.posix.size_tVar
 import rocksdb.rocksdb_free
+import rocksdb.rocksdb_options_create_copy
 import rocksdb.rocksdb_optionsutil_descriptor_name
 import rocksdb.rocksdb_optionsutil_descriptor_options
 import rocksdb.rocksdb_optionsutil_descriptors_count
@@ -59,9 +60,13 @@ actual object OptionsUtil {
         val pointer = Unit.wrapWithNullErrorThrower { error ->
             rocksdb_optionsutil_get_latest_options_file_name(dbPath, env.native, error)
         }
-        val fileName = pointer?.toKString().orEmpty()
-        pointer?.let { rocksdb_free(it) }
-        return fileName
+        return pointer?.let {
+            try {
+                it.toKString()
+            } finally {
+                rocksdb_free(it)
+            }
+        }.orEmpty()
     }
 
     private inline fun loadDescriptors(
@@ -95,17 +100,37 @@ actual object OptionsUtil {
     ) {
         val count = rocksdb_optionsutil_descriptors_count(bundle).toInt()
         if (count == 0) return
-        repeat(count) { index ->
-            memScoped {
-                val length = alloc<size_tVar>()
-                val namePtr = rocksdb_optionsutil_descriptor_name(bundle, index.asSizeT(), length.ptr)
-                val name = namePtr?.readBytes(length.value.toInt()) ?: ByteArray(0)
-                namePtr?.let { rocksdb_free(it) }
-                val optionsPtr = rocksdb_optionsutil_descriptor_options(bundle, index.asSizeT())
-                requireNotNull(optionsPtr) { "Column family options pointer was null" }
-                val cfOptions = ColumnFamilyOptions.wrap(optionsPtr, owning = true)
-                columnFamilyDescriptors += ColumnFamilyDescriptor(name, cfOptions)
+        val outputStartSize = columnFamilyDescriptors.size
+        try {
+            repeat(count) { index ->
+                memScoped {
+                    val length = alloc<size_tVar>()
+                    val namePtr = rocksdb_optionsutil_descriptor_name(bundle, index.asSizeT(), length.ptr)
+                    val name = namePtr?.readBytes(length.value.toInt()) ?: ByteArray(0)
+                    val optionsPtr = rocksdb_optionsutil_descriptor_options(bundle, index.asSizeT())
+                    requireNotNull(optionsPtr) { "Column family options pointer was null" }
+
+                    val copiedOptions = ColumnFamilyOptions.wrap(
+                        requireNotNull(rocksdb_options_create_copy(optionsPtr)) {
+                            "Unable to copy column family options"
+                        },
+                        owning = true,
+                    )
+                    var cfOptions: ColumnFamilyOptions? = copiedOptions
+                    try {
+                        val descriptor = ColumnFamilyDescriptor(name, copiedOptions)
+                        cfOptions = null
+                        columnFamilyDescriptors += descriptor
+                    } finally {
+                        cfOptions?.close()
+                    }
+                }
             }
+        } catch (throwable: Throwable) {
+            while (columnFamilyDescriptors.size > outputStartSize) {
+                columnFamilyDescriptors.removeAt(columnFamilyDescriptors.lastIndex).getOptions().close()
+            }
+            throw throwable
         }
     }
 }

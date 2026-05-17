@@ -21,7 +21,7 @@ actual class CompactRangeOptions internal constructor(
     actual constructor() : this(rocksdb_compactoptions_create()!!)
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_compactoptions_destroy(native)
             super.close()
         }

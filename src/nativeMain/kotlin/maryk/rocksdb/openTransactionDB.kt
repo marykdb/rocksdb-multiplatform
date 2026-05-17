@@ -26,6 +26,7 @@ actual fun openTransactionDB(
 
     return Unit.wrapWithNullErrorThrower { error ->
         memScoped {
+            val retainedReferences = dbOptions.retainedNativeReferences()
             val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
             val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
 
@@ -37,7 +38,7 @@ actual fun openTransactionDB(
 
             val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyDescriptors.size)
 
-            rocksdb.rocksdb_transactiondb_open_column_families(
+            val native = rocksdb.rocksdb_transactiondb_open_column_families(
                 dbOptions.native,
                 transactionDbOptions.native,
                 path,
@@ -46,10 +47,16 @@ actual fun openTransactionDB(
                 optionsArray,
                 handles,
                 error,
-            )?.let(::TransactionDB).also {
-                for (i in columnFamilyDescriptors.indices) {
-                    columnFamilyHandles += ColumnFamilyHandle(handles[i]!!)
-                }
+            ) ?: return@memScoped null
+
+            wrapOpenedColumnFamilies(
+                handles = handles,
+                count = columnFamilyDescriptors.size,
+                columnFamilyDescriptors = columnFamilyDescriptors,
+                columnFamilyHandles = columnFamilyHandles,
+                closeNativeDb = { rocksdb.rocksdb_transactiondb_close(native) },
+            ) { ownedComparators ->
+                TransactionDB(native, ownedComparators, retainedReferences)
             }
         }
     } ?: throw RocksDBException("No Database could be opened at $path with given descriptors and handles for column families")
@@ -62,5 +69,13 @@ actual fun openTransactionDB(
     path: String
 ): TransactionDB =
     Unit.wrapWithNullErrorThrower { error ->
-        rocksdb.rocksdb_transactiondb_open(options.native, transactionDbOptions.native, path, error)?.let(::TransactionDB)
+        val retainedReferences = options.retainedNativeReferences()
+        rocksdb.rocksdb_transactiondb_open(options.native, transactionDbOptions.native, path, error)?.let { native ->
+            wrapOpenedDb(
+                closeNativeDb = { rocksdb.rocksdb_transactiondb_close(native) },
+                releaseComparator = { options.releaseOwnedComparator() },
+            ) { ownedComparators ->
+                TransactionDB(native, ownedComparators, retainedReferences)
+            }
+        }
     } ?: throw RocksDBException("No Database could be opened at $path")

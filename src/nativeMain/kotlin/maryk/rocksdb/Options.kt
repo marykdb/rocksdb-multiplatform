@@ -79,19 +79,36 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
     private var env: Env? = null
     private var tableFormatConfig: TableFormatConfig? = null
     private var ownedComparator: AbstractComparator? = null
+    private var sstFileManager: SstFileManager? = null
 
     actual constructor() : this(rocksdb_options_create()!!)
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             val comparator = ownedComparator
+            val attachedStatistics = statistics
             ownedComparator = null
             if (comparator != null) {
                 rocksdb_options_set_comparator(native, null)
             }
+            attachedStatistics?.disconnectFromNative(native)
             rocksdb_options_destroy(native)
-            comparator?.close()
+            comparator?.closeFromOptions()
+            statistics = null
+            env = null
+            tableFormatConfig = null
+            sstFileManager = null
             super.close()
+        }
+    }
+
+    internal fun releaseOwnedComparator(): AbstractComparator? {
+        val comparator = ownedComparator
+        if (comparator != null) {
+            rocksdb_options_set_comparator(native, null)
+        }
+        return comparator.also {
+            ownedComparator = null
         }
     }
 
@@ -107,8 +124,12 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
 
     actual fun setSstFileManager(sstFileManager: SstFileManager): Options {
         rocksdb_options_set_sst_file_manager(native, sstFileManager.native)
+        this.sstFileManager = sstFileManager
         return this
     }
+
+    internal fun retainedNativeReferences(): List<Any> =
+        listOfNotNull(env, statistics, sstFileManager)
 
     actual fun setMaxOpenFiles(maxOpenFiles: Int): Options {
         rocksdb_options_set_max_open_files(native, maxOpenFiles)
@@ -214,24 +235,28 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
             BuiltinComparator.BYTEWISE_COMPARATOR -> BytewiseComparator(null)
             BuiltinComparator.REVERSE_BYTEWISE_COMPARATOR -> ReverseBytewiseComparator(null)
         }
-        rocksdb_options_set_comparator(native, comparator.native)
-        ownedComparator?.close()
+        val previous = ownedComparator
+        val comparatorNative = comparator.transferOwnershipToOptions()
+        rocksdb_options_set_comparator(native, comparatorNative)
         ownedComparator = comparator
+        previous?.closeFromOptions()
         return this
     }
 
     actual fun setComparator(comparator: AbstractComparator): Options {
-        ownedComparator?.let {
-            rocksdb_options_set_comparator(native, null)
-            it.close()
+        if (ownedComparator === comparator) {
+            return this
         }
-        rocksdb_options_set_comparator(native, comparator.native)
-        ownedComparator = null
+        val previous = ownedComparator
+        val comparatorNative = comparator.transferOwnershipToOptions()
+        rocksdb_options_set_comparator(native, comparatorNative)
+        ownedComparator = comparator
+        previous?.closeFromOptions()
         return this
     }
 
     actual fun useFixedLengthPrefixExtractor(n: Int): Options {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_options_set_prefix_extractor(native, rocksdb_slicetransform_create_fixed_prefix(n.asSizeT()))
         return this
     }
@@ -322,6 +347,7 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
         getInfoLogLevel(rocksdb_options_get_info_log_level(native).toUByte())
 
     actual fun setStatistics(statistics: Statistics): Options {
+        this.statistics?.disconnectFromNative(native)
         this.statistics = statistics
         statistics.connectWithNative(native)
         return this

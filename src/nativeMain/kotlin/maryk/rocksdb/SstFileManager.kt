@@ -19,10 +19,11 @@ import rocksdb.rocksdb_sst_file_manager_set_max_allowed_space_usage
 import rocksdb.rocksdb_sst_file_manager_set_max_trash_db_ratio
 
 actual class SstFileManager internal constructor(
-    internal val native: CPointer<rocksdb_sst_file_manager_t>
+    internal val native: CPointer<rocksdb_sst_file_manager_t>,
+    private var envRef: Env? = null,
 ) : RocksObject() {
 
-    actual constructor(env: Env) : this(rocksdb_sst_file_manager_create(env.native)!!)
+    actual constructor(env: Env) : this(rocksdb_sst_file_manager_create(env.native)!!, env)
 
     actual fun setMaxAllowedSpaceUsage(maxAllowedSpace: Long) {
         rocksdb_sst_file_manager_set_max_allowed_space_usage(native, maxAllowedSpace.toULong())
@@ -55,8 +56,9 @@ actual class SstFileManager internal constructor(
     }
 
     actual override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_sst_file_manager_destroy(native)
+            envRef = null
             super.close()
         }
     }

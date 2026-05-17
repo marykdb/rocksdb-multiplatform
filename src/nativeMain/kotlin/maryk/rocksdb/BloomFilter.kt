@@ -24,7 +24,7 @@ actual class BloomFilter internal constructor(
     )
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_filterpolicy_destroy(native)
             super.close()
         }

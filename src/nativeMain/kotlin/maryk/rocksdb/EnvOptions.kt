@@ -9,7 +9,7 @@ actual class EnvOptions actual constructor() : RocksObject() {
     internal val native: CPointer<rocksdb_envoptions_t> = rocksdb_envoptions_create()!!
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_envoptions_destroy(native)
             super.close()
         }

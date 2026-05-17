@@ -22,7 +22,7 @@ actual class IngestExternalFileOptions actual constructor() : RocksObject() {
     private var ingestBehind = false
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_ingestexternalfileoptions_destroy(native)
             super.close()
         }

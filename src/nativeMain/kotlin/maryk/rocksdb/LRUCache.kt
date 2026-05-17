@@ -2,14 +2,10 @@
 
 package maryk.rocksdb
 
-import cnames.structs.rocksdb_lru_cache_options_t
-import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.UnsafeNumber
 import maryk.asSizeT
 
 actual class LRUCache private constructor() : Cache() {
-    lateinit var options: CPointer<rocksdb_lru_cache_options_t>
-
     actual constructor(capacity: Long) : this(capacity, -1, false, 0.0, 0.0)
 
     actual constructor(capacity: Long, numShardBits: Int) : this(capacity, numShardBits, false, 0.0, 0.0)
@@ -30,18 +26,23 @@ actual class LRUCache private constructor() : Cache() {
         highPriPoolRatio: Double,
         lowPriPoolRatio: Double
     ) : this() {
-        options = rocksdb.rocksdb_lru_cache_options_create()!!.apply {
-            rocksdb.rocksdb_lru_cache_options_set_capacity(this, capacity.asSizeT())
-            rocksdb.rocksdb_lru_cache_options_set_num_shard_bits(this, numShardBits)
+        val options = requireNotNull(rocksdb.rocksdb_lru_cache_options_create()) {
+            "Unable to allocate RocksDB LRU cache options"
         }
-
-        native = rocksdb.rocksdb_cache_create_lru_opts(options)!!
+        try {
+            rocksdb.rocksdb_lru_cache_options_set_capacity(options, capacity.asSizeT())
+            rocksdb.rocksdb_lru_cache_options_set_num_shard_bits(options, numShardBits)
+            native = requireNotNull(rocksdb.rocksdb_cache_create_lru_opts(options)) {
+                "Unable to allocate RocksDB LRU cache"
+            }
+        } finally {
+            rocksdb.rocksdb_lru_cache_options_destroy(options)
+        }
     }
 
     override fun close() {
-        if (isOwningHandle()) {
-            rocksdb.rocksdb_lru_cache_options_destroy(options)
+        if (tryClose()) {
+            rocksdb.rocksdb_cache_destroy(native)
         }
-        super.close()
     }
 }

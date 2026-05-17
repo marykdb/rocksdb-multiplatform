@@ -25,6 +25,7 @@ actual fun openOptimisticTransactionDB(
 
     return Unit.wrapWithNullErrorThrower { error ->
         memScoped {
+            val retainedReferences = dbOptions.retainedNativeReferences()
             val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
             val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
 
@@ -36,7 +37,7 @@ actual fun openOptimisticTransactionDB(
 
             val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyDescriptors.size)
 
-            rocksdb.rocksdb_optimistictransactiondb_open_column_families(
+            val native = rocksdb.rocksdb_optimistictransactiondb_open_column_families(
                 dbOptions.native,
                 path,
                 columnFamilyDescriptors.size,
@@ -44,10 +45,16 @@ actual fun openOptimisticTransactionDB(
                 optionsArray,
                 handles,
                 error,
-            )?.let(::OptimisticTransactionDB).also {
-                for (i in columnFamilyDescriptors.indices) {
-                    columnFamilyHandles += ColumnFamilyHandle(handles[i]!!)
-                }
+            ) ?: return@memScoped null
+
+            wrapOpenedColumnFamilies(
+                handles = handles,
+                count = columnFamilyDescriptors.size,
+                columnFamilyDescriptors = columnFamilyDescriptors,
+                columnFamilyHandles = columnFamilyHandles,
+                closeNativeDb = { rocksdb.rocksdb_optimistictransactiondb_close(native) },
+            ) { ownedComparators ->
+                OptimisticTransactionDB(native, ownedComparators, retainedReferences)
             }
         }
     } ?: throw RocksDBException("No Database could be opened at $path with given descriptors and handles for column families")
@@ -59,5 +66,13 @@ actual fun openOptimisticTransactionDB(
     path: String
 ): OptimisticTransactionDB =
     Unit.wrapWithNullErrorThrower { error ->
-        rocksdb.rocksdb_optimistictransactiondb_open(options.native, path, error)?.let(::OptimisticTransactionDB)
+        val retainedReferences = options.retainedNativeReferences()
+        rocksdb.rocksdb_optimistictransactiondb_open(options.native, path, error)?.let { native ->
+            wrapOpenedDb(
+                closeNativeDb = { rocksdb.rocksdb_optimistictransactiondb_close(native) },
+                releaseComparator = { options.releaseOwnedComparator() },
+            ) { ownedComparators ->
+                OptimisticTransactionDB(native, ownedComparators, retainedReferences)
+            }
+        }
     } ?: throw RocksDBException("No Database could be opened at $path")

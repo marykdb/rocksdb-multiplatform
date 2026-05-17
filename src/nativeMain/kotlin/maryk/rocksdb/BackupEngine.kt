@@ -31,7 +31,9 @@ import rocksdb.rocksdb_backup_engine_restore_db_from_latest_backup
 @OptIn(UnsafeNumber::class)
 actual class BackupEngine
 internal constructor(
-    internal val native: CPointer<rocksdb_backup_engine_t>
+    internal val native: CPointer<rocksdb_backup_engine_t>,
+    private var envRef: Env? = null,
+    private var backupEnvRef: Env? = null,
 )
     : RocksObject(), AutoCloseable {
     actual fun createNewBackup(db: RocksDB) {
@@ -52,33 +54,43 @@ internal constructor(
         flushBeforeBackup: Boolean
     ) {
         wrapWithErrorThrower { error ->
-            val options = rocksdb.rocksdb_create_backup_options_create()
-            rocksdb.rocksdb_create_backup_options_set_flush_before_backup(options, flushBeforeBackup)
-            memScoped {
-                val backupId = alloc<UIntVar>()
-                rocksdb.rocksdb_backup_engine_create_new_backup_with_options_with_metadata(native, db.native, options, metadata, backupId.ptr, error)
+            val options = requireNotNull(rocksdb.rocksdb_create_backup_options_create()) {
+                "Unable to allocate RocksDB backup creation options"
             }
-            rocksdb.rocksdb_create_backup_options_destroy(options)
+            try {
+                rocksdb.rocksdb_create_backup_options_set_flush_before_backup(options, flushBeforeBackup)
+                memScoped {
+                    val backupId = alloc<UIntVar>()
+                    rocksdb.rocksdb_backup_engine_create_new_backup_with_options_with_metadata(native, db.native, options, metadata, backupId.ptr, error)
+                }
+            } finally {
+                rocksdb.rocksdb_create_backup_options_destroy(options)
+            }
         }
     }
 
     actual fun getBackupInfo(): List<BackupInfo> {
-        return buildList {
-            val info = rocksdb_backup_engine_get_backup_info(native)
-            val count = rocksdb_backup_engine_info_count(info)
+        val info = rocksdb_backup_engine_get_backup_info(native)
+        try {
+            return buildList {
+                val count = rocksdb_backup_engine_info_count(info)
 
-            for (i in 0 until count) {
-                val appMetaData = rocksdb.rocksdb_backup_engine_info_app_metadata(info, i)
-                this += BackupInfo(
-                    backupId = rocksdb_backup_engine_info_backup_id(info, i).toInt(),
-                    timestamp = rocksdb_backup_engine_info_timestamp(info, i),
-                    size = rocksdb_backup_engine_info_size(info, i).toLong(),
-                    numberFiles = rocksdb_backup_engine_info_number_files(info, i).toInt(),
-                    appMetadata = appMetaData?.toKString(),
-                )
-                rocksdb.rocksdb_free(appMetaData)
+                for (i in 0 until count) {
+                    val appMetaData = rocksdb.rocksdb_backup_engine_info_app_metadata(info, i)
+                    try {
+                        this += BackupInfo(
+                            backupId = rocksdb_backup_engine_info_backup_id(info, i).toInt(),
+                            timestamp = rocksdb_backup_engine_info_timestamp(info, i),
+                            size = rocksdb_backup_engine_info_size(info, i).toLong(),
+                            numberFiles = rocksdb_backup_engine_info_number_files(info, i).toInt(),
+                            appMetadata = appMetaData?.toKString(),
+                        )
+                    } finally {
+                        rocksdb.rocksdb_free(appMetaData)
+                    }
+                }
             }
-
+        } finally {
             rocksdb_backup_engine_info_destroy(info)
         }
     }
@@ -88,10 +100,11 @@ internal constructor(
             wrapWithErrorThrower { _ ->
                 val size = alloc<size_tVar>()
                 val idsPtr = rocksdb.rocksdb_backup_engine_get_corrupted_backups(native, size.ptr)
-
-                IntArray(size.value.toInt()) { index ->
-                    idsPtr?.get(index)!!
-                }.also {
+                try {
+                    IntArray(size.value.toInt()) { index ->
+                        idsPtr?.get(index)!!
+                    }
+                } finally {
                     rocksdb.rocksdb_free(idsPtr)
                 }
             }
@@ -151,8 +164,10 @@ internal constructor(
     }
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_backup_engine_close(native)
+            envRef = null
+            backupEnvRef = null
             super.close()
         }
     }
@@ -163,6 +178,8 @@ actual fun openBackupEngine(
     options: BackupEngineOptions
 ) = Unit.wrapWithErrorThrower { error ->
     BackupEngine(
-        rocksdb_backup_engine_open_opts(options.native, env.native, error)!!
+        rocksdb_backup_engine_open_opts(options.native, env.native, error)!!,
+        env,
+        options.backupEnv(),
     )
 }

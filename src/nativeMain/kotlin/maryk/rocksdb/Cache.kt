@@ -12,18 +12,18 @@ actual abstract class Cache() : RocksObject() {
 
     @OptIn(UnsafeNumber::class)
     actual fun getUsage(): Long {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb.rocksdb_cache_get_usage(native).toLong()
     }
 
     @OptIn(UnsafeNumber::class)
     actual fun getPinnedUsage(): Long {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb.rocksdb_cache_get_pinned_usage(native).toLong()
     }
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb.rocksdb_cache_destroy(native)
         }
         super.close()

@@ -6,7 +6,9 @@ import kotlinx.cinterop.UnsafeNumber
 import maryk.asSizeT
 
 actual class TransactionDBOptions actual constructor(): RocksObject() {
-    val native = rocksdb.rocksdb_transactiondb_options_create()
+    val native = requireNotNull(rocksdb.rocksdb_transactiondb_options_create()) {
+        "Unable to allocate RocksDB transaction DB options"
+    }
 
     actual fun getMaxNumLocks(): Long {
         return rocksdb.rocksdb_transactiondb_options_get_max_num_locks(native)
@@ -48,7 +50,7 @@ actual class TransactionDBOptions actual constructor(): RocksObject() {
     }
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb.rocksdb_transactiondb_options_destroy(native)
             super.close()
         }

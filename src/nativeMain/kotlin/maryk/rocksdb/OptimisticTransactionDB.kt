@@ -9,12 +9,19 @@ import kotlin.experimental.ExperimentalNativeApi
 actual open class OptimisticTransactionDB
 internal constructor(
     internal val tnative: CPointer<rocksdb_optimistictransactiondb_t>,
-) : RocksDB(rocksdb.rocksdb_optimistictransactiondb_get_base_db(tnative)!!) {
+    ownedComparators: List<AbstractComparator> = emptyList(),
+    retainedReferences: List<Any> = emptyList(),
+) : RocksDB(rocksdb.rocksdb_optimistictransactiondb_get_base_db(tnative)!!, ownedComparators, retainedReferences) {
     val defaultTransactionOptions: OptimisticTransactionOptions = OptimisticTransactionOptions()
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             defaultTransactionOptions.close()
+            closeDefaultReferences()
+            rocksdb.rocksdb_optimistictransactiondb_close_base_db(native)
+            rocksdb.rocksdb_optimistictransactiondb_close(tnative)
+            closeOwnedComparators()
+            clearRetainedReferences()
             super.close()
         }
     }

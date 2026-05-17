@@ -27,12 +27,25 @@ actual class SstFileWriter actual constructor(
     private val envOptions: EnvOptions,
     private val options: Options
 ) : RocksObject() {
-    internal val native: CPointer<rocksdb_sstfilewriter_t> =
-        rocksdb_sstfilewriter_create(envOptions.native, options.native)!!
+    private var ownedComparator: AbstractComparator? = null
+
+    internal val native: CPointer<rocksdb_sstfilewriter_t>
+    init {
+        val created = rocksdb_sstfilewriter_create(envOptions.native, options.native)!!
+        try {
+            ownedComparator = options.releaseOwnedComparator()
+            native = created
+        } catch (throwable: Throwable) {
+            rocksdb_sstfilewriter_destroy(created)
+            throw throwable
+        }
+    }
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_sstfilewriter_destroy(native)
+            ownedComparator?.closeFromOptions()
+            ownedComparator = null
             super.close()
         }
     }

@@ -37,19 +37,24 @@ actual abstract class MergeOperator : RocksObject() {
     init {
         // Create a stable reference to this instance so that C callbacks can find it.
         val stableRef = StableRef.create(this)
-        native = rocksdb.rocksdb_mergeoperator_create(
-            state = stableRef.asCPointer(),
-            destructor = staticCFunction(::mergeOperatorDestructor),
-            full_merge = staticCFunction(::fullMergeCallback),
-            partial_merge = staticCFunction(::partialMergeCallback),
-            delete_value = staticCFunction(::deleteValueCallback),
-            name = staticCFunction(::mergeOperatorNameCallback)
-        ) ?: error("Failed to create merge operator")
+        try {
+            native = rocksdb.rocksdb_mergeoperator_create(
+                state = stableRef.asCPointer(),
+                destructor = staticCFunction(::mergeOperatorDestructor),
+                full_merge = staticCFunction(::fullMergeCallback),
+                partial_merge = staticCFunction(::partialMergeCallback),
+                delete_value = staticCFunction(::deleteValueCallback),
+                name = staticCFunction(::mergeOperatorNameCallback)
+            ) ?: error("Failed to create merge operator")
+        } catch (throwable: Throwable) {
+            stableRef.dispose()
+            throw throwable
+        }
     }
 
     // Override close() to free our pinned name and destroy the native object.
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             // Destroy the native merge operator. Adjust this function call if needed.
             rocksdb.rocksdb_mergeoperator_destroy(native)
             super.close()
@@ -57,7 +62,7 @@ actual abstract class MergeOperator : RocksObject() {
     }
 
     internal fun transferOwnershipToNative() {
-        disownHandle()
+        check(disownHandle()) { "MergeOperator is already closed or registered." }
     }
 
     internal fun destroyFromNative() {
@@ -65,7 +70,7 @@ actual abstract class MergeOperator : RocksObject() {
             nativeHeap.free(it.rawValue)
             pinnedName = null
         }
-        disownHandle()
+        tryCloseTransferred()
     }
 
     /**
@@ -142,8 +147,12 @@ actual abstract class MergeOperator : RocksObject() {
 private fun mergeOperatorDestructor(state: CPointer<out CPointed>?) {
     state?.asStableRef<MergeOperator>()?.let { stableRef ->
         stableRef.get().run {
-            destructor()
-            destroyFromNative()
+            try {
+                destructor()
+            } catch (_: Throwable) {
+            } finally {
+                destroyFromNative()
+            }
         }
         stableRef.dispose()
     }
@@ -158,12 +167,29 @@ private fun fullMergeCallback(
     success: CPointer<UByteVarOf<UByte>>?, newValueLength: CPointer<size_tVar>?
 ): CPointer<ByteVarOf<Byte>>? {
     val instance = state?.asStableRef<MergeOperator>()?.get() ?: return null
-    val (succeeded, resultPair) = instance.fullMerge(key, keyLen, existingValue, existingValueLen, operands, operandsLengths, numOperands)
-    success?.pointed?.value = if (succeeded) 1u else 0u
-    if (resultPair.first != null) {
-        newValueLength?.pointed?.value = resultPair.second
+    val (succeeded, resultPair) = try {
+        instance.fullMerge(key, keyLen, existingValue, existingValueLen, operands, operandsLengths, numOperands)
+    } catch (_: Throwable) {
+        success?.pointed?.value = 0u
+        newValueLength?.pointed?.value = 0.asSizeT()
+        return null
     }
-    return resultPair.first
+    val value = resultPair.first
+    val valueLength = resultPair.second
+    if (!succeeded || value == null) {
+        success?.pointed?.value = 0u
+        newValueLength?.pointed?.value = 0.asSizeT()
+        if (value != null) {
+            try {
+                instance.deleteValue(value, valueLength)
+            } catch (_: Throwable) {
+            }
+        }
+        return null
+    }
+    success?.pointed?.value = 1u
+    newValueLength?.pointed?.value = valueLength
+    return value
 }
 
 private fun partialMergeCallback(
@@ -174,18 +200,39 @@ private fun partialMergeCallback(
     success: CPointer<UByteVarOf<UByte>>?, newValueLength: CPointer<size_tVar>?
 ): CPointer<ByteVarOf<Byte>>? {
     val instance = state?.asStableRef<MergeOperator>()?.get() ?: return null
-    val (succeeded, resultPair) = instance.partialMerge(key, keyLen, operands, operandsLengths, numOperands)
-    success?.pointed?.value = if (succeeded) 1u else 0u
-    if (resultPair.first != null) {
-        newValueLength?.pointed?.value = resultPair.second
+    val (succeeded, resultPair) = try {
+        instance.partialMerge(key, keyLen, operands, operandsLengths, numOperands)
+    } catch (_: Throwable) {
+        success?.pointed?.value = 0u
+        newValueLength?.pointed?.value = 0.asSizeT()
+        return null
     }
-    return resultPair.first
+    val value = resultPair.first
+    val valueLength = resultPair.second
+    if (!succeeded || value == null) {
+        success?.pointed?.value = 0u
+        newValueLength?.pointed?.value = 0.asSizeT()
+        if (value != null) {
+            try {
+                instance.deleteValue(value, valueLength)
+            } catch (_: Throwable) {
+            }
+        }
+        return null
+    }
+    success?.pointed?.value = 1u
+    newValueLength?.pointed?.value = valueLength
+    return value
 }
 
 // Updated callback: now simply returns the persistent pinnedName.
 private fun mergeOperatorNameCallback(state: CPointer<out CPointed>?): CPointer<ByteVarOf<Byte>>? {
     val instance = state?.asStableRef<MergeOperator>()?.get()
-    return instance?.pinnedName()
+    return try {
+        instance?.pinnedName()
+    } catch (_: Throwable) {
+        null
+    }
 }
 
 private fun deleteValueCallback(
@@ -193,5 +240,8 @@ private fun deleteValueCallback(
     value: CPointer<ByteVarOf<Byte>>?,
     valueLen: size_t
 ) {
-    state?.asStableRef<MergeOperator>()?.get()?.deleteValue(value, valueLen)
+    try {
+        state?.asStableRef<MergeOperator>()?.get()?.deleteValue(value, valueLen)
+    } catch (_: Throwable) {
+    }
 }

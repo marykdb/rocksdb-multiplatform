@@ -3,7 +3,9 @@
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_transaction_t
+import cnames.structs.rocksdb_snapshot_t
 import kotlinx.cinterop.ByteVar
+import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.StableRef
@@ -30,14 +32,46 @@ import maryk.byteArrayToCPointer
 import maryk.toByteArray
 import maryk.wrapWithErrorThrower
 import platform.posix.size_tVar
+import kotlin.concurrent.AtomicInt
+
+private class SnapshotNotifierState(
+    val transaction: Transaction,
+    val notifier: AbstractTransactionNotifier,
+) {
+    private val disposed = AtomicInt(0)
+    var ref: StableRef<SnapshotNotifierState>? = null
+
+    fun disposeOnce() {
+        if (disposed.compareAndSet(0, 1)) {
+            ref?.dispose()
+            ref = null
+        }
+    }
+}
+
+private val snapshotCreatedCallback = staticCFunction<COpaquePointer?, CPointer<rocksdb_snapshot_t>?, Unit> { state, snapshotPtr ->
+    val notifierState = state?.asStableRef<SnapshotNotifierState>()?.get()
+        ?: return@staticCFunction
+    try {
+        try {
+            snapshotPtr?.let { Snapshot(it) }?.let(notifierState.notifier::snapshotCreated)
+        } catch (_: Throwable) {
+        }
+    } finally {
+        notifierState.transaction.clearPendingSnapshotNotifier(notifierState)
+        notifierState.disposeOnce()
+    }
+}
 
 actual class Transaction(
     internal val native: CPointer<rocksdb_transaction_t>,
 ): RocksObject() {
     private val defaultReadOptions = ReadOptions()
+    private var pendingSnapshotNotifier: SnapshotNotifierState? = null
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
+            disposePendingSnapshotNotifier()
             rocksdb.rocksdb_transaction_destroy(native)
             defaultReadOptions.close()
             super.close()
@@ -49,23 +83,37 @@ actual class Transaction(
     }
 
     actual fun setSnapshotOnNextOperation() {
-        rocksdb.rocksdb_transaction_set_snapshot_on_next_operation(native, null ,null)
+        disposePendingSnapshotNotifier()
+        rocksdb.rocksdb_transaction_set_snapshot_on_next_operation(native, null, null)
     }
 
     actual fun setSnapshotOnNextOperation(transactionNotifier: AbstractTransactionNotifier) {
-        val notifierStableRef: StableRef<AbstractTransactionNotifier> = StableRef.create(transactionNotifier)
+        disposePendingSnapshotNotifier()
+        val notifierState = SnapshotNotifierState(this, transactionNotifier)
+        notifierState.ref = StableRef.create(notifierState)
+        pendingSnapshotNotifier = notifierState
+        rocksdb.rocksdb_transaction_set_snapshot_on_next_operation(
+            native,
+            notifierState.ref!!.asCPointer(),
+            snapshotCreatedCallback
+        )
+    }
 
-        rocksdb.rocksdb_transaction_set_snapshot_on_next_operation(native, notifierStableRef.asCPointer(), staticCFunction { state, snapshotPtr ->
-            val ref = state?.asStableRef<AbstractTransactionNotifier>()
-            val notifier = ref?.get()
-            notifier?.snapshotCreated(snapshotPtr?.let { Snapshot(it) } ?: throw IllegalStateException("Snapshot is null"))
-            ref?.dispose()
-        })
+    internal fun clearPendingSnapshotNotifier(notifierState: Any) {
+        if (pendingSnapshotNotifier === notifierState) {
+            pendingSnapshotNotifier = null
+        }
+    }
+
+    private fun disposePendingSnapshotNotifier() {
+        val notifierState = pendingSnapshotNotifier ?: return
+        pendingSnapshotNotifier = null
+        notifierState.disposeOnce()
     }
 
     actual fun getSnapshot(): Snapshot? {
         val snapshotPtr = rocksdb.rocksdb_transaction_get_snapshot(native)
-        return snapshotPtr?.let { Snapshot(it) }
+        return snapshotPtr?.let { Snapshot(it, freeWrapperOnClose = true) }
     }
 
     actual fun clearSnapshot() {
@@ -107,6 +155,7 @@ actual class Transaction(
     actual fun get(readOptions: ReadOptions, columnFamilyHandle: ColumnFamilyHandle, key: ByteArray): ByteArray? =
         memScoped {
             val errPtr = allocPointerTo<ByteVar>()
+            errPtr.value = null
             val valueLen = alloc<size_tVar>()
             val valuePtr = rocksdb.rocksdb_transaction_get_cf(
                 native,
@@ -117,15 +166,18 @@ actual class Transaction(
                 valueLen.ptr,
                 errPtr.ptr
             )
-            errPtr.value?.let { error ->
-                val message = error.toKString()
-                rocksdb.rocksdb_free(error)
-                throw RocksDBException(message)
-            }
-            valuePtr?.let {
-                try {
-                    it.readBytes(valueLen.value.convert())
-                } finally {
+            try {
+                errPtr.value?.let { error ->
+                    val message = try {
+                        error.toKString()
+                    } finally {
+                        rocksdb.rocksdb_free(error)
+                    }
+                    throw RocksDBException(message)
+                }
+                valuePtr?.readBytes(valueLen.value.convert())
+            } finally {
+                valuePtr?.let {
                     rocksdb.rocksdb_free(it)
                 }
             }
@@ -134,6 +186,7 @@ actual class Transaction(
     actual fun get(readOptions: ReadOptions, key: ByteArray): ByteArray? =
         memScoped {
             val errPtr = allocPointerTo<ByteVar>()
+            errPtr.value = null
             val valueLen = alloc<size_tVar>()
             val valuePtr = rocksdb.rocksdb_transaction_get(
                 native,
@@ -143,15 +196,18 @@ actual class Transaction(
                 valueLen.ptr,
                 errPtr.ptr
             )
-            errPtr.value?.let { error ->
-                val message = error.toKString()
-                rocksdb.rocksdb_free(error)
-                throw RocksDBException(message)
-            }
-            valuePtr?.let {
-                try {
-                    it.readBytes(valueLen.value.convert())
-                } finally {
+            try {
+                errPtr.value?.let { error ->
+                    val message = try {
+                        error.toKString()
+                    } finally {
+                        rocksdb.rocksdb_free(error)
+                    }
+                    throw RocksDBException(message)
+                }
+                valuePtr?.readBytes(valueLen.value.convert())
+            } finally {
+                valuePtr?.let {
                     rocksdb.rocksdb_free(it)
                 }
             }
@@ -251,6 +307,7 @@ actual class Transaction(
     ): ByteArray? = memScoped {
         // Allocate error pointer and length holder.
         val errPtr = allocPointerTo<ByteVar>()
+        errPtr.value = null
         val valueLen = alloc<size_tVar>()
         // Call the native function using the correct parameter ordering:
         // txn, options, column_family, key, klen, vlen, exclusive, errptr
@@ -264,15 +321,18 @@ actual class Transaction(
             if (exclusive) 1.toUByte() else 0.toUByte(),
             errPtr.ptr
         )
-        errPtr.value?.let { error ->
-            val message = error.toKString()
-            rocksdb.rocksdb_free(error)
-            throw RocksDBException(message)
-        }
-        valuePtr?.let {
-            try {
-                it.readBytes(valueLen.value.convert())
-            } finally {
+        try {
+            errPtr.value?.let { error ->
+                val message = try {
+                    error.toKString()
+                } finally {
+                    rocksdb.rocksdb_free(error)
+                }
+                throw RocksDBException(message)
+            }
+            valuePtr?.readBytes(valueLen.value.convert())
+        } finally {
+            valuePtr?.let {
                 rocksdb.rocksdb_free(it)
             }
         }
@@ -284,6 +344,7 @@ actual class Transaction(
         exclusive: Boolean
     ): ByteArray? = memScoped {
         val errPtr = allocPointerTo<ByteVar>()
+        errPtr.value = null
         val valueLen = alloc<size_tVar>()
         // Call the native function using the correct parameter ordering:
         // txn, options, key, klen, vlen, exclusive, errptr
@@ -296,15 +357,18 @@ actual class Transaction(
             if (exclusive) 1.toUByte() else 0.toUByte(),
             errPtr.ptr
         )
-        errPtr.value?.let { error ->
-            val message = error.toKString()
-            rocksdb.rocksdb_free(error)
-            throw RocksDBException(message)
-        }
-        valuePtr?.let {
-            try {
-                it.readBytes(valueLen.value.convert())
-            } finally {
+        try {
+            errPtr.value?.let { error ->
+                val message = try {
+                    error.toKString()
+                } finally {
+                    rocksdb.rocksdb_free(error)
+                }
+                throw RocksDBException(message)
+            }
+            valuePtr?.readBytes(valueLen.value.convert())
+        } finally {
+            valuePtr?.let {
                 rocksdb.rocksdb_free(it)
             }
         }
@@ -730,9 +794,7 @@ actual class Transaction(
 
     actual fun getWriteBatch(): WriteBatchWithIndex {
         val wbPtr = rocksdb.rocksdb_transaction_get_write_batch(native)
-        return WriteBatchWithIndex(wbPtr!!).also {
-            it.disownHandle()
-        }
+        return WriteBatchWithIndex(wbPtr!!, ownsNative = false)
     }
 
     actual fun setLockTimeout(lockTimeout: Long) {
@@ -800,7 +862,13 @@ actual class Transaction(
     actual fun getName(): String = memScoped {
         val nameLenVar = alloc<size_tVar>()
         val namePtr = rocksdb.rocksdb_transaction_get_name(native, nameLenVar.ptr)
-        namePtr?.toByteArray(nameLenVar.value)?.decodeToString() ?: ""
+        namePtr?.let {
+            try {
+                it.toByteArray(nameLenVar.value).decodeToString()
+            } finally {
+                rocksdb.rocksdb_free(it)
+            }
+        } ?: ""
     }
 
     actual fun getID(): Long {
@@ -837,16 +905,18 @@ actual class Transaction(
         val keyString = keyBuffer.toKString()
         val count = numTxnsVar.value.toInt()
 
-        val txnIdsArray = if (txnIdsPtr != null && count > 0) {
-            LongArray(count) { index ->
-                txnIdsPtr[index].toLong()
+        val txnIdsArray = try {
+            if (txnIdsPtr != null && count > 0) {
+                LongArray(count) { index ->
+                    txnIdsPtr[index].toLong()
+                }
+            } else {
+                LongArray(0)
             }
-        } else {
-            LongArray(0)
-        }
-
-        if (txnIdsPtr != null) {
-            rocksdb.rocksdb_free(txnIdsPtr)
+        } finally {
+            if (txnIdsPtr != null) {
+                rocksdb.rocksdb_free(txnIdsPtr)
+            }
         }
 
         WaitingTransactions(

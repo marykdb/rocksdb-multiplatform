@@ -114,7 +114,7 @@ class ReadOptionsTest {
     @Test
     fun failSetVerifyChecksumUninitialized() {
         setupUninitializedReadOptions().use { readOptions ->
-            assertFailsWith<AssertionError> {
+            assertFailsWith<Throwable> {
                 readOptions.setVerifyChecksums(true)
             }
         }
@@ -123,7 +123,7 @@ class ReadOptionsTest {
     @Test
     fun failVerifyChecksumUninitialized() {
         setupUninitializedReadOptions().use { readOptions ->
-            assertFailsWith<AssertionError> {
+            assertFailsWith<Throwable> {
                 readOptions.verifyChecksums()
             }
         }
@@ -132,7 +132,7 @@ class ReadOptionsTest {
     @Test
     fun failSetFillCacheUninitialized() {
         setupUninitializedReadOptions().use { readOptions ->
-            assertFailsWith<AssertionError> {
+            assertFailsWith<Throwable> {
                 readOptions.setFillCache(true)
             }
         }
@@ -141,7 +141,7 @@ class ReadOptionsTest {
     @Test
     fun failFillCacheUninitialized() {
         setupUninitializedReadOptions().use { readOptions ->
-            assertFailsWith<AssertionError> {
+            assertFailsWith<Throwable> {
                 readOptions.fillCache()
             }
         }

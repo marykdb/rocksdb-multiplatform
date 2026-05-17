@@ -15,40 +15,55 @@ import kotlinx.cinterop.ptr
 import kotlinx.cinterop.set
 import maryk.byteArrayToCPointer
 import maryk.toUByte
-import maryk.wrapWithErrorThrower
 import maryk.wrapWithNullErrorThrower
 import rocksdb.rocksdb_ttl_close
 import rocksdb.rocksdb_ttl_create_column_family
 import rocksdb.rocksdb_ttl_get_base_db
 import rocksdb.rocksdb_ttl_open
 import rocksdb.rocksdb_ttl_open_column_families
+import rocksdb.rocksdb_transactiondb_close_base_db
 
 actual class TtlDB internal constructor(
     internal val nativeTtl: CPointer<rocksdb_ttl_t>,
+    ownedComparators: List<AbstractComparator> = emptyList(),
+    retainedReferences: List<Any> = emptyList(),
 ) : RocksDB(requireNotNull(rocksdb_ttl_get_base_db(nativeTtl)) {
     "Unable to obtain base DB from TTL handle"
-}) {
+}, ownedComparators, retainedReferences) {
     actual fun createColumnFamilyWithTtl(
         columnFamilyDescriptor: ColumnFamilyDescriptor,
         ttl: Int,
-    ): ColumnFamilyHandle = wrapWithErrorThrower { error ->
+    ): ColumnFamilyHandle =
         memScoped {
             val name = columnFamilyDescriptor.getName().decodeToString()
-            ColumnFamilyHandle(
+            val handle = createColumnFamilyHandle { error ->
                 rocksdb_ttl_create_column_family(
                     nativeTtl,
                     columnFamilyDescriptor.getOptions().native,
                     name,
                     ttl,
                     error,
-                )!!,
-            )
+                )
+            }
+            try {
+                columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
+                    retainOwnedComparator(it)
+                }
+            } catch (throwable: Throwable) {
+                handle.close()
+                throw throwable
+            }
+            handle
         }
-    }
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
+            closeDefaultReferences()
+            // RocksDB exposes no TTL-specific close_base_db; this helper deletes only the rocksdb_t wrapper.
+            rocksdb_transactiondb_close_base_db(native)
             rocksdb_ttl_close(nativeTtl)
+            closeOwnedComparators()
+            clearRetainedReferences()
             super.close()
         }
     }
@@ -59,7 +74,15 @@ actual fun openTtlDB(options: Options, dbPath: String): TtlDB =
 
 actual fun openTtlDB(options: Options, dbPath: String, ttl: Int, readOnly: Boolean): TtlDB =
     Unit.wrapWithNullErrorThrower { error ->
-        rocksdb_ttl_open(options.native, dbPath, ttl, readOnly.toUByte(), error)?.let(::TtlDB)
+        val retainedReferences = options.retainedNativeReferences()
+        rocksdb_ttl_open(options.native, dbPath, ttl, readOnly.toUByte(), error)?.let { native ->
+            wrapOpenedDb(
+                closeNativeDb = { rocksdb_ttl_close(native) },
+                releaseComparator = { options.releaseOwnedComparator() },
+            ) { ownedComparators ->
+                TtlDB(native, ownedComparators, retainedReferences)
+            }
+        }
     } ?: throw RocksDBException("Unable to open TTL DB at $dbPath")
 
 actual fun openTtlDB(
@@ -74,6 +97,7 @@ actual fun openTtlDB(
         "ttlValues size (${ttlValues.size}) must match descriptors size (${columnFamilyDescriptors.size})"
     }
     memScoped {
+        val retainedReferences = options.retainedNativeReferences()
         val count = columnFamilyDescriptors.size
         val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(count)
         val namesArray = allocArray<CPointerVar<ByteVar>>(count)
@@ -85,7 +109,7 @@ actual fun openTtlDB(
             ttlArray[index] = ttlValues[index]
         }
         val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(count)
-        rocksdb_ttl_open_column_families(
+        val native = rocksdb_ttl_open_column_families(
             options.native,
             dbPath,
             count,
@@ -95,11 +119,16 @@ actual fun openTtlDB(
             handles,
             readOnly.toUByte(),
             error,
-        )?.let { native ->
-            repeat(count) { index ->
-                columnFamilyHandles += ColumnFamilyHandle(handles[index]!!)
-            }
-            TtlDB(native)
+        ) ?: return@memScoped null
+
+        wrapOpenedColumnFamilies(
+            handles = handles,
+            count = count,
+            columnFamilyDescriptors = columnFamilyDescriptors,
+            columnFamilyHandles = columnFamilyHandles,
+            closeNativeDb = { rocksdb_ttl_close(native) },
+        ) { ownedComparators ->
+            TtlDB(native, ownedComparators, retainedReferences)
         }
     }
 } ?: throw RocksDBException("Unable to open TTL DB at $dbPath with provided column families")

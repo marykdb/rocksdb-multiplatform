@@ -34,55 +34,61 @@ import maryk.asSizeT
 import platform.posix.memcpy
 import platform.posix.size_t
 
-actual class ReadOptions private constructor(val native: CPointer<rocksdb_readoptions_t>?) : RocksObject() {
+actual class ReadOptions private constructor(val native: CPointer<rocksdb_readoptions_t>) : RocksObject() {
     private var snapshot: Snapshot? = null
     private var upperBound: BoundBuffer? = null
     private var lowerBound: BoundBuffer? = null
     internal var tableFilterRef: AbstractTableFilter? = null
 
-    actual constructor() : this(rocksdb_readoptions_create())
+    actual constructor() : this(
+        requireNotNull(rocksdb_readoptions_create()) {
+            "Unable to allocate RocksDB read options"
+        }
+    )
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             upperBound?.free()
             upperBound = null
             lowerBound?.free()
             lowerBound = null
+            tableFilterRef?.closeFromReadOptions()
             tableFilterRef = null
+            snapshot = null
             rocksdb_readoptions_destroy(native)
             super.close()
         }
     }
 
     actual fun verifyChecksums(): Boolean {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_readoptions_get_verify_checksums(native).toBoolean()
     }
 
     actual fun setVerifyChecksums(verifyChecksums: Boolean): ReadOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_readoptions_set_verify_checksums(native, verifyChecksums.toUByte())
         return this
     }
 
     actual fun fillCache(): Boolean {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_readoptions_get_fill_cache(native).toBoolean()
     }
 
     actual fun setFillCache(fillCache: Boolean): ReadOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_readoptions_set_fill_cache(native, fillCache.toUByte())
         return this
     }
 
     actual fun prefixSameAsStart(): Boolean {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_readoptions_get_prefix_same_as_start(native).toBoolean()
     }
 
     actual fun setPrefixSameAsStart(prefixSameAsStart: Boolean): ReadOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_readoptions_set_prefix_same_as_start(native, prefixSameAsStart.toUByte())
         return this
     }
@@ -90,7 +96,7 @@ actual class ReadOptions private constructor(val native: CPointer<rocksdb_readop
     actual fun snapshot(): Snapshot? = snapshot
 
     actual fun setSnapshot(snapshot: Snapshot?): ReadOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_readoptions_set_snapshot(native, snapshot?.native)
         this.snapshot = snapshot
         return this
@@ -99,7 +105,7 @@ actual class ReadOptions private constructor(val native: CPointer<rocksdb_readop
     actual fun iterateUpperBound(): Slice? = upperBound?.toSlice()
 
     actual fun setIterateUpperBound(iterateUpperBound: AbstractSlice<*>): ReadOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         upperBound = updateBound(upperBound, iterateUpperBound) { pointer, length ->
             rocksdb_readoptions_set_iterate_upper_bound(native, pointer, length)
         }
@@ -109,7 +115,7 @@ actual class ReadOptions private constructor(val native: CPointer<rocksdb_readop
     actual fun iterateLowerBound(): Slice? = lowerBound?.toSlice()
 
     actual fun setIterateLowerBound(iterateLowerBound: AbstractSlice<*>): ReadOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         lowerBound = updateBound(lowerBound, iterateLowerBound) { pointer, length ->
             rocksdb_readoptions_set_iterate_lower_bound(native, pointer, length)
         }
@@ -117,7 +123,7 @@ actual class ReadOptions private constructor(val native: CPointer<rocksdb_readop
     }
 
     actual fun readTier(): ReadTier {
-        assert(isOwningHandle())
+        checkOwningHandle()
         val tier = rocksdb_readoptions_get_read_tier(native).toByte()
         return when (tier) {
             ReadTier.READ_ALL_TIER.getValue() -> ReadTier.READ_ALL_TIER
@@ -129,18 +135,18 @@ actual class ReadOptions private constructor(val native: CPointer<rocksdb_readop
     }
 
     actual fun setReadTier(readTier: ReadTier): ReadOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_readoptions_set_read_tier(native, readTier.getValue().toInt())
         return this
     }
 
     actual fun tailing(): Boolean {
-        assert(isOwningHandle())
+        checkOwningHandle()
         return rocksdb_readoptions_get_tailing(native).toBoolean()
     }
 
     actual fun setTailing(tailing: Boolean): ReadOptions {
-        assert(isOwningHandle())
+        checkOwningHandle()
         rocksdb_readoptions_set_tailing(native, tailing.toUByte())
         return this
     }
@@ -162,15 +168,19 @@ private inline fun updateBound(
     slice: AbstractSlice<*>,
     setter: (CPointer<ByteVar>?, size_t) -> Unit
 ): BoundBuffer {
-    current?.free()
-
     val bytes = slice.copyBytes()
     val buffer = nativeHeap.allocArray<ByteVar>(bytes.size)
-    bytes.usePinned { pinned ->
-        memcpy(buffer, pinned.addressOf(0), bytes.size.asSizeT())
+    try {
+        bytes.usePinned { pinned ->
+            memcpy(buffer, pinned.addressOf(0), bytes.size.asSizeT())
+        }
+        setter(buffer, bytes.size.asSizeT())
+        current?.free()
+        return BoundBuffer(buffer, bytes)
+    } catch (throwable: Throwable) {
+        nativeHeap.free(buffer.rawValue)
+        throw throwable
     }
-    setter(buffer, bytes.size.asSizeT())
-    return BoundBuffer(buffer, bytes)
 }
 
 private fun AbstractSlice<*>.copyBytes(): ByteArray = when (this) {
@@ -184,8 +194,14 @@ private fun AbstractSlice<*>.copyBytes(): ByteArray = when (this) {
 }
 
 actual fun ReadOptions.setTableFilter(tableFilter: AbstractTableFilter): ReadOptions {
-    assert(isOwningHandle())
+    checkOwningHandle()
+    if (tableFilterRef === tableFilter) {
+        return this
+    }
+    val previous = tableFilterRef
+    tableFilter.transferOwnershipToReadOptions()
     this.tableFilterRef = tableFilter
     rocksdb_readoptions_set_table_filter(native, tableFilter.native)
+    previous?.closeFromReadOptions()
     return this
 }

@@ -19,7 +19,7 @@ actual class FlushOptions internal constructor(
     actual constructor() : this(rocksdb_flushoptions_create()!!, false, false)
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_flushoptions_destroy(native)
             super.close()
         }

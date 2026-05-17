@@ -14,20 +14,35 @@ import rocksdb.rocksdb_table_filter_destroy
 actual abstract class AbstractTableFilter protected actual constructor() : RocksCallbackObject() {
     private val stableRef = StableRef.create(this)
 
-    internal val native: CPointer<rocksdb_table_filter_t> = rocksdb_table_filter_create(
-        stableRef.asCPointer(),
-        staticCFunction(::tableFilterDestructor),
-        staticCFunction(::tableFilterCallback),
-    ) ?: error("Unable to create table filter")
+    internal val native: CPointer<rocksdb_table_filter_t> = try {
+        rocksdb_table_filter_create(
+            stableRef.asCPointer(),
+            staticCFunction(::tableFilterDestructor),
+            staticCFunction(::tableFilterCallback),
+        ) ?: error("Unable to create table filter")
+    } catch (throwable: Throwable) {
+        stableRef.dispose()
+        throw throwable
+    }
 
     protected actual abstract fun filter(tableProperties: TableProperties): Boolean
 
     internal fun shouldInclude(tableProperties: TableProperties): Boolean = filter(tableProperties)
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_table_filter_destroy(native)
             super.close()
+        }
+    }
+
+    internal fun transferOwnershipToReadOptions() {
+        check(disownHandle()) { "TableFilter is already closed or registered." }
+    }
+
+    internal fun closeFromReadOptions() {
+        if (tryCloseTransferred()) {
+            rocksdb_table_filter_destroy(native)
         }
     }
 }
@@ -41,6 +56,10 @@ private fun tableFilterCallback(
     properties: CPointer<rocksdb_tableproperties_t>?,
 ): UByte {
     val filter = state?.asStableRef<AbstractTableFilter>()?.get() ?: return 0u
-    val shouldInclude = filter.shouldInclude(TableProperties(properties))
+    val shouldInclude = try {
+        filter.shouldInclude(TableProperties(properties))
+    } catch (_: Throwable) {
+        false
+    }
     return shouldInclude.toUByte()
 }

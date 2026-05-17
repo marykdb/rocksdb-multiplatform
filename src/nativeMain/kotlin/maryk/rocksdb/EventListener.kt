@@ -5,6 +5,7 @@ import cnames.structs.rocksdb_eventlistener_t
 import cnames.structs.rocksdb_externalfileingestioninfo_t
 import cnames.structs.rocksdb_flushjobinfo_t
 import cnames.structs.rocksdb_memtableinfo_t
+import cnames.structs.rocksdb_subcompactionjobinfo_t
 import cnames.structs.rocksdb_t
 import cnames.structs.rocksdb_writestallinfo_t
 import kotlinx.cinterop.COpaquePointer
@@ -23,20 +24,25 @@ actual abstract class EventListener : RocksCallbackObject() {
     private val stableRef = StableRef.create(this)
 
     init {
-        native = rocksdb_eventlistener_create(
-            stableRef.asCPointer(),
-            staticCFunction(::eventListenerDestructor),
-            staticCFunction(::eventListenerOnFlushBegin),
-            staticCFunction(::eventListenerOnFlushCompleted),
-            staticCFunction(::eventListenerOnCompactionBegin),
-            staticCFunction(::eventListenerOnCompactionCompleted),
-            null,
-            null,
-            staticCFunction(::eventListenerOnExternalFileIngested),
-            staticCFunction(::eventListenerOnBackgroundError),
-            staticCFunction(::eventListenerOnStallConditionsChanged),
-            staticCFunction(::eventListenerOnMemTableSealed)
-        ) ?: error("Failed to allocate RocksDB event listener")
+        try {
+            native = rocksdb_eventlistener_create(
+                stableRef.asCPointer(),
+                staticCFunction(::eventListenerDestructor),
+                staticCFunction(::eventListenerOnFlushBegin),
+                staticCFunction(::eventListenerOnFlushCompleted),
+                staticCFunction(::eventListenerOnCompactionBegin),
+                staticCFunction(::eventListenerOnCompactionCompleted),
+                staticCFunction(::eventListenerOnSubcompactionBegin),
+                staticCFunction(::eventListenerOnSubcompactionCompleted),
+                staticCFunction(::eventListenerOnExternalFileIngested),
+                staticCFunction(::eventListenerOnBackgroundError),
+                staticCFunction(::eventListenerOnStallConditionsChanged),
+                staticCFunction(::eventListenerOnMemTableSealed)
+            ) ?: error("Failed to allocate RocksDB event listener")
+        } catch (throwable: Throwable) {
+            stableRef.dispose()
+            throw throwable
+        }
     }
 
     actual open fun onFlushBeginEvent(db: RocksDB, flushJobInfo: FlushJobInfo) {}
@@ -56,7 +62,7 @@ actual abstract class EventListener : RocksCallbackObject() {
     actual open fun onMemTableSealed(info: MemTableInfo) {}
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_eventlistener_destroy(native)
             super.close()
         }
@@ -73,10 +79,16 @@ private fun eventListenerOnFlushBegin(
     infoPtr: CPointer<rocksdb_flushjobinfo_t>?
 ) {
     val listener = state?.asStableRef<EventListener>()?.get() ?: return
-    val db = dbPtr?.let(::wrapDb) ?: return
     val info = infoPtr?.let(::FlushJobInfo) ?: return
-    listener.onFlushBeginEvent(db, info)
-    db.close()
+    val db = dbPtr?.let(::wrapDb) ?: return
+    try {
+        try {
+            listener.onFlushBeginEvent(db, info)
+        } catch (_: Throwable) {
+        }
+    } finally {
+        db.closeNonOwningReferences()
+    }
 }
 
 private fun eventListenerOnFlushCompleted(
@@ -85,10 +97,16 @@ private fun eventListenerOnFlushCompleted(
     infoPtr: CPointer<rocksdb_flushjobinfo_t>?
 ) {
     val listener = state?.asStableRef<EventListener>()?.get() ?: return
-    val db = dbPtr?.let(::wrapDb) ?: return
     val info = infoPtr?.let(::FlushJobInfo) ?: return
-    listener.onFlushCompletedEvent(db, info)
-    db.close()
+    val db = dbPtr?.let(::wrapDb) ?: return
+    try {
+        try {
+            listener.onFlushCompletedEvent(db, info)
+        } catch (_: Throwable) {
+        }
+    } finally {
+        db.closeNonOwningReferences()
+    }
 }
 
 private fun eventListenerOnCompactionBegin(
@@ -97,10 +115,16 @@ private fun eventListenerOnCompactionBegin(
     infoPtr: CPointer<rocksdb_compactionjobinfo_t>?
 ) {
     val listener = state?.asStableRef<EventListener>()?.get() ?: return
-    val db = dbPtr?.let(::wrapDb) ?: return
     val info = infoPtr?.let(::CompactionJobInfo) ?: return
-    listener.onCompactionBeginEvent(db, info)
-    db.close()
+    val db = dbPtr?.let(::wrapDb) ?: return
+    try {
+        try {
+            listener.onCompactionBeginEvent(db, info)
+        } catch (_: Throwable) {
+        }
+    } finally {
+        db.closeNonOwningReferences()
+    }
 }
 
 private fun eventListenerOnCompactionCompleted(
@@ -109,10 +133,28 @@ private fun eventListenerOnCompactionCompleted(
     infoPtr: CPointer<rocksdb_compactionjobinfo_t>?
 ) {
     val listener = state?.asStableRef<EventListener>()?.get() ?: return
-    val db = dbPtr?.let(::wrapDb) ?: return
     val info = infoPtr?.let(::CompactionJobInfo) ?: return
-    listener.onCompactionCompletedEvent(db, info)
-    db.close()
+    val db = dbPtr?.let(::wrapDb) ?: return
+    try {
+        try {
+            listener.onCompactionCompletedEvent(db, info)
+        } catch (_: Throwable) {
+        }
+    } finally {
+        db.closeNonOwningReferences()
+    }
+}
+
+private fun eventListenerOnSubcompactionBegin(
+    state: COpaquePointer?,
+    infoPtr: CPointer<rocksdb_subcompactionjobinfo_t>?,
+) {
+}
+
+private fun eventListenerOnSubcompactionCompleted(
+    state: COpaquePointer?,
+    infoPtr: CPointer<rocksdb_subcompactionjobinfo_t>?,
+) {
 }
 
 
@@ -122,10 +164,16 @@ private fun eventListenerOnExternalFileIngested(
     infoPtr: CPointer<rocksdb_externalfileingestioninfo_t>?
 ) {
     val listener = state?.asStableRef<EventListener>()?.get() ?: return
-    val db = dbPtr?.let(::wrapDb) ?: return
     val info = infoPtr?.let(::ExternalFileIngestionInfo) ?: return
-    listener.onExternalFileIngested(db, info)
-    db.close()
+    val db = dbPtr?.let(::wrapDb) ?: return
+    try {
+        try {
+            listener.onExternalFileIngested(db, info)
+        } catch (_: Throwable) {
+        }
+    } finally {
+        db.closeNonOwningReferences()
+    }
 }
 
 private fun eventListenerOnBackgroundError(
@@ -136,7 +184,10 @@ private fun eventListenerOnBackgroundError(
     val listener = state?.asStableRef<EventListener>()?.get() ?: return
     val reason = backgroundErrorReasonFromValue(reasonValue)
     val status = statusPointer?.toKString()?.let(::convertToStatus)
-    listener.onBackgroundErrorEvent(reason, status)
+    try {
+        listener.onBackgroundErrorEvent(reason, status)
+    } catch (_: Throwable) {
+    }
 }
 
 private fun eventListenerOnStallConditionsChanged(
@@ -145,7 +196,10 @@ private fun eventListenerOnStallConditionsChanged(
 ) {
     val listener = state?.asStableRef<EventListener>()?.get() ?: return
     val info = infoPtr?.let(::WriteStallInfo) ?: return
-    listener.onStallConditionsChanged(info)
+    try {
+        listener.onStallConditionsChanged(info)
+    } catch (_: Throwable) {
+    }
 }
 
 private fun eventListenerOnMemTableSealed(
@@ -154,7 +208,10 @@ private fun eventListenerOnMemTableSealed(
 ) {
     val listener = state?.asStableRef<EventListener>()?.get() ?: return
     val info = infoPtr?.let(::MemTableInfo) ?: return
-    listener.onMemTableSealed(info)
+    try {
+        listener.onMemTableSealed(info)
+    } catch (_: Throwable) {
+    }
 }
 
 private fun wrapDb(native: CPointer<rocksdb_t>): RocksDB {

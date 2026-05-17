@@ -14,13 +14,20 @@ import rocksdb.rocksdb_configoptions_set_input_strings_escaped
 import rocksdb.rocksdb_configoptions_set_sanity_level
 
 actual class ConfigOptions internal constructor(
-    internal val native: CPointer<rocksdb_configoptions_t>?,
+    internal val native: CPointer<rocksdb_configoptions_t>,
 ) : RocksObject() {
-    actual constructor() : this(rocksdb_configoptions_create())
+    private var envRef: Env? = null
+
+    actual constructor() : this(
+        requireNotNull(rocksdb_configoptions_create()) {
+            "Unable to allocate RocksDB config options"
+        }
+    )
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_configoptions_destroy(native)
+            envRef = null
             super.close()
         }
     }
@@ -37,6 +44,7 @@ actual class ConfigOptions internal constructor(
 
     actual fun setEnv(env: Env): ConfigOptions {
         rocksdb_configoptions_set_env(native, env.native)
+        envRef = env
         return this
     }
 

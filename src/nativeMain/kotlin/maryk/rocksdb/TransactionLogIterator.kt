@@ -36,12 +36,17 @@ actual class TransactionLogIterator internal constructor(
     actual fun getBatch(): TransactionLogBatchResult = memScoped {
         val sequenceNumber = alloc<uint64_tVar>()
         val batchPointer = rocksdb_wal_iter_get_batch(native, sequenceNumber.ptr)!!
-        val batch = WriteBatch(batchPointer).also { it.disownHandle() }
-        TransactionLogBatchResult(sequenceNumber.value.toLong(), batch)
+        val batch = WriteBatch(batchPointer)
+        try {
+            TransactionLogBatchResult(sequenceNumber.value.toLong(), batch)
+        } catch (throwable: Throwable) {
+            batch.close()
+            throw throwable
+        }
     }
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_wal_iter_destroy(native)
             super.close()
         }

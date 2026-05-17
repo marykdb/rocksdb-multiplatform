@@ -28,6 +28,8 @@ import rocksdb.rocksdb_options_statistics_get_ticker_count
 import rocksdb.rocksdb_options_statistics_set_histograms
 import rocksdb.rocksdb_options_enable_statistics
 import rocksdb.rocksdb_statistics_histogram_data_create
+import rocksdb.rocksdb_statistics_histogram_data_destroy
+import kotlin.concurrent.AtomicInt
 
 actual class Statistics internal constructor(
     internal var native: CPointer<rocksdb_options_t>?,
@@ -41,9 +43,13 @@ actual class Statistics internal constructor(
     )
 
     private var statsLevel: StatsLevel? = null
+    private val attached = AtomicInt(if (native == null) 0 else 1)
+    private val activeReaders = AtomicInt(0)
 
     @OptIn(UnsafeNumber::class)
     internal fun connectWithNative(native: CPointer<rocksdb_options_t>) {
+        check(isOwningHandle()) { "Statistics is closed." }
+        attached.value = 0
         this.native = native
         rocksdb_options_enable_statistics(native)
 
@@ -61,67 +67,115 @@ actual class Statistics internal constructor(
             }
         }
 
-        statsLevel?.let { level -> setStatsLevel(level) }
+        statsLevel?.let { level ->
+            rocksdb_options_set_statistics_level(native, level.value.toInt())
+        }
+        attached.value = 1
     }
 
-    actual fun statsLevel(): StatsLevel? = native?.let {
-        getStatsLevel(rocksdb_options_get_statistics_level(it).toUByte())
-    } ?: statsLevel
+    internal fun disconnectFromNative(native: CPointer<rocksdb_options_t>) {
+        if (this.native != native) {
+            return
+        }
+        attached.value = 0
+        while (activeReaders.value != 0) {
+            // Statistics calls are short C API reads; wait until any in-flight call
+            // drops the borrowed options pointer before the owning options is freed.
+        }
+        if (this.native == native) {
+            this.native = null
+        }
+    }
+
+    internal fun isAttachedToNative(): Boolean =
+        isOwningHandle() && attached.value == 1 && native != null
+
+    override fun close() {
+        if (tryClose()) {
+            attached.value = 0
+            while (activeReaders.value != 0) {
+            }
+            native = null
+        }
+    }
+
+    actual fun statsLevel(): StatsLevel? {
+        check(isOwningHandle()) { "Statistics is closed." }
+        return if (isAttachedToNative()) {
+            withNative { getStatsLevel(rocksdb_options_get_statistics_level(it).toUByte()) }
+        } else {
+            statsLevel
+        }
+    }
 
     actual fun setStatsLevel(statsLevel: StatsLevel) {
+        check(isOwningHandle()) { "Statistics is closed." }
         this.statsLevel = statsLevel
-        native?.let { rocksdb_options_set_statistics_level(it, statsLevel.value.toInt()) }
+        if (isAttachedToNative()) {
+            withNative { rocksdb_options_set_statistics_level(it, statsLevel.value.toInt()) }
+        }
     }
 
     actual fun getTickerCount(tickerType: TickerType): Long {
-        val attachedNative = requireNative()
-        return rocksdb_options_statistics_get_ticker_count(attachedNative, tickerType.value).toLong()
+        return withNative {
+            rocksdb_options_statistics_get_ticker_count(it, tickerType.value).toLong()
+        }
     }
 
     actual fun getAndResetTickerCount(tickerType: TickerType): Long {
-        val attachedNative = requireNative()
-        return rocksdb_options_statistics_get_and_reset_ticker_count(attachedNative, tickerType.value)
-            .toLong()
+        return withNative {
+            rocksdb_options_statistics_get_and_reset_ticker_count(it, tickerType.value).toLong()
+        }
     }
 
     actual fun getHistogramData(histogramType: HistogramType): HistogramData {
-        val attachedNative = requireNative()
         val histogramData = rocksdb_statistics_histogram_data_create()
-        rocksdb_options_statistics_get_histogram_data(attachedNative, histogramType.value, histogramData)
-        return HistogramData(
-            median = rocksdb.rocksdb_statistics_histogram_data_get_median(histogramData),
-            p95 = rocksdb.rocksdb_statistics_histogram_data_get_p95(histogramData),
-            p99 = rocksdb.rocksdb_statistics_histogram_data_get_p99(histogramData),
-            average = rocksdb.rocksdb_statistics_histogram_data_get_average(histogramData),
-            stdDev = rocksdb.rocksdb_statistics_histogram_data_get_std_dev(histogramData),
-            max = rocksdb.rocksdb_statistics_histogram_data_get_max(histogramData),
-            count = rocksdb.rocksdb_statistics_histogram_data_get_count(histogramData),
-            sum = rocksdb.rocksdb_statistics_histogram_data_get_sum(histogramData),
-            min = rocksdb.rocksdb_statistics_histogram_data_get_min(histogramData),
-        ).also {
-            rocksdb.rocksdb_statistics_histogram_data_destroy(histogramData)
+        try {
+            return withNative {
+                rocksdb_options_statistics_get_histogram_data(it, histogramType.value, histogramData)
+                HistogramData(
+                    median = rocksdb.rocksdb_statistics_histogram_data_get_median(histogramData),
+                    p95 = rocksdb.rocksdb_statistics_histogram_data_get_p95(histogramData),
+                    p99 = rocksdb.rocksdb_statistics_histogram_data_get_p99(histogramData),
+                    average = rocksdb.rocksdb_statistics_histogram_data_get_average(histogramData),
+                    stdDev = rocksdb.rocksdb_statistics_histogram_data_get_std_dev(histogramData),
+                    max = rocksdb.rocksdb_statistics_histogram_data_get_max(histogramData),
+                    count = rocksdb.rocksdb_statistics_histogram_data_get_count(histogramData),
+                    sum = rocksdb.rocksdb_statistics_histogram_data_get_sum(histogramData),
+                    min = rocksdb.rocksdb_statistics_histogram_data_get_min(histogramData),
+                )
+            }
+        } finally {
+            rocksdb_statistics_histogram_data_destroy(histogramData)
         }
     }
 
     actual fun getHistogramString(histogramType: HistogramType): String {
-        val attachedNative = requireNative()
-        return memScoped {
-            val lengthVar = alloc<size_tVar>()
-            val raw = rocksdb_options_statistics_get_histogram_string(
-                attachedNative,
-                histogramType.value,
-                lengthVar.ptr
-            )
-            raw?.let {
-                val stringValue = it.toByteArray(lengthVar.value).decodeToString()
-                rocksdb_free(it)
-                stringValue
-            } ?: ""
+        return withNative { attachedNative ->
+            memScoped {
+                val lengthVar = alloc<size_tVar>()
+                val raw = rocksdb_options_statistics_get_histogram_string(
+                    attachedNative,
+                    histogramType.value,
+                    lengthVar.ptr
+                )
+                raw?.let {
+                    try {
+                        it.toByteArray(lengthVar.value).decodeToString()
+                    } finally {
+                        rocksdb_free(it)
+                    }
+                } ?: ""
+            }
         }
     }
 
     actual fun reset() {
-        native?.let { attached ->
+        check(isOwningHandle()) { "Statistics is closed." }
+        if (!isAttachedToNative()) {
+            return
+        }
+        withNative { attached ->
             wrapWithErrorThrower { error ->
                 rocksdb.rocksdb_options_statistics_reset(attached, error)
             }
@@ -129,13 +183,57 @@ actual class Statistics internal constructor(
     }
 
     actual override fun toString(): String {
-        val attachedNative = requireNative()
-        val raw = rocksdb_options_statistics_get_string(attachedNative)
-        return raw?.toKString().also { raw?.let { rocksdb_free(it) } } ?: ""
+        return withNative { attachedNative ->
+            val raw = rocksdb_options_statistics_get_string(attachedNative)
+            raw?.let {
+                try {
+                    it.toKString()
+                } finally {
+                    rocksdb_free(it)
+                }
+            } ?: ""
+        }
     }
 
-    private fun requireNative(): CPointer<rocksdb_options_t> =
-        native ?: error("Statistics must be attached to Options before use")
+    private fun <T> withNative(block: (CPointer<rocksdb_options_t>) -> T): T {
+        check(isOwningHandle()) { "Statistics is closed." }
+        acquireReader()
+        try {
+            if (attached.value != 1) {
+                error("Statistics must be attached to Options before use")
+            }
+            val attachedNative = native
+                ?: error("Statistics must be attached to Options before use")
+            return block(attachedNative)
+        } finally {
+            releaseReader()
+        }
+    }
+
+    private fun acquireReader() {
+        while (true) {
+            if (attached.value != 1) {
+                error("Statistics must be attached to Options before use")
+            }
+            val current = activeReaders.value
+            if (activeReaders.compareAndSet(current, current + 1)) {
+                if (attached.value == 1) {
+                    return
+                }
+                releaseReader()
+                error("Statistics must be attached to Options before use")
+            }
+        }
+    }
+
+    private fun releaseReader() {
+        while (true) {
+            val current = activeReaders.value
+            if (activeReaders.compareAndSet(current, current - 1)) {
+                return
+            }
+        }
+    }
 }
 
 actual fun createStatistics(enabledHistograms: Set<HistogramType>): Statistics =

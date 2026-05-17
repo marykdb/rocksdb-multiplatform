@@ -14,9 +14,29 @@ actual class PersistentCache actual constructor(
     logger: Logger,
     optimizedForNvm: Boolean,
 ) : RocksObject() {
-    private val loggerRef = logger
+    private var envRef: Env? = env
 
     internal val native: CPointer<rocksdb_persistent_cache_t> =
+        createPersistentCache(env, path, size, logger, optimizedForNvm)
+
+    override fun close() {
+        if (tryClose()) {
+            rocksdb_persistent_cache_destroy(native)
+            envRef = null
+            super.close()
+        }
+    }
+}
+
+private fun createPersistentCache(
+    env: Env,
+    path: String,
+    size: Long,
+    logger: Logger,
+    optimizedForNvm: Boolean,
+): CPointer<rocksdb_persistent_cache_t> {
+    check(logger.disownHandle()) { "Logger is already closed or registered." }
+    return try {
         Unit.wrapWithNullErrorThrower { error ->
             rocksdb_persistent_cache_create(
                 env.native,
@@ -27,11 +47,7 @@ actual class PersistentCache actual constructor(
                 error,
             )
         } ?: error("Unable to create persistent cache at $path")
-
-    override fun close() {
-        if (isOwningHandle()) {
-            rocksdb_persistent_cache_destroy(native)
-            super.close()
-        }
+    } finally {
+        logger.closeAfterSharedOwnershipTransfer()
     }
 }

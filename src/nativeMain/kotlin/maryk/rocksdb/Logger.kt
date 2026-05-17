@@ -15,18 +15,30 @@ import rocksdb.rocksdb_logger_destroy
 actual abstract class Logger : RocksCallbackObject() {
     private val stableRef = StableRef.create(this)
 
-    internal val native: CPointer<rocksdb_logger_t> = rocksdb_logger_create(
-        stableRef.asCPointer(),
-        staticCFunction(::loggerDestructor),
-        staticCFunction(::loggerLogCallback),
-    ) ?: error("Unable to allocate RocksDB logger")
+    internal val native: CPointer<rocksdb_logger_t> = try {
+        rocksdb_logger_create(
+            stableRef.asCPointer(),
+            staticCFunction(::loggerDestructor),
+            staticCFunction(::loggerLogCallback),
+        ) ?: error("Unable to allocate RocksDB logger")
+    } catch (throwable: Throwable) {
+        stableRef.dispose()
+        throw throwable
+    }
 
     protected open fun log(level: InfoLogLevel, message: String) {}
 
     internal fun dispatchLog(level: InfoLogLevel, message: String) = log(level, message)
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
+            rocksdb_logger_destroy(native)
+            super.close()
+        }
+    }
+
+    internal fun closeAfterSharedOwnershipTransfer() {
+        if (tryCloseTransferred()) {
             rocksdb_logger_destroy(native)
             super.close()
         }
@@ -48,5 +60,8 @@ private fun loggerLogCallback(state: COpaquePointer?, level: Int, message: COpaq
     } catch (_: IllegalArgumentException) {
         InfoLogLevel.INFO_LEVEL
     }
-    logger.dispatchLog(infoLogLevel, kotlinMessage)
+    try {
+        logger.dispatchLog(infoLogLevel, kotlinMessage)
+    } catch (_: Throwable) {
+    }
 }

@@ -26,7 +26,7 @@ actual class RateLimiter internal constructor(
     )
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_ratelimiter_destroy(native)
             super.close()
         }

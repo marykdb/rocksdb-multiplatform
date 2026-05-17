@@ -111,8 +111,12 @@ protected constructor(
         }
     }
 
+    internal fun transferWrapperOwnershipToNative() {
+        check(disownHandle()) { "Iterator is already closed or transferred." }
+    }
+
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_iter_destroy(native)
             super.close()
         }

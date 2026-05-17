@@ -164,8 +164,11 @@ actual constructor(path: String)
         rocksdb_backup_engine_options_get_callback_trigger_interval_size(native).toLong()
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_backup_engine_options_destroy(native)
+            backupEnvRef = null
+            backupRateLimiterRef = null
+            restoreRateLimiterRef = null
             super.close()
         }
     }

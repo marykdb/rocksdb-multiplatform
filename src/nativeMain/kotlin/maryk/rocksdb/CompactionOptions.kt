@@ -44,7 +44,7 @@ actual class CompactionOptions internal constructor(
     actual constructor() : this(rocksdb_compactionoptions_create()!!)
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_compactionoptions_destroy(native)
             super.close()
         }
@@ -81,7 +81,7 @@ actual class CompactionOptionsFIFO internal constructor(
     actual constructor() : this(rocksdb_compactionoptions_fifo_create()!!)
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_compactionoptions_fifo_destroy(native)
             super.close()
         }
@@ -110,7 +110,7 @@ actual class CompactionOptionsUniversal internal constructor(
     actual constructor() : this(rocksdb_compactionoptions_universal_create()!!)
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_compactionoptions_universal_destroy(native)
             super.close()
         }

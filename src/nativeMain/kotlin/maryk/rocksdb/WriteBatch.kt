@@ -41,12 +41,13 @@ actual class WriteBatch(
 
     actual fun getWalTerminationPoint(): WriteBatchSavePoint {
         val terminationPoint = rocksdb.rocksdb_writebatch_get_wal_termination_point(native)
-
-        return WriteBatchSavePoint(
-            size = rocksdb.rocksdb_save_point_get_size(terminationPoint).toLong(),
-            count = rocksdb.rocksdb_save_point_get_count(terminationPoint).toLong(),
-            contentFlags = rocksdb.rocksdb_save_point_get_content_flags(terminationPoint).toLong(),
-        ).also {
+        try {
+            return WriteBatchSavePoint(
+                size = rocksdb.rocksdb_save_point_get_size(terminationPoint).toLong(),
+                count = rocksdb.rocksdb_save_point_get_count(terminationPoint).toLong(),
+                contentFlags = rocksdb.rocksdb_save_point_get_content_flags(terminationPoint).toLong(),
+            )
+        } finally {
             rocksdb.rocksdb_save_point_destroy(terminationPoint)
         }
     }
@@ -59,7 +60,7 @@ actual class WriteBatch(
     }
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_writebatch_destroy(native)
             super.close()
         }

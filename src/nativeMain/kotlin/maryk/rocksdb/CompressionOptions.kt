@@ -22,7 +22,7 @@ actual class CompressionOptions internal constructor(
     actual constructor() : this(rocksdb_compression_options_create()!!)
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_compression_options_destroy(native)
             super.close()
         }

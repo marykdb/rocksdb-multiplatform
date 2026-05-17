@@ -36,7 +36,7 @@ actual class WriteBufferManager internal constructor(
     actual fun allowStall(): Boolean = allowStallFlag
 
     override fun close() {
-        if (isOwningHandle()) {
+        if (tryClose()) {
             rocksdb_write_buffer_manager_destroy(native)
             super.close()
         }
