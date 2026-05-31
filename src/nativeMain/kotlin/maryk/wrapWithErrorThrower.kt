@@ -13,10 +13,13 @@ import rocksdb.rocksdb_free
 
 internal fun consumeRocksDBError(errorRef: CPointerVar<ByteVar>): RocksDBException? {
     val errorPtr = errorRef.value
-    val error = errorPtr?.toKString()
-    if (errorPtr != null) {
-        rocksdb_free(errorPtr)
-        errorRef.value = null
+    val error = errorPtr?.let {
+        try {
+            it.toKString()
+        } finally {
+            rocksdb_free(it)
+            errorRef.value = null
+        }
     }
 
     return error?.let { RocksDBException(it, convertToStatus(it)) }

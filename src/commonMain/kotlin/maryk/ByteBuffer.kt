@@ -3,6 +3,7 @@ package maryk
 expect abstract class ByteBuffer : Buffer {
     final override fun array(): ByteArray
     fun put(src: ByteArray): ByteBuffer
+    fun put(src: ByteArray, offset: Int, length: Int): ByteBuffer
     abstract operator fun get(index: Int): Byte
     operator fun get(dst: ByteArray, offset: Int, length: Int): ByteBuffer
     operator fun get(dst: ByteArray): ByteBuffer

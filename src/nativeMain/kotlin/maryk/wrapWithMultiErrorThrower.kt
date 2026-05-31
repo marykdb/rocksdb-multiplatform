@@ -33,9 +33,12 @@ fun <T : Any, R : Any> T.wrapWithMultiErrorThrower(
     for (i in 0 until numKeys) {
         val singleErrorPtr = errsArray[i]
         if (singleErrorPtr != null) {
-            val errMsg = singleErrorPtr.toKString()
-            rocksdb_free(singleErrorPtr)
-            errsArray[i] = null
+            val errMsg = try {
+                singleErrorPtr.toKString()
+            } finally {
+                rocksdb_free(singleErrorPtr)
+                errsArray[i] = null
+            }
 
             if (firstError == null) {
                 firstError = RocksDBException(

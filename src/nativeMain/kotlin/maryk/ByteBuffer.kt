@@ -3,14 +3,21 @@ package maryk
 
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.plus
 import kotlinx.cinterop.readBytes
 import kotlinx.cinterop.set
-import kotlinx.cinterop.toCValues
+import kotlinx.cinterop.usePinned
+import maryk.asSizeT
+import platform.posix.memcpy
 
 private val MAX_BYTE = 0b1111_1111.toUByte()
+
+private fun CPointer<ByteVar>.offsetBy(bytes: Int): CPointer<ByteVar> =
+    requireNotNull(plus(bytes)) { "pointer offset produced a null pointer" }
 
 actual abstract class ByteBuffer(
     internal val nativePointer: CPointer<ByteVar>,
@@ -27,11 +34,21 @@ actual abstract class ByteBuffer(
     }
 
     actual fun put(src: ByteArray): ByteBuffer {
-        if (src.size > remaining()) {
-            throw IndexOutOfBoundsException("source size=${src.size}, remaining=${remaining()}")
+        return put(src, 0, src.size)
+    }
+
+    actual fun put(src: ByteArray, offset: Int, length: Int): ByteBuffer {
+        if (offset < 0 || length < 0 || length > src.size - offset) {
+            throw IndexOutOfBoundsException("offset=$offset, length=$length, source size=${src.size}")
         }
-        for (byte in src) {
-            nativePointer[position++] = byte
+        if (length > remaining()) {
+            throw IndexOutOfBoundsException("length=$length, remaining=${remaining()}")
+        }
+        if (length > 0) {
+            src.usePinned { pinned ->
+                memcpy(nativePointer.offsetBy(position), pinned.addressOf(offset), length.asSizeT())
+            }
+            position += length
         }
         return this
     }
@@ -41,16 +58,18 @@ actual abstract class ByteBuffer(
     }
 
     actual operator fun get(dst: ByteArray, offset: Int, length: Int): ByteBuffer {
-        if (offset < 0 || length < 0 || offset + length > dst.size) {
+        if (offset < 0 || length < 0 || length > dst.size - offset) {
             throw IndexOutOfBoundsException("offset=$offset, length=$length, destination size=${dst.size}")
         }
         if (length > remaining()) {
             throw IndexOutOfBoundsException("length=$length, remaining=${remaining()}")
         }
-        for (index in 0 until length) {
-            dst[index + offset] = nativePointer[index + position]
+        if (length > 0) {
+            dst.usePinned { pinned ->
+                memcpy(pinned.addressOf(offset), nativePointer.offsetBy(position), length.asSizeT())
+            }
+            position += length
         }
-        position += length
         return this
     }
 
@@ -122,8 +141,12 @@ class HeapByteBuffer internal constructor(
 
 actual fun duplicateByteBuffer(byteBuffer: ByteBuffer, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit) {
     memScoped {
-        val pointer = allocArray<ByteVar>(byteBuffer.capacity) { i ->
-            byteBuffer.nativePointer[i]
+        val pointer = if (byteBuffer.capacity == 0) {
+            allocArray<ByteVar>(1)
+        } else {
+            val pointer = allocArray<ByteVar>(byteBuffer.capacity)
+            memcpy(pointer, byteBuffer.nativePointer, byteBuffer.capacity.asSizeT())
+            pointer
         }
 
         val duplicate = if (byteBuffer is DirectByteBuffer) {
@@ -136,20 +159,33 @@ actual fun duplicateByteBuffer(byteBuffer: ByteBuffer, memSafeByteBuffer: (buffe
 }
 
 actual fun allocateByteBuffer(capacity: Int, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit) {
+    require(capacity >= 0) { "capacity must be non-negative" }
     memScoped {
-        memSafeByteBuffer(HeapByteBuffer(allocArray(capacity), capacity))
+        val pointer = allocArray<ByteVar>(if (capacity == 0) 1 else capacity)
+        memSafeByteBuffer(HeapByteBuffer(pointer, capacity))
     }
 }
 
 actual fun allocateDirectByteBuffer(capacity: Int, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit) {
+    require(capacity >= 0) { "capacity must be non-negative" }
     memScoped {
-        memSafeByteBuffer(DirectByteBuffer(allocArray(capacity), capacity))
+        val pointer = allocArray<ByteVar>(if (capacity == 0) 1 else capacity)
+        memSafeByteBuffer(DirectByteBuffer(pointer, capacity))
     }
 }
 
 actual fun wrapByteBuffer(bytes: ByteArray, memSafeByteBuffer: (buffer: ByteBuffer) -> Unit) {
     memScoped {
-        memSafeByteBuffer(HeapByteBuffer(bytes.toCValues().getPointer(this), bytes.size))
+        val pointer = if (bytes.isEmpty()) {
+            allocArray<ByteVar>(1)
+        } else {
+            val pointer = allocArray<ByteVar>(bytes.size)
+            bytes.usePinned { pinned ->
+                memcpy(pointer, pinned.addressOf(0), bytes.size.asSizeT())
+            }
+            pointer
+        }
+        memSafeByteBuffer(HeapByteBuffer(pointer, bytes.size))
     }
 }
 

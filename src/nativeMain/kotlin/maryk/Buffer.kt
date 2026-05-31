@@ -5,6 +5,11 @@ actual abstract class Buffer(
     internal var limit: Int,
     internal var position: Int = 0
 ) {
+    init {
+        require(capacity >= 0) { "capacity must be non-negative" }
+        require(limit in 0..capacity) { "limit must be between 0 and capacity" }
+        require(position in 0..limit) { "position must be between 0 and limit" }
+    }
 
     actual abstract fun array(): Any
 
