@@ -16,7 +16,11 @@ actual class FlushOptions internal constructor(
     private var waitForFlushValue: Boolean,
     private var allowWriteStallValue: Boolean
 ) : RocksObject() {
-    actual constructor() : this(rocksdb_flushoptions_create()!!, false, false)
+    actual constructor() : this(
+        requireNotNull(rocksdb_flushoptions_create()) { "Unable to allocate flush options" },
+        false,
+        false
+    )
 
     override fun close() {
         if (tryClose()) {
@@ -26,18 +30,26 @@ actual class FlushOptions internal constructor(
     }
 
     actual fun setWaitForFlush(wait: Boolean): FlushOptions {
+        checkOwningHandle()
         waitForFlushValue = wait
         rocksdb_flushoptions_set_wait(native, wait.toUByte())
         return this
     }
 
-    actual fun waitForFlush(): Boolean = waitForFlushValue
+    actual fun waitForFlush(): Boolean {
+        checkOwningHandle()
+        return waitForFlushValue
+    }
 
     actual fun setAllowWriteStall(allow: Boolean): FlushOptions {
+        checkOwningHandle()
         allowWriteStallValue = allow
         rocksdb_flushoptions_set_allow_write_stall(native, allow.toUByte())
         return this
     }
 
-    actual fun allowWriteStall(): Boolean = allowWriteStallValue
+    actual fun allowWriteStall(): Boolean {
+        checkOwningHandle()
+        return allowWriteStallValue
+    }
 }

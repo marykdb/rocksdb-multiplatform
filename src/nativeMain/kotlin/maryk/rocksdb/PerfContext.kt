@@ -6,6 +6,7 @@ import cnames.structs.rocksdb_perfcontext_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toKString
+import maryk.toCheckedLong
 import rocksdb.rocksdb_free
 import rocksdb.rocksdb_perfcontext_create
 import rocksdb.rocksdb_perfcontext_destroy
@@ -16,7 +17,7 @@ import rocksdb.rocksdb_perfcontext_reset
 actual class PerfContext internal constructor(
     internal val native: CPointer<rocksdb_perfcontext_t>,
 ) : RocksObject() {
-    constructor() : this(rocksdb_perfcontext_create()!!)
+    constructor() : this(requireNotNull(rocksdb_perfcontext_create()) { "Unable to allocate RocksDB perf context" })
 
     override fun close() {
         if (tryClose()) {
@@ -26,11 +27,14 @@ actual class PerfContext internal constructor(
     }
 
     actual fun reset() {
+        checkOwningHandle()
         rocksdb_perfcontext_reset(native)
     }
 
-    private fun metric(metric: PerfContextMetric): Long =
-        rocksdb_perfcontext_metric(native, metric.id).toLong()
+    private fun metric(metric: PerfContextMetric): Long {
+        checkOwningHandle()
+        return rocksdb_perfcontext_metric(native, metric.id).toCheckedLong("perf context metric ${metric.name}")
+    }
 
     actual fun getUserKeyComparisonCount(): Long = metric(PerfContextMetric.USER_KEY_COMPARISON_COUNT)
 
@@ -243,14 +247,15 @@ actual class PerfContext internal constructor(
     actual fun getNumberAsyncSeek(): Long = metric(PerfContextMetric.NUMBER_ASYNC_SEEK)
 
     actual fun toString(excludeZeroCounters: Boolean): String {
-        val raw = rocksdb_perfcontext_report(native, if (excludeZeroCounters) 1u else 0u)
-        return raw?.let {
-            try {
-                it.toKString()
-            } finally {
-                rocksdb_free(it)
-            }
-        } ?: ""
+        checkOwningHandle()
+        val raw = requireNotNull(rocksdb_perfcontext_report(native, if (excludeZeroCounters) 1u else 0u)) {
+            "RocksDB returned null perf context report"
+        }
+        return try {
+            raw.toKString()
+        } finally {
+            rocksdb_free(raw)
+        }
     }
 
     private enum class PerfContextMetric(val id: Int) {

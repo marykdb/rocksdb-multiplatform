@@ -5,7 +5,7 @@ import rocksdb.rocksdb_mem_env_create
 actual class MemEnv actual constructor(
     baseEnv: Env,
 ) : Env(
-    rocksdb_mem_env_create(baseEnv.native) ?: error("Unable to create in-memory env"),
+    createMemEnv(baseEnv),
 ) {
     private var baseEnvRef: Env? = baseEnv
 
@@ -14,3 +14,9 @@ actual class MemEnv actual constructor(
         baseEnvRef = null
     }
 }
+
+private fun createMemEnv(baseEnv: Env) =
+    baseEnv.let {
+        it.checkOwningHandle()
+        rocksdb_mem_env_create(it.native) ?: error("Unable to create in-memory env")
+    }

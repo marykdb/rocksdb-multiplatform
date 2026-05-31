@@ -5,6 +5,7 @@ package maryk.rocksdb
 import cnames.structs.rocksdb_cache_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.UnsafeNumber
+import maryk.sizeTToLong
 import kotlin.experimental.ExperimentalNativeApi
 
 actual abstract class Cache() : RocksObject() {
@@ -13,13 +14,13 @@ actual abstract class Cache() : RocksObject() {
     @OptIn(UnsafeNumber::class)
     actual fun getUsage(): Long {
         checkOwningHandle()
-        return rocksdb.rocksdb_cache_get_usage(native).toLong()
+        return sizeTToLong(rocksdb.rocksdb_cache_get_usage(native), "cache usage")
     }
 
     @OptIn(UnsafeNumber::class)
     actual fun getPinnedUsage(): Long {
         checkOwningHandle()
-        return rocksdb.rocksdb_cache_get_pinned_usage(native).toLong()
+        return sizeTToLong(rocksdb.rocksdb_cache_get_pinned_usage(native), "cache pinned usage")
     }
 
     override fun close() {

@@ -48,16 +48,20 @@ actual abstract class AbstractTableFilter protected actual constructor() : Rocks
 }
 
 private fun tableFilterDestructor(state: COpaquePointer?) {
-    state?.asStableRef<AbstractTableFilter>()?.dispose()
+    try {
+        state?.asStableRef<AbstractTableFilter>()?.dispose()
+    } catch (_: Throwable) {
+    }
 }
 
 private fun tableFilterCallback(
     state: COpaquePointer?,
     properties: CPointer<rocksdb_tableproperties_t>?,
 ): UByte {
-    val filter = state?.asStableRef<AbstractTableFilter>()?.get() ?: return 0u
     val shouldInclude = try {
-        filter.shouldInclude(TableProperties(properties))
+        val filter = state?.asStableRef<AbstractTableFilter>()?.get() ?: return 0u
+        val tableProperties = properties ?: return 0u
+        filter.shouldInclude(TableProperties(tableProperties))
     } catch (_: Throwable) {
         false
     }

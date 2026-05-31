@@ -1,13 +1,56 @@
 package maryk.rocksdb
 
+import cnames.structs.rocksdb_sstfilereader_t
+import kotlinx.cinterop.CPointer
+import maryk.wrapWithErrorThrower
+import rocksdb.rocksdb_sstfilereader_create
+import rocksdb.rocksdb_sstfilereader_destroy
+import rocksdb.rocksdb_sstfilereader_open
+import rocksdb.rocksdb_sstfilereader_verify_checksum
+
 actual class SstFileReader actual constructor(
-    @Suppress("UNUSED_PARAMETER") options: Options
+    options: Options
 ) : RocksObject() {
-    actual fun open(@Suppress("UNUSED_PARAMETER") filePath: String) {
-        throw RocksDBException("SstFileReader is not yet supported on Kotlin/Native; update the RocksDB C API to enable it.")
+    private val native: CPointer<rocksdb_sstfilereader_t>
+    private var ownedComparator: AbstractComparator? = null
+    private var retainedReferences: List<Any> = emptyList()
+
+    init {
+        options.checkOwningHandle()
+        retainedReferences = options.retainedNativeReferences()
+        val created = requireNotNull(rocksdb_sstfilereader_create(options.native)) {
+            "Unable to create SST file reader"
+        }
+        native = created
+        ownedComparator = try {
+            options.releaseOwnedComparator()
+        } catch (throwable: Throwable) {
+            rocksdb_sstfilereader_destroy(created)
+            throw throwable
+        }
+    }
+
+    actual fun open(filePath: String) {
+        checkOwningHandle()
+        wrapWithErrorThrower { error ->
+            rocksdb_sstfilereader_open(native, filePath, error)
+        }
     }
 
     actual fun verifyChecksum() {
-        throw RocksDBException("SstFileReader is not yet supported on Kotlin/Native; update the RocksDB C API to enable it.")
+        checkOwningHandle()
+        wrapWithErrorThrower { error ->
+            rocksdb_sstfilereader_verify_checksum(native, error)
+        }
+    }
+
+    override fun close() {
+        if (tryClose()) {
+            rocksdb_sstfilereader_destroy(native)
+            ownedComparator?.closeFromOptions()
+            ownedComparator = null
+            retainedReferences = emptyList()
+            super.close()
+        }
     }
 }

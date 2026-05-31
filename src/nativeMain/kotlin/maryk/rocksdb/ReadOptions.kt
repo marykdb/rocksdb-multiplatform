@@ -95,8 +95,14 @@ actual class ReadOptions private constructor(val native: CPointer<rocksdb_readop
 
     actual fun snapshot(): Snapshot? = snapshot
 
+    internal fun checkOpenForRead() {
+        checkOwningHandle()
+        snapshot?.checkOwningHandle()
+    }
+
     actual fun setSnapshot(snapshot: Snapshot?): ReadOptions {
         checkOwningHandle()
+        snapshot?.checkOwningHandle()
         rocksdb_readoptions_set_snapshot(native, snapshot?.native)
         this.snapshot = snapshot
         return this
@@ -169,6 +175,18 @@ private inline fun updateBound(
     setter: (CPointer<ByteVar>?, size_t) -> Unit
 ): BoundBuffer {
     val bytes = slice.copyBytes()
+    if (bytes.isEmpty()) {
+        val buffer = nativeHeap.allocArray<ByteVar>(1)
+        try {
+            setter(buffer, 0u)
+            current?.free()
+            return BoundBuffer(buffer, bytes)
+        } catch (throwable: Throwable) {
+            nativeHeap.free(buffer.rawValue)
+            throw throwable
+        }
+    }
+
     val buffer = nativeHeap.allocArray<ByteVar>(bytes.size)
     try {
         bytes.usePinned { pinned ->
@@ -185,7 +203,7 @@ private inline fun updateBound(
 
 private fun AbstractSlice<*>.copyBytes(): ByteArray = when (this) {
     is Slice -> data.copyOf()
-    is DirectSlice -> data.array()
+    is DirectSlice -> data().array()
     else -> when (val raw = data()) {
         is ByteArray -> raw.copyOf()
         is ByteBuffer -> raw.array()

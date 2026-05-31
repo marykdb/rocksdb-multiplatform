@@ -15,6 +15,7 @@ import kotlinx.cinterop.value
 import kotlinx.cinterop.toKString
 import maryk.asSizeT
 import maryk.toByteArray
+import maryk.toCheckedLong
 import maryk.wrapWithErrorThrower
 import platform.posix.size_tVar
 import rocksdb.rocksdb_free
@@ -118,18 +119,21 @@ actual class Statistics internal constructor(
 
     actual fun getTickerCount(tickerType: TickerType): Long {
         return withNative {
-            rocksdb_options_statistics_get_ticker_count(it, tickerType.value).toLong()
+            rocksdb_options_statistics_get_ticker_count(it, tickerType.value).toCheckedLong("statistics ticker count")
         }
     }
 
     actual fun getAndResetTickerCount(tickerType: TickerType): Long {
         return withNative {
-            rocksdb_options_statistics_get_and_reset_ticker_count(it, tickerType.value).toLong()
+            rocksdb_options_statistics_get_and_reset_ticker_count(it, tickerType.value)
+                .toCheckedLong("statistics ticker count")
         }
     }
 
     actual fun getHistogramData(histogramType: HistogramType): HistogramData {
-        val histogramData = rocksdb_statistics_histogram_data_create()
+        val histogramData = requireNotNull(rocksdb_statistics_histogram_data_create()) {
+            "RocksDB returned null statistics histogram data"
+        }
         try {
             return withNative {
                 rocksdb_options_statistics_get_histogram_data(it, histogramType.value, histogramData)
@@ -165,7 +169,12 @@ actual class Statistics internal constructor(
                     } finally {
                         rocksdb_free(it)
                     }
-                } ?: ""
+                } ?: run {
+                    check(lengthVar.value == 0.asSizeT()) {
+                        "RocksDB returned null histogram string for ${lengthVar.value} bytes"
+                    }
+                    ""
+                }
             }
         }
     }

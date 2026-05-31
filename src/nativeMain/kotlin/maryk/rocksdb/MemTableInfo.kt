@@ -10,6 +10,7 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
 import maryk.toByteArray
+import maryk.toCheckedLong
 import platform.posix.size_tVar
 
 actual class MemTableInfo internal constructor(
@@ -22,15 +23,14 @@ actual class MemTableInfo internal constructor(
     internal constructor(native: CPointer<rocksdb_memtableinfo_t>) : this(
         columnFamilyNameValue = memScoped {
             val length = alloc<size_tVar>()
-            rocksdb.rocksdb_memtableinfo_cf_name(native, length.ptr)
-                ?.toByteArray(length.value)
-                ?.decodeToString()
-                ?: ""
+            requireNotNull(rocksdb.rocksdb_memtableinfo_cf_name(native, length.ptr)) {
+                "RocksDB returned null memtable column family name"
+            }.toByteArray(length.value).decodeToString()
         },
-        firstSeqnoValue = rocksdb.rocksdb_memtableinfo_first_seqno(native).toLong(),
-        earliestSeqnoValue = rocksdb.rocksdb_memtableinfo_earliest_seqno(native).toLong(),
-        numEntriesValue = rocksdb.rocksdb_memtableinfo_num_entries(native).toLong(),
-        numDeletesValue = rocksdb.rocksdb_memtableinfo_num_deletes(native).toLong()
+        firstSeqnoValue = rocksdb.rocksdb_memtableinfo_first_seqno(native).toCheckedLong("memtable first sequence number"),
+        earliestSeqnoValue = rocksdb.rocksdb_memtableinfo_earliest_seqno(native).toCheckedLong("memtable earliest sequence number"),
+        numEntriesValue = rocksdb.rocksdb_memtableinfo_num_entries(native).toCheckedLong("memtable entry count"),
+        numDeletesValue = rocksdb.rocksdb_memtableinfo_num_deletes(native).toCheckedLong("memtable delete count")
     )
 
     actual fun columnFamilyName(): String = columnFamilyNameValue

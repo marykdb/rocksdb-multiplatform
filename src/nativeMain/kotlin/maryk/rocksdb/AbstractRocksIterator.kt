@@ -5,9 +5,9 @@ package maryk.rocksdb
 import cnames.structs.rocksdb_iterator_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.UnsafeNumber
-import kotlinx.cinterop.toCValues
 import maryk.asSizeT
 import maryk.toBoolean
+import maryk.usePointer
 import maryk.wrapWithErrorThrower
 import rocksdb.rocksdb_iter_destroy
 import rocksdb.rocksdb_iter_get_error
@@ -30,14 +30,17 @@ protected constructor(
      *
      * @return true if iterator is valid.
      */
-    actual override fun isValid(): Boolean =
-        rocksdb_iter_valid(native).toBoolean()
+    actual override fun isValid(): Boolean {
+        checkOwningHandle()
+        return rocksdb_iter_valid(native).toBoolean()
+    }
 
     /**
      * Position at the first entry in the source.  The iterator is Valid()
      * after this call if the source is not empty.
      */
     actual override fun seekToFirst() {
+        checkOwningHandle()
         rocksdb_iter_seek_to_first(native)
     }
 
@@ -46,6 +49,7 @@ protected constructor(
      * valid after this call if the source is not empty.
      */
     actual override fun seekToLast() {
+        checkOwningHandle()
         rocksdb_iter_seek_to_last(native)
     }
 
@@ -60,7 +64,10 @@ protected constructor(
      * key prefix to seek for.
      */
     actual override fun seek(target: ByteArray) {
-        rocksdb_iter_seek(native, target.toCValues(), target.size.asSizeT())
+        checkOwningHandle()
+        target.usePointer { targetPointer ->
+            rocksdb_iter_seek(native, targetPointer, target.size.asSizeT())
+        }
     }
 
     /**
@@ -74,7 +81,10 @@ protected constructor(
      * key prefix to seek for.
      */
     actual override fun seekForPrev(target: ByteArray) {
-        rocksdb_iter_seek_for_prev(native, target.toCValues(), target.size.asSizeT())
+        checkOwningHandle()
+        target.usePointer { targetPointer ->
+            rocksdb_iter_seek_for_prev(native, targetPointer, target.size.asSizeT())
+        }
     }
 
     /**
@@ -84,6 +94,7 @@ protected constructor(
      * REQUIRES: [.isValid]
      */
     actual override fun next() {
+        checkOwningHandle()
         rocksdb_iter_next(native)
     }
 
@@ -94,6 +105,7 @@ protected constructor(
      * REQUIRES: [.isValid]
      */
     actual override fun prev() {
+        checkOwningHandle()
         rocksdb_iter_prev(native)
     }
 
@@ -106,6 +118,7 @@ protected constructor(
      * native library.
      */
     actual override fun status() {
+        checkOwningHandle()
         wrapWithErrorThrower { error ->
             rocksdb_iter_get_error(native, error)
         }
@@ -115,7 +128,7 @@ protected constructor(
         check(disownHandle()) { "Iterator is already closed or transferred." }
     }
 
-    override fun close() {
+    open override fun close() {
         if (tryClose()) {
             rocksdb_iter_destroy(native)
             super.close()

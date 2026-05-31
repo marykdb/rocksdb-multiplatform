@@ -58,7 +58,11 @@ internal inline fun <T : RocksDB> wrapOpenedColumnFamilies(
         db = createDb(ownedComparators)
 
         repeat(count) { index ->
-            val handle = ColumnFamilyHandle(handles[index]!!)
+            val handle = db.registerColumnFamilyHandle(ColumnFamilyHandle(
+                requireNotNull(handles[index]) {
+                    "RocksDB returned null column family handle at index $index"
+                }
+            ))
             try {
                 wrappedHandles += handle
                 columnFamilyHandles += handle

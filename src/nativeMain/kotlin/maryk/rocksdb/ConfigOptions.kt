@@ -33,27 +33,33 @@ actual class ConfigOptions internal constructor(
     }
 
     actual fun setDelimiter(delimiter: String): ConfigOptions {
+        checkOwningHandle()
         rocksdb_configoptions_set_delimiter(native, delimiter)
         return this
     }
 
     actual fun setIgnoreUnknownOptions(ignore: Boolean): ConfigOptions {
+        checkOwningHandle()
         rocksdb_configoptions_set_ignore_unknown_options(native, ignore.toUByte())
         return this
     }
 
     actual fun setEnv(env: Env): ConfigOptions {
+        checkOwningHandle()
+        env.checkOwningHandle()
         rocksdb_configoptions_set_env(native, env.native)
         envRef = env
         return this
     }
 
     actual fun setInputStringsEscaped(escaped: Boolean): ConfigOptions {
+        checkOwningHandle()
         rocksdb_configoptions_set_input_strings_escaped(native, escaped.toUByte())
         return this
     }
 
     actual fun setSanityLevel(level: SanityLevel): ConfigOptions {
+        checkOwningHandle()
         rocksdb_configoptions_set_sanity_level(native, level.toNativeValue())
         return this
     }

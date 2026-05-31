@@ -2,6 +2,8 @@
 
 package maryk.rocksdb
 
+import maryk.toCheckedLong
+
 actual class LevelMetaData(
     val level: Int,
     val size: ULong,
@@ -9,7 +11,7 @@ actual class LevelMetaData(
 ) {
     actual fun level() = level
 
-    actual fun size() = size.toLong()
+    actual fun size() = size.toCheckedLong("level metadata size")
 
     actual fun files() = files
 }

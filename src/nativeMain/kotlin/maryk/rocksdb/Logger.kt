@@ -46,21 +46,24 @@ actual abstract class Logger : RocksCallbackObject() {
 }
 
 private fun loggerDestructor(state: COpaquePointer?) {
-    state?.asStableRef<Logger>()?.dispose()
+    try {
+        state?.asStableRef<Logger>()?.dispose()
+    } catch (_: Throwable) {
+    }
 }
 
 private fun loggerLogCallback(state: COpaquePointer?, level: Int, message: COpaquePointer?) {
-    val logger = state?.asStableRef<Logger>()?.get() ?: return
-    val kotlinMessage = message
-        ?.reinterpret<ByteVar>()
-        ?.toKString()
-        .orEmpty()
-    val infoLogLevel = try {
-        getInfoLogLevel(level.toUByte())
-    } catch (_: IllegalArgumentException) {
-        InfoLogLevel.INFO_LEVEL
-    }
     try {
+        val logger = state?.asStableRef<Logger>()?.get() ?: return
+        val kotlinMessage = message
+            ?.reinterpret<ByteVar>()
+            ?.toKString()
+            .orEmpty()
+        val infoLogLevel = try {
+            getInfoLogLevel(level.toUByte())
+        } catch (_: IllegalArgumentException) {
+            InfoLogLevel.INFO_LEVEL
+        }
         logger.dispatchLog(infoLogLevel, kotlinMessage)
     } catch (_: Throwable) {
     }

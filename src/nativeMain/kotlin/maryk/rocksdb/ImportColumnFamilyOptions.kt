@@ -16,15 +16,22 @@ actual class ImportColumnFamilyOptions internal constructor(
     private var moveFilesValue: Boolean,
 ) : RocksObject() {
 
-    actual constructor() : this(rocksdb_import_column_family_options_create()!!, false)
+    actual constructor() : this(
+        requireNotNull(rocksdb_import_column_family_options_create()) {
+            "Unable to allocate import column-family options"
+        },
+        false
+    )
 
     actual fun setMoveFiles(moveFiles: Boolean): ImportColumnFamilyOptions {
+        checkOwningHandle()
         moveFilesValue = moveFiles
         rocksdb_import_column_family_options_set_move_files(native, moveFiles.toUByte())
         return this
     }
 
     actual fun moveFiles(): Boolean {
+        checkOwningHandle()
         moveFilesValue = rocksdb_import_column_family_options_get_move_files(native) != 0.toUByte()
         return moveFilesValue
     }

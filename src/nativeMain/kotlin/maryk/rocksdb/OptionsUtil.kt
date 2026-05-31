@@ -18,6 +18,7 @@ import kotlinx.cinterop.readBytes
 import kotlinx.cinterop.toKString
 import kotlinx.cinterop.value
 import maryk.asSizeT
+import maryk.sizeTToInt
 import maryk.wrapWithNullErrorThrower
 import platform.posix.size_tVar
 import rocksdb.rocksdb_free
@@ -57,14 +58,15 @@ actual object OptionsUtil {
 
     @Throws(RocksDBException::class)
     actual fun getLatestOptionsFileName(dbPath: String, env: Env): String {
+        env.checkOwningHandle()
         val pointer = Unit.wrapWithNullErrorThrower { error ->
             rocksdb_optionsutil_get_latest_options_file_name(dbPath, env.native, error)
         }
-        return pointer?.let {
+        return pointer?.let { name ->
             try {
-                it.toKString()
+                name.toKString()
             } finally {
-                rocksdb_free(it)
+                rocksdb_free(name)
             }
         }.orEmpty()
     }
@@ -81,7 +83,9 @@ actual object OptionsUtil {
             error: CValuesRef<CPointerVar<ByteVar>>,
         ) -> CPointer<rocksdb_loaded_cf_options_t>?,
     ) {
-        columnFamilyDescriptors.clear()
+        configOptions.checkOwningHandle()
+        dbOptions.checkOwningHandle()
+        columnFamilyDescriptors.closeOptionsAndClear()
         val descriptorSet = Unit.wrapWithNullErrorThrower { error ->
             loader(configOptions.native, path, dbOptions.native, error)
         }
@@ -98,7 +102,7 @@ actual object OptionsUtil {
         bundle: CPointer<rocksdb_loaded_cf_options_t>?,
         columnFamilyDescriptors: MutableList<ColumnFamilyDescriptor>,
     ) {
-        val count = rocksdb_optionsutil_descriptors_count(bundle).toInt()
+        val count = sizeTToInt(rocksdb_optionsutil_descriptors_count(bundle), "column family descriptor count")
         if (count == 0) return
         val outputStartSize = columnFamilyDescriptors.size
         try {
@@ -106,7 +110,9 @@ actual object OptionsUtil {
                 memScoped {
                     val length = alloc<size_tVar>()
                     val namePtr = rocksdb_optionsutil_descriptor_name(bundle, index.asSizeT(), length.ptr)
-                    val name = namePtr?.readBytes(length.value.toInt()) ?: ByteArray(0)
+                    val name = requireNotNull(namePtr) {
+                        "RocksDB returned null column family descriptor name at index $index"
+                    }.readBytes(sizeTToInt(length.value, "column family name"))
                     val optionsPtr = rocksdb_optionsutil_descriptor_options(bundle, index.asSizeT())
                     requireNotNull(optionsPtr) { "Column family options pointer was null" }
 
@@ -133,4 +139,11 @@ actual object OptionsUtil {
             throw throwable
         }
     }
+}
+
+private fun MutableList<ColumnFamilyDescriptor>.closeOptionsAndClear() {
+    for (descriptor in this) {
+        descriptor.getOptions().close()
+    }
+    clear()
 }

@@ -12,15 +12,23 @@ import rocksdb.rocksdb_filterpolicy_destroy
 actual class BloomFilter internal constructor(
     internal val native: CPointer<rocksdb_filterpolicy_t>
 ) : FilterPolicy() {
-    actual constructor() : this(rocksdb_filterpolicy_create_bloom(10.toDouble())!!)
+    actual constructor() : this(
+        requireNotNull(rocksdb_filterpolicy_create_bloom(10.toDouble())) {
+            "Unable to allocate RocksDB bloom filter"
+        }
+    )
 
     actual constructor(bitsPerKey: Double) : this(
-        rocksdb_filterpolicy_create_bloom(bitsPerKey)!!
+        requireNotNull(rocksdb_filterpolicy_create_bloom(bitsPerKey)) {
+            "Unable to allocate RocksDB bloom filter"
+        }
     )
 
     actual constructor(bitsPerKey: Double, useBlockBasedBuilder: Boolean) : this(
         // The value useBlockBasedBuilder is ignored in java implementation so ignore it here too.
-        rocksdb_filterpolicy_create_bloom_full(bitsPerKey)!!
+        requireNotNull(rocksdb_filterpolicy_create_bloom_full(bitsPerKey)) {
+            "Unable to allocate RocksDB full bloom filter"
+        }
     )
 
     override fun close() {

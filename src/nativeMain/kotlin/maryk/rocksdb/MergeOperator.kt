@@ -5,10 +5,21 @@ package maryk.rocksdb
 import cnames.structs.rocksdb_mergeoperator_t
 import kotlinx.cinterop.*
 import maryk.asSizeT
+import maryk.sizeTToInt
 import platform.posix.memcpy
 import platform.posix.size_t
 import platform.posix.size_tVar
+import kotlin.concurrent.AtomicReference
 import kotlin.experimental.ExperimentalNativeApi
+
+private val fallbackMergeOperatorName: CPointer<ByteVar> = run {
+    val nameBytes = "KotlinMergeOperator\u0000".encodeToByteArray()
+    val mem = nativeHeap.allocArray<ByteVar>(nameBytes.size)
+    nameBytes.usePinned { pinned ->
+        memcpy(mem, pinned.addressOf(0), nameBytes.size.asSizeT())
+    }
+    mem
+}
 
 /**
  * Base (actual) merge operator implementation.
@@ -17,19 +28,27 @@ import kotlin.experimental.ExperimentalNativeApi
  */
 actual abstract class MergeOperator : RocksObject() {
     // Allocate and persist the operator's name on the native heap.
-    private var pinnedName: CPointer<ByteVar>? = null
+    private val pinnedName = AtomicReference<CPointer<ByteVar>?>(null)
 
     internal fun pinnedName(): CPointer<ByteVar> {
-        pinnedName?.let { return it }
-        val actualName = name()
+        pinnedName.value?.let { return it }
+        val actualName = try {
+            name()
+        } catch (_: Throwable) {
+            "KotlinMergeOperator"
+        }
         // Append a null terminator.
         val nameBytes = (actualName + "\u0000").encodeToByteArray()
         val mem = nativeHeap.allocArray<ByteVar>(nameBytes.size)
         nameBytes.usePinned { pinned ->
-            memcpy(mem, pinned.addressOf(0), nameBytes.size.convert())
+            memcpy(mem, pinned.addressOf(0), nameBytes.size.asSizeT())
         }
-        pinnedName = mem
-        return mem
+        return if (pinnedName.compareAndSet(null, mem)) {
+            mem
+        } else {
+            nativeHeap.free(mem.rawValue)
+            requireNotNull(pinnedName.value) { "Merge operator name was cleared while being initialized." }
+        }
     }
 
     val native: CPointer<rocksdb_mergeoperator_t>
@@ -66,9 +85,10 @@ actual abstract class MergeOperator : RocksObject() {
     }
 
     internal fun destroyFromNative() {
-        pinnedName?.let {
-            nativeHeap.free(it.rawValue)
-            pinnedName = null
+        pinnedName.value?.let {
+            if (pinnedName.compareAndSet(it, null)) {
+                nativeHeap.free(it.rawValue)
+            }
         }
         tryCloseTransferred()
     }
@@ -85,14 +105,11 @@ actual abstract class MergeOperator : RocksObject() {
         if (numOperands > 0 && operands != null && operandsLengths != null) {
             val lastIndex = numOperands - 1
             val operandPtr = (operands + lastIndex)!!.pointed.value
+                ?: return Pair(false, Pair(null, 0.asSizeT()))
             val operandLen = (operandsLengths + lastIndex)!!.pointed.value
-            val merged = nativeHeap.allocArray<ByteVar>(operandLen.toInt())
-            memcpy(merged, operandPtr, operandLen)
-            return Pair(true, Pair(merged, operandLen))
+            return Pair(true, Pair(copyMergeResult(operandPtr, operandLen, "merge operand"), operandLen))
         } else if (existingValue != null) {
-            val merged = nativeHeap.allocArray<ByteVar>(existingValueLen.toInt())
-            memcpy(merged, existingValue, existingValueLen)
-            return Pair(true, Pair(merged, existingValueLen))
+            return Pair(true, Pair(copyMergeResult(existingValue, existingValueLen, "merge existing value"), existingValueLen))
         } else {
             return Pair(false, Pair(null, 0.asSizeT()))
         }
@@ -109,10 +126,9 @@ actual abstract class MergeOperator : RocksObject() {
         if (numOperands > 0 && operands != null && operandsLengths != null) {
             val lastIndex = numOperands - 1
             val operandPtr = (operands + lastIndex)!!.pointed.value
+                ?: return Pair(false, Pair(null, 0.asSizeT()))
             val operandLen = (operandsLengths + lastIndex)!!.pointed.value
-            val merged = nativeHeap.allocArray<ByteVar>(operandLen.toInt())
-            memcpy(merged, operandPtr, operandLen)
-            return Pair(true, Pair(merged, operandLen))
+            return Pair(true, Pair(copyMergeResult(operandPtr, operandLen, "merge operand"), operandLen))
         } else {
             return Pair(false, Pair(null, 0.asSizeT()))
         }
@@ -145,16 +161,22 @@ actual abstract class MergeOperator : RocksObject() {
 // --- C Callback Implementations ---
 
 private fun mergeOperatorDestructor(state: CPointer<out CPointed>?) {
-    state?.asStableRef<MergeOperator>()?.let { stableRef ->
-        stableRef.get().run {
+    try {
+        state?.asStableRef<MergeOperator>()?.let { stableRef ->
             try {
-                destructor()
-            } catch (_: Throwable) {
+                stableRef.get().run {
+                    try {
+                        destructor()
+                    } catch (_: Throwable) {
+                    } finally {
+                        destroyFromNative()
+                    }
+                }
             } finally {
-                destroyFromNative()
+                stableRef.dispose()
             }
         }
-        stableRef.dispose()
+    } catch (_: Throwable) {
     }
 }
 
@@ -166,30 +188,35 @@ private fun fullMergeCallback(
     operandsLengths: CPointer<size_tVar>?, numOperands: Int,
     success: CPointer<UByteVarOf<UByte>>?, newValueLength: CPointer<size_tVar>?
 ): CPointer<ByteVarOf<Byte>>? {
-    val instance = state?.asStableRef<MergeOperator>()?.get() ?: return null
-    val (succeeded, resultPair) = try {
-        instance.fullMerge(key, keyLen, existingValue, existingValueLen, operands, operandsLengths, numOperands)
-    } catch (_: Throwable) {
-        success?.pointed?.value = 0u
-        newValueLength?.pointed?.value = 0.asSizeT()
-        return null
-    }
-    val value = resultPair.first
-    val valueLength = resultPair.second
-    if (!succeeded || value == null) {
-        success?.pointed?.value = 0u
-        newValueLength?.pointed?.value = 0.asSizeT()
-        if (value != null) {
-            try {
-                instance.deleteValue(value, valueLength)
-            } catch (_: Throwable) {
+    try {
+        val instance = state?.asStableRef<MergeOperator>()?.get()
+            ?: return failedMergeValue(success, newValueLength)
+        val (succeeded, resultPair) = instance.fullMerge(
+            key,
+            keyLen,
+            existingValue,
+            existingValueLen,
+            operands,
+            operandsLengths,
+            numOperands
+        )
+        val value = resultPair.first
+        val valueLength = resultPair.second
+        if (!succeeded || value == null) {
+            if (value != null) {
+                try {
+                    instance.deleteValue(value, valueLength)
+                } catch (_: Throwable) {
+                }
             }
+            return failedMergeValue(success, newValueLength)
         }
-        return null
+        success?.pointed?.value = 1u
+        newValueLength?.pointed?.value = valueLength
+        return value
+    } catch (_: Throwable) {
+        return failedMergeValue(success, newValueLength)
     }
-    success?.pointed?.value = 1u
-    newValueLength?.pointed?.value = valueLength
-    return value
 }
 
 private fun partialMergeCallback(
@@ -199,39 +226,74 @@ private fun partialMergeCallback(
     operandsLengths: CPointer<size_tVar>?, numOperands: Int,
     success: CPointer<UByteVarOf<UByte>>?, newValueLength: CPointer<size_tVar>?
 ): CPointer<ByteVarOf<Byte>>? {
-    val instance = state?.asStableRef<MergeOperator>()?.get() ?: return null
-    val (succeeded, resultPair) = try {
-        instance.partialMerge(key, keyLen, operands, operandsLengths, numOperands)
-    } catch (_: Throwable) {
-        success?.pointed?.value = 0u
-        newValueLength?.pointed?.value = 0.asSizeT()
-        return null
-    }
-    val value = resultPair.first
-    val valueLength = resultPair.second
-    if (!succeeded || value == null) {
-        success?.pointed?.value = 0u
-        newValueLength?.pointed?.value = 0.asSizeT()
-        if (value != null) {
-            try {
-                instance.deleteValue(value, valueLength)
-            } catch (_: Throwable) {
+    try {
+        val instance = state?.asStableRef<MergeOperator>()?.get()
+            ?: return failedMergeValue(success, newValueLength)
+        val (succeeded, resultPair) = instance.partialMerge(
+            key,
+            keyLen,
+            operands,
+            operandsLengths,
+            numOperands
+        )
+        val value = resultPair.first
+        val valueLength = resultPair.second
+        if (!succeeded || value == null) {
+            if (value != null) {
+                try {
+                    instance.deleteValue(value, valueLength)
+                } catch (_: Throwable) {
+                }
             }
+            return failedMergeValue(success, newValueLength)
         }
-        return null
+        success?.pointed?.value = 1u
+        newValueLength?.pointed?.value = valueLength
+        return value
+    } catch (_: Throwable) {
+        return failedMergeValue(success, newValueLength)
     }
-    success?.pointed?.value = 1u
-    newValueLength?.pointed?.value = valueLength
-    return value
+}
+
+private fun failedMergeValue(
+    success: CPointer<UByteVarOf<UByte>>?,
+    newValueLength: CPointer<size_tVar>?,
+): CPointer<ByteVarOf<Byte>> {
+    success?.pointed?.value = 0u
+    newValueLength?.pointed?.value = 0.asSizeT()
+    return nativeHeap.allocArray<ByteVar>(1)
+}
+
+internal fun copyMergeResult(
+    source: CPointer<ByteVarOf<Byte>>,
+    length: size_t,
+    label: String,
+): CPointer<ByteVar> {
+    val lengthInt = sizeTToInt(length, label)
+    val result = nativeHeap.allocArray<ByteVar>(if (lengthInt == 0) 1 else lengthInt)
+    if (lengthInt > 0) {
+        memcpy(result, source, length)
+    }
+    return result
+}
+
+internal fun ByteArray.copyToMergeResult(): CPointer<ByteVar> {
+    val result = nativeHeap.allocArray<ByteVar>(if (isEmpty()) 1 else size)
+    if (isNotEmpty()) {
+        usePinned { pinned ->
+            memcpy(result, pinned.addressOf(0), size.asSizeT())
+        }
+    }
+    return result
 }
 
 // Updated callback: now simply returns the persistent pinnedName.
 private fun mergeOperatorNameCallback(state: CPointer<out CPointed>?): CPointer<ByteVarOf<Byte>>? {
-    val instance = state?.asStableRef<MergeOperator>()?.get()
     return try {
-        instance?.pinnedName()
+        val instance = state?.asStableRef<MergeOperator>()?.get()
+        instance?.pinnedName() ?: fallbackMergeOperatorName
     } catch (_: Throwable) {
-        null
+        fallbackMergeOperatorName
     }
 }
 

@@ -26,6 +26,23 @@ actual class LRUCache private constructor() : Cache() {
         highPriPoolRatio: Double,
         lowPriPoolRatio: Double
     ) : this() {
+        if (highPriPoolRatio != 0.0 || lowPriPoolRatio != 0.0) {
+            throw UnsupportedOperationException(
+                "Native RocksDB C API does not expose LRU cache priority pool ratio setters"
+            )
+        }
+        if (strictCapacityLimit) {
+            if (numShardBits != -1) {
+                throw UnsupportedOperationException(
+                    "Native RocksDB C API only exposes strict-capacity LRU cache creation without custom shard bits"
+                )
+            }
+            native = requireNotNull(rocksdb.rocksdb_cache_create_lru_with_strict_capacity_limit(capacity.asSizeT())) {
+                "Unable to allocate strict-capacity RocksDB LRU cache"
+            }
+            return
+        }
+
         val options = requireNotNull(rocksdb.rocksdb_lru_cache_options_create()) {
             "Unable to allocate RocksDB LRU cache options"
         }

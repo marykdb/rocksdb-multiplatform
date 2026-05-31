@@ -1,6 +1,7 @@
 package maryk.rocksdb
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -43,17 +44,23 @@ actual class StatisticsCollector actual constructor(
         }
         completed.value = 0
         val collectorState = state
-        val job = scope.launch {
+        val job = scope.launch(start = CoroutineStart.LAZY) {
             try {
                 collectorState.run()
             } finally {
                 running.value = 0
             }
         }
-        jobRef.value = job
+        if (!jobRef.compareAndSet(null, job)) {
+            running.compareAndSet(1, 0)
+            completed.value = 0
+            job.cancel()
+            return
+        }
         job.invokeOnCompletion {
             jobRef.compareAndSet(job, null)
         }
+        job.start()
     }
 
     actual fun shutDown(shutdownTimeout: Int) {

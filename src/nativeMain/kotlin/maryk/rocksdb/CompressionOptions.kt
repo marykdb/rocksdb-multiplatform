@@ -5,6 +5,8 @@ package maryk.rocksdb
 import cnames.structs.rocksdb_compression_options_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
+import maryk.asUInt32
+import maryk.toCheckedInt
 import rocksdb.rocksdb_compression_options_create
 import rocksdb.rocksdb_compression_options_destroy
 import rocksdb.rocksdb_compression_options_get_level
@@ -19,7 +21,11 @@ import rocksdb.rocksdb_compression_options_set_window_bits
 actual class CompressionOptions internal constructor(
     internal val native: CPointer<rocksdb_compression_options_t>
 ) : RocksObject() {
-    actual constructor() : this(rocksdb_compression_options_create()!!)
+    actual constructor() : this(
+        requireNotNull(rocksdb_compression_options_create()) {
+            "Unable to allocate RocksDB compression options"
+        }
+    )
 
     override fun close() {
         if (tryClose()) {
@@ -29,31 +35,46 @@ actual class CompressionOptions internal constructor(
     }
 
     actual fun setWindowBits(windowBits: Int): CompressionOptions {
+        checkOwningHandle()
         rocksdb_compression_options_set_window_bits(native, windowBits)
         return this
     }
 
-    actual fun windowBits(): Int = rocksdb_compression_options_get_window_bits(native)
+    actual fun windowBits(): Int {
+        checkOwningHandle()
+        return rocksdb_compression_options_get_window_bits(native)
+    }
 
     actual fun setLevel(level: Int): CompressionOptions {
+        checkOwningHandle()
         rocksdb_compression_options_set_level(native, level)
         return this
     }
 
-    actual fun level(): Int = rocksdb_compression_options_get_level(native)
+    actual fun level(): Int {
+        checkOwningHandle()
+        return rocksdb_compression_options_get_level(native)
+    }
 
     actual fun setStrategy(strategy: Int): CompressionOptions {
+        checkOwningHandle()
         rocksdb_compression_options_set_strategy(native, strategy)
         return this
     }
 
-    actual fun strategy(): Int = rocksdb_compression_options_get_strategy(native)
+    actual fun strategy(): Int {
+        checkOwningHandle()
+        return rocksdb_compression_options_get_strategy(native)
+    }
 
     actual fun setMaxDictBytes(bytes: Int): CompressionOptions {
-        rocksdb_compression_options_set_max_dict_bytes(native, bytes.toUInt())
+        checkOwningHandle()
+        rocksdb_compression_options_set_max_dict_bytes(native, bytes.asUInt32())
         return this
     }
 
-    actual fun maxDictBytes(): Int =
-        rocksdb_compression_options_get_max_dict_bytes(native).toInt()
+    actual fun maxDictBytes(): Int {
+        checkOwningHandle()
+        return rocksdb_compression_options_get_max_dict_bytes(native).toCheckedInt("compression options max dictionary bytes")
+    }
 }

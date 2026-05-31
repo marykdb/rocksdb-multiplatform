@@ -5,7 +5,7 @@ import rocksdb.rocksdb_timed_env_create
 actual class TimedEnv actual constructor(
     baseEnv: Env,
 ) : Env(
-    rocksdb_timed_env_create(baseEnv.native) ?: error("Unable to create timed env"),
+    createTimedEnv(baseEnv),
 ) {
     private var baseEnvRef: Env? = baseEnv
 
@@ -14,3 +14,9 @@ actual class TimedEnv actual constructor(
         baseEnvRef = null
     }
 }
+
+private fun createTimedEnv(baseEnv: Env) =
+    baseEnv.let {
+        it.checkOwningHandle()
+        rocksdb_timed_env_create(it.native) ?: error("Unable to create timed env")
+    }

@@ -13,7 +13,6 @@ import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.set
-import maryk.byteArrayToCPointer
 import maryk.toUByte
 import maryk.wrapWithNullErrorThrower
 import rocksdb.rocksdb_ttl_close
@@ -35,12 +34,13 @@ actual class TtlDB internal constructor(
         ttl: Int,
     ): ColumnFamilyHandle =
         memScoped {
-            val name = columnFamilyDescriptor.getName().decodeToString()
+            checkOwningHandle()
+            columnFamilyDescriptor.getOptions().checkOwningHandle()
             val handle = createColumnFamilyHandle { error ->
                 rocksdb_ttl_create_column_family(
                     nativeTtl,
                     columnFamilyDescriptor.getOptions().native,
-                    name,
+                    columnFamilyNameToCString(columnFamilyDescriptor.getName()),
                     ttl,
                     error,
                 )
@@ -53,11 +53,15 @@ actual class TtlDB internal constructor(
                 handle.close()
                 throw throwable
             }
-            handle
+            registerColumnFamilyHandle(handle)
         }
 
     override fun close() {
         if (tryClose()) {
+            invalidateBorrowedIterators()
+            invalidateBorrowedTransactionLogIterators()
+            releaseBorrowedSnapshots()
+            invalidateColumnFamilyHandles()
             closeDefaultReferences()
             // RocksDB exposes no TTL-specific close_base_db; this helper deletes only the rocksdb_t wrapper.
             rocksdb_transactiondb_close_base_db(native)
@@ -74,6 +78,7 @@ actual fun openTtlDB(options: Options, dbPath: String): TtlDB =
 
 actual fun openTtlDB(options: Options, dbPath: String, ttl: Int, readOnly: Boolean): TtlDB =
     Unit.wrapWithNullErrorThrower { error ->
+        options.checkOwningHandle()
         val retainedReferences = options.retainedNativeReferences()
         rocksdb_ttl_open(options.native, dbPath, ttl, readOnly.toUByte(), error)?.let { native ->
             wrapOpenedDb(
@@ -96,6 +101,9 @@ actual fun openTtlDB(
     require(columnFamilyDescriptors.size == ttlValues.size) {
         "ttlValues size (${ttlValues.size}) must match descriptors size (${columnFamilyDescriptors.size})"
     }
+    require(columnFamilyDescriptors.isNotEmpty()) { "columnFamilyDescriptors must not be empty" }
+    options.checkOwningHandle()
+    columnFamilyDescriptors.forEach { it.getOptions().checkOwningHandle() }
     memScoped {
         val retainedReferences = options.retainedNativeReferences()
         val count = columnFamilyDescriptors.size
@@ -104,7 +112,7 @@ actual fun openTtlDB(
         val ttlArray = allocArray<IntVar>(count)
         columnFamilyDescriptors.forEachIndexed { index, descriptor ->
             val name = descriptor.getName()
-            namesArray[index] = byteArrayToCPointer(name, 0, name.size)
+            namesArray[index] = columnFamilyNameToCString(name)
             optionsArray[index] = descriptor.getOptions().native
             ttlArray[index] = ttlValues[index]
         }

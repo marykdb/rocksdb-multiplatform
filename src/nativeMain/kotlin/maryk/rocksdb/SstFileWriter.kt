@@ -3,16 +3,19 @@
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_sstfilewriter_t
+import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ULongVar
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
+import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
 import maryk.asSizeT
+import maryk.toCheckedLong
 import maryk.wrapWithErrorThrower
 import rocksdb.rocksdb_sstfilewriter_create
 import rocksdb.rocksdb_sstfilewriter_delete
@@ -28,10 +31,16 @@ actual class SstFileWriter actual constructor(
     private val options: Options
 ) : RocksObject() {
     private var ownedComparator: AbstractComparator? = null
+    private var retainedReferences: List<Any> = emptyList()
 
     internal val native: CPointer<rocksdb_sstfilewriter_t>
     init {
-        val created = rocksdb_sstfilewriter_create(envOptions.native, options.native)!!
+        envOptions.checkOwningHandle()
+        options.checkOwningHandle()
+        retainedReferences = options.retainedNativeReferences()
+        val created = requireNotNull(rocksdb_sstfilewriter_create(envOptions.native, options.native)) {
+            "Unable to allocate RocksDB SST file writer"
+        }
         try {
             ownedComparator = options.releaseOwnedComparator()
             native = created
@@ -46,11 +55,13 @@ actual class SstFileWriter actual constructor(
             rocksdb_sstfilewriter_destroy(native)
             ownedComparator?.closeFromOptions()
             ownedComparator = null
+            retainedReferences = emptyList()
             super.close()
         }
     }
 
     actual fun open(filePath: String) {
+        checkOwningHandle()
         memScoped {
             wrapWithErrorThrower { error ->
                 rocksdb_sstfilewriter_open(native, filePath, error)
@@ -59,32 +70,57 @@ actual class SstFileWriter actual constructor(
     }
 
     actual fun put(key: ByteArray, value: ByteArray) {
+        checkOwningHandle()
         wrapWithErrorThrower { error ->
-            key.usePinned { keyPinned ->
-                value.usePinned { valuePinned ->
-                    rocksdb_sstfilewriter_put(
-                        native,
-                        keyPinned.addressOf(0),
-                        key.size.asSizeT(),
-                        valuePinned.addressOf(0),
-                        value.size.asSizeT(),
-                        error
-                    )
+            memScoped {
+                val emptyPointer = allocArray<ByteVar>(1)
+                key.usePointer(emptyPointer) { keyPointer ->
+                    value.usePointer(emptyPointer) { valuePointer ->
+                        rocksdb_sstfilewriter_put(
+                            native,
+                            keyPointer,
+                            key.size.asSizeT(),
+                            valuePointer,
+                            value.size.asSizeT(),
+                            error
+                        )
+                    }
                 }
             }
         }
     }
 
     actual fun merge(key: ByteArray, value: ByteArray) {
+        checkOwningHandle()
         wrapWithErrorThrower { error ->
-            key.usePinned { keyPinned ->
-                value.usePinned { valuePinned ->
-                    rocksdb_sstfilewriter_merge(
+            memScoped {
+                val emptyPointer = allocArray<ByteVar>(1)
+                key.usePointer(emptyPointer) { keyPointer ->
+                    value.usePointer(emptyPointer) { valuePointer ->
+                        rocksdb_sstfilewriter_merge(
+                            native,
+                            keyPointer,
+                            key.size.asSizeT(),
+                            valuePointer,
+                            value.size.asSizeT(),
+                            error
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    actual fun delete(key: ByteArray) {
+        checkOwningHandle()
+        wrapWithErrorThrower { error ->
+            memScoped {
+                val emptyPointer = allocArray<ByteVar>(1)
+                key.usePointer(emptyPointer) { keyPointer ->
+                    rocksdb_sstfilewriter_delete(
                         native,
-                        keyPinned.addressOf(0),
+                        keyPointer,
                         key.size.asSizeT(),
-                        valuePinned.addressOf(0),
-                        value.size.asSizeT(),
                         error
                     )
                 }
@@ -92,30 +128,30 @@ actual class SstFileWriter actual constructor(
         }
     }
 
-    actual fun delete(key: ByteArray) {
-        wrapWithErrorThrower { error ->
-            key.usePinned { keyPinned ->
-                rocksdb_sstfilewriter_delete(
-                    native,
-                    keyPinned.addressOf(0),
-                    key.size.asSizeT(),
-                    error
-                )
-            }
-        }
-    }
-
     actual fun finish() {
+        checkOwningHandle()
         wrapWithErrorThrower { error ->
             rocksdb_sstfilewriter_finish(native, error)
         }
     }
 
     actual fun fileSize(): Long {
+        checkOwningHandle()
         memScoped {
             val sizeVar = alloc<ULongVar>()
             rocksdb_sstfilewriter_file_size(native, sizeVar.ptr)
-            return sizeVar.value.toLong()
+            return sizeVar.value.toCheckedLong("SST file writer file size")
         }
+    }
+}
+
+private inline fun <R> ByteArray.usePointer(
+    emptyPointer: CPointer<ByteVar>,
+    block: (CPointer<ByteVar>) -> R,
+): R = if (isEmpty()) {
+    block(emptyPointer)
+} else {
+    usePinned { pinned ->
+        block(pinned.addressOf(0))
     }
 }

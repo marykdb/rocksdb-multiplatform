@@ -6,9 +6,14 @@ import cnames.structs.rocksdb_options_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.UnsafeNumber
 import maryk.asSizeT
+import maryk.asUInt32
+import maryk.asUInt64
 import maryk.rocksdb.util.BytewiseComparator
 import maryk.rocksdb.util.ReverseBytewiseComparator
+import maryk.sizeTToLong
 import maryk.toBoolean
+import maryk.toCheckedInt
+import maryk.toCheckedLong
 import rocksdb.rocksdb_options_create
 import rocksdb.rocksdb_options_destroy
 import rocksdb.rocksdb_options_get_arena_block_size
@@ -62,7 +67,7 @@ actual class ColumnFamilyOptions private constructor(
     private var tableFormatConfig: TableFormatConfig? = null
     private var ownedComparator: AbstractComparator? = null
 
-    actual constructor() : this(rocksdb_options_create()!!)
+    actual constructor() : this(requireNotNull(rocksdb_options_create()) { "Unable to allocate RocksDB column-family options" })
 
     companion object {
         internal fun wrap(native: CPointer<rocksdb_options_t>, owning: Boolean): ColumnFamilyOptions {
@@ -89,6 +94,7 @@ actual class ColumnFamilyOptions private constructor(
     }
 
     internal fun releaseOwnedComparator(): AbstractComparator? {
+        checkOwningHandle()
         val comparator = ownedComparator
         if (comparator != null) {
             rocksdb_options_set_comparator(native, null)
@@ -99,6 +105,7 @@ actual class ColumnFamilyOptions private constructor(
     }
 
     actual fun setTableFormatConfig(tableFormatConfig: TableFormatConfig): ColumnFamilyOptions {
+        checkOwningHandle()
         when (tableFormatConfig) {
             is BlockBasedTableConfig -> tableFormatConfig.applyToOptions(native)
             is PlainTableConfig -> tableFormatConfig.applyToOptions(native)
@@ -121,13 +128,13 @@ actual class ColumnFamilyOptions private constructor(
 
     actual fun setBloomLocality(bloomLocality: Int): ColumnFamilyOptions {
         checkOwningHandle()
-        rocksdb_options_set_bloom_locality(native, bloomLocality.toUInt())
+        rocksdb_options_set_bloom_locality(native, bloomLocality.asUInt32())
         return this
     }
 
     actual fun bloomLocality(): Int {
         checkOwningHandle()
-        return rocksdb_options_get_bloom_locality(native).toInt()
+        return rocksdb_options_get_bloom_locality(native).toCheckedInt("column-family options bloom locality")
     }
 
     actual fun setNumLevels(numLevels: Int): ColumnFamilyOptions {
@@ -142,15 +149,18 @@ actual class ColumnFamilyOptions private constructor(
     }
 
     actual fun setCompactionStyle(compactionStyle: CompactionStyle): ColumnFamilyOptions {
+        checkOwningHandle()
         rocksdb_options_set_compaction_style(native, compactionStyle.value.toInt())
         return this
     }
 
     actual fun compactionStyle(): CompactionStyle {
+        checkOwningHandle()
         return getCompactionStyle(rocksdb_options_get_compaction_style(native).toByte())
     }
 
     actual fun setComparator(builtinComparator: BuiltinComparator): ColumnFamilyOptions {
+        checkOwningHandle()
         val comparator = when (builtinComparator) {
             BuiltinComparator.BYTEWISE_COMPARATOR -> BytewiseComparator(null)
             BuiltinComparator.REVERSE_BYTEWISE_COMPARATOR -> ReverseBytewiseComparator(null)
@@ -164,6 +174,7 @@ actual class ColumnFamilyOptions private constructor(
     }
 
     actual fun setComparator(comparator: AbstractComparator): ColumnFamilyOptions {
+        checkOwningHandle()
         if (ownedComparator === comparator) {
             return this
         }
@@ -176,6 +187,7 @@ actual class ColumnFamilyOptions private constructor(
     }
 
     actual fun setMergeOperator(mergeOperator: MergeOperator): ColumnFamilyOptions {
+        checkOwningHandle()
         mergeOperator.transferOwnershipToNative()
         rocksdb.rocksdb_options_set_merge_operator(native, mergeOperator.native)
         return this
@@ -188,12 +200,15 @@ actual class ColumnFamilyOptions private constructor(
     }
 
     actual fun setMaxBytesForLevelMultiplier(multiplier: Double): ColumnFamilyOptions {
+        checkOwningHandle()
         rocksdb_options_set_max_bytes_for_level_multiplier(native, multiplier)
         return this
     }
 
-    actual fun maxBytesForLevelMultiplier(): Double =
-        rocksdb_options_get_max_bytes_for_level_multiplier(native)
+    actual fun maxBytesForLevelMultiplier(): Double {
+        checkOwningHandle()
+        return rocksdb_options_get_max_bytes_for_level_multiplier(native)
+    }
 
     actual fun setWriteBufferSize(writeBufferSize: Long): ColumnFamilyOptions {
         checkOwningHandle()
@@ -203,7 +218,7 @@ actual class ColumnFamilyOptions private constructor(
 
     actual fun writeBufferSize(): Long {
         checkOwningHandle()
-        return rocksdb_options_get_write_buffer_size(native).toLong()
+        return sizeTToLong(rocksdb_options_get_write_buffer_size(native), "column-family options write buffer size")
     }
 
     actual fun setDisableAutoCompactions(disableAutoCompactions: Boolean): ColumnFamilyOptions {
@@ -230,13 +245,13 @@ actual class ColumnFamilyOptions private constructor(
 
     actual fun setMaxBytesForLevelBase(maxBytesForLevelBase: Long): ColumnFamilyOptions {
         checkOwningHandle()
-        rocksdb_options_set_max_bytes_for_level_base(native, maxBytesForLevelBase.toULong())
+        rocksdb_options_set_max_bytes_for_level_base(native, maxBytesForLevelBase.asUInt64())
         return this
     }
 
     actual fun maxBytesForLevelBase(): Long {
         checkOwningHandle()
-        return rocksdb_options_get_max_bytes_for_level_base(native).toLong()
+        return rocksdb_options_get_max_bytes_for_level_base(native).toCheckedLong("column-family options max bytes for level base")
     }
 
     actual fun setCompressionType(compressionType: CompressionType): ColumnFamilyOptions {
@@ -282,7 +297,7 @@ actual class ColumnFamilyOptions private constructor(
 
     actual fun memtableHugePageSize(): Long {
         checkOwningHandle()
-        return rocksdb_options_get_memtable_huge_page_size(native).toLong()
+        return sizeTToLong(rocksdb_options_get_memtable_huge_page_size(native), "column-family options memtable huge page size")
     }
 
     actual fun setArenaBlockSize(arenaBlockSize: Long): ColumnFamilyOptions {
@@ -293,7 +308,7 @@ actual class ColumnFamilyOptions private constructor(
 
     actual fun arenaBlockSize(): Long {
         checkOwningHandle()
-        return rocksdb_options_get_arena_block_size(native).toLong()
+        return sizeTToLong(rocksdb_options_get_arena_block_size(native), "column-family options arena block size")
     }
 
     actual fun setLevel0SlowdownWritesTrigger(level0SlowdownWritesTrigger: Int): ColumnFamilyOptions {
@@ -320,13 +335,13 @@ actual class ColumnFamilyOptions private constructor(
 
     actual fun setTargetFileSizeBase(targetFileSizeBase: Long): ColumnFamilyOptions {
         checkOwningHandle()
-        rocksdb_options_set_target_file_size_base(native, targetFileSizeBase.toULong())
+        rocksdb_options_set_target_file_size_base(native, targetFileSizeBase.asUInt64())
         return this
     }
 
     actual fun targetFileSizeBase(): Long {
         checkOwningHandle()
-        return rocksdb_options_get_target_file_size_base(native).toLong()
+        return rocksdb_options_get_target_file_size_base(native).toCheckedLong("column-family options target file size base")
     }
 
     actual fun setTargetFileSizeMultiplier(multiplier: Int): ColumnFamilyOptions {
@@ -342,13 +357,14 @@ actual class ColumnFamilyOptions private constructor(
 
     actual fun setMaxSequentialSkipInIterations(maxSequentialSkipInIterations: Long): ColumnFamilyOptions {
         checkOwningHandle()
-        rocksdb_options_set_max_sequential_skip_in_iterations(native, maxSequentialSkipInIterations.toULong())
+        rocksdb_options_set_max_sequential_skip_in_iterations(native, maxSequentialSkipInIterations.asUInt64())
         return this
     }
 
     actual fun maxSequentialSkipInIterations(): Long {
         checkOwningHandle()
-        return rocksdb_options_get_max_sequential_skip_in_iterations(native).toLong()
+        return rocksdb_options_get_max_sequential_skip_in_iterations(native)
+            .toCheckedLong("column-family options max sequential skip in iterations")
     }
 
     actual fun setMaxSuccessiveMerges(maxSuccessiveMerges: Long): ColumnFamilyOptions {
@@ -359,6 +375,6 @@ actual class ColumnFamilyOptions private constructor(
 
     actual fun maxSuccessiveMerges(): Long {
         checkOwningHandle()
-        return rocksdb_options_get_max_successive_merges(native).toLong()
+        return sizeTToLong(rocksdb_options_get_max_successive_merges(native), "column-family options max successive merges")
     }
 }

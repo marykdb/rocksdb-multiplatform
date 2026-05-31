@@ -6,6 +6,7 @@ import cnames.structs.rocksdb_options_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.UnsafeNumber
 import maryk.asSizeT
+import maryk.asUInt32
 import maryk.toUByte
 import rocksdb.rocksdb_options_set_plain_table_factory
 
@@ -78,7 +79,7 @@ actual class PlainTableConfig actual constructor() : TableFormatConfig() {
     internal fun applyToOptions(options: CPointer<rocksdb_options_t>) {
         rocksdb_options_set_plain_table_factory(
             options,
-            keySize.toUInt(),
+            keySize.asUInt32(),
             bloomBitsPerKey,
             hashTableRatio,
             indexSparseness.asSizeT(),

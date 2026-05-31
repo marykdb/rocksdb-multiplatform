@@ -1,5 +1,7 @@
 package maryk.rocksdb
 
+import maryk.toCheckedLong
+
 actual open class SstFileMetaData protected constructor() {
     private lateinit var fileNameValue: String
     private lateinit var pathValue: String
@@ -25,7 +27,7 @@ actual open class SstFileMetaData protected constructor() {
 
     actual fun path(): String = pathValue
 
-    actual fun size(): Long = sizeValue.toLong()
+    actual fun size(): Long = sizeValue.toCheckedLong("SST file metadata size")
 
     actual fun smallestKey(): ByteArray = smallestKeyValue
 

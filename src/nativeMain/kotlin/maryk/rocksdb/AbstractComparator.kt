@@ -11,52 +11,77 @@ import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.asStableRef
-import kotlinx.cinterop.convert
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.usePinned
 import maryk.ByteBuffer
 import maryk.DirectByteBuffer
+import maryk.asSizeT
+import maryk.sizeTToInt
 import platform.posix.memcpy
 import rocksdb.rocksdb_comparator_destroy
 import rocksdb.rocksdb_comparator_get_comparator_type
+import kotlin.concurrent.AtomicReference
+
+private val fallbackComparatorName: CPointer<ByteVar> = run {
+    val nameBytes = "KotlinComparator\u0000".encodeToByteArray()
+    val mem = nativeHeap.allocArray<ByteVar>(nameBytes.size)
+    nameBytes.usePinned { pinned ->
+        memcpy(mem, pinned.addressOf(0), nameBytes.size.asSizeT())
+    }
+    mem
+}
 
 actual abstract class AbstractComparator
     protected actual constructor(val copt: ComparatorOptions?)
 : RocksCallbackObject() {
     protected actual constructor() : this(null)
 
-    private var pinnedName: CPointer<ByteVar>? = null
+    private val pinnedName = AtomicReference<CPointer<ByteVar>?>(null)
 
     private fun pinnedName(): CPointer<ByteVar> {
-        pinnedName?.let { return it }
-        val actualName = name()
+        pinnedName.value?.let { return it }
+        val actualName = try {
+            name()
+        } catch (_: Throwable) {
+            "KotlinComparator"
+        }
         val nameBytes = (actualName + "\u0000").encodeToByteArray()
         val mem = nativeHeap.allocArray<ByteVar>(nameBytes.size)
 
         nameBytes.usePinned { pinned ->
-            memcpy(mem, pinned.addressOf(0), nameBytes.size.convert())
+            memcpy(mem, pinned.addressOf(0), nameBytes.size.asSizeT())
         }
-        pinnedName = mem
-        return mem
+        return if (pinnedName.compareAndSet(null, mem)) {
+            mem
+        } else {
+            nativeHeap.free(mem.rawValue)
+            requireNotNull(pinnedName.value) { "Comparator name was cleared while being initialized." }
+        }
     }
 
     private val nameCallback = staticCFunction<COpaquePointer?, CPointer<ByteVar>?> { statePtr ->
-        val comparator = statePtr?.asStableRef<AbstractComparator>()?.get()
-            ?: return@staticCFunction null
         try {
+            val comparator = statePtr?.asStableRef<AbstractComparator>()?.get()
+                ?: return@staticCFunction fallbackComparatorName
             comparator.pinnedName()
         } catch (_: Throwable) {
-            null
+            fallbackComparatorName
         }
     }
 
     private var stableRef: StableRef<AbstractComparator>? = null
 
     private val destructorCallback = staticCFunction<COpaquePointer?, Unit> { ref ->
-        ref?.asStableRef<AbstractComparator>()?.let { stableRef ->
-            stableRef.get().destroyFromNative()
-            stableRef.dispose()
+        try {
+            ref?.asStableRef<AbstractComparator>()?.let { stableRef ->
+                try {
+                    stableRef.get().destroyFromNative()
+                } finally {
+                    stableRef.dispose()
+                }
+            }
+        } catch (_: Throwable) {
         }
     }
 
@@ -67,15 +92,18 @@ actual abstract class AbstractComparator
                 name = nameCallback,
                 state = ref.asCPointer(),
                 compare = staticCFunction { statePtr, aPtr, aLen, bPtr, bLen ->
-                    val comparator = statePtr?.asStableRef<AbstractComparator>()?.get()
-                        ?: return@staticCFunction 0
-
-                    if (aPtr == null || bPtr == null) {
-                        return@staticCFunction 0
-                    }
-
                     try {
-                        comparator.compare(DirectByteBuffer(aPtr, aLen.toInt()), DirectByteBuffer(bPtr, bLen.toInt()))
+                        val comparator = statePtr?.asStableRef<AbstractComparator>()?.get()
+                            ?: return@staticCFunction 0
+
+                        if (aPtr == null || bPtr == null) {
+                            return@staticCFunction 0
+                        }
+
+                        comparator.compare(
+                            DirectByteBuffer(aPtr, sizeTToInt(aLen, "comparator key")),
+                            DirectByteBuffer(bPtr, sizeTToInt(bLen, "comparator key")),
+                        )
                     } catch (_: Throwable) {
                         0
                     }
@@ -127,9 +155,10 @@ actual abstract class AbstractComparator
     }
 
     internal fun destroyFromNative() {
-        pinnedName?.let {
-            nativeHeap.free(it.rawValue)
-            pinnedName = null
+        pinnedName.value?.let {
+            if (pinnedName.compareAndSet(it, null)) {
+                nativeHeap.free(it.rawValue)
+            }
         }
     }
 

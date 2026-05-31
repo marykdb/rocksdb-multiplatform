@@ -8,7 +8,6 @@ import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.set
-import maryk.byteArrayToCPointer
 import maryk.wrapWithNullErrorThrower
 import kotlin.collections.plusAssign
 
@@ -20,6 +19,10 @@ actual fun openTransactionDB(
     columnFamilyDescriptors: List<ColumnFamilyDescriptor>,
     columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ): TransactionDB {
+    require(columnFamilyDescriptors.isNotEmpty()) { "columnFamilyDescriptors must not be empty" }
+    dbOptions.checkOwningHandle()
+    transactionDbOptions.checkOwningHandle()
+    columnFamilyDescriptors.forEach { it.getOptions().checkOwningHandle() }
     if (columnFamilyDescriptors.find { it.getName().contentEquals(defaultColumnFamily) } == null) {
         throw IllegalArgumentException("Default column family descriptor should always be included")
     }
@@ -32,7 +35,7 @@ actual fun openTransactionDB(
 
             columnFamilyDescriptors.forEachIndexed { index, cfDesc ->
                 val name = cfDesc.getName()
-                namesArray[index] = byteArrayToCPointer(name, 0, name.size)
+                namesArray[index] = columnFamilyNameToCString(name)
                 optionsArray[index] = cfDesc.getOptions().native
             }
 
@@ -69,6 +72,8 @@ actual fun openTransactionDB(
     path: String
 ): TransactionDB =
     Unit.wrapWithNullErrorThrower { error ->
+        options.checkOwningHandle()
+        transactionDbOptions.checkOwningHandle()
         val retainedReferences = options.retainedNativeReferences()
         rocksdb.rocksdb_transactiondb_open(options.native, transactionDbOptions.native, path, error)?.let { native ->
             wrapOpenedDb(

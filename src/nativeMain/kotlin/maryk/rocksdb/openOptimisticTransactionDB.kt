@@ -8,7 +8,6 @@ import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.set
-import maryk.byteArrayToCPointer
 import maryk.wrapWithNullErrorThrower
 import kotlin.collections.plusAssign
 
@@ -19,6 +18,9 @@ actual fun openOptimisticTransactionDB(
     columnFamilyDescriptors: List<ColumnFamilyDescriptor>,
     columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ): OptimisticTransactionDB {
+    require(columnFamilyDescriptors.isNotEmpty()) { "columnFamilyDescriptors must not be empty" }
+    dbOptions.checkOwningHandle()
+    columnFamilyDescriptors.forEach { it.getOptions().checkOwningHandle() }
     if (columnFamilyDescriptors.find { it.getName().contentEquals(defaultColumnFamily) } == null) {
         throw IllegalArgumentException("Default column family descriptor should always be included")
     }
@@ -31,7 +33,7 @@ actual fun openOptimisticTransactionDB(
 
             columnFamilyDescriptors.forEachIndexed { index, cfDesc ->
                 val name = cfDesc.getName()
-                namesArray[index] = byteArrayToCPointer(name, 0, name.size)
+                namesArray[index] = columnFamilyNameToCString(name)
                 optionsArray[index] = cfDesc.getOptions().native
             }
 
@@ -66,6 +68,7 @@ actual fun openOptimisticTransactionDB(
     path: String
 ): OptimisticTransactionDB =
     Unit.wrapWithNullErrorThrower { error ->
+        options.checkOwningHandle()
         val retainedReferences = options.retainedNativeReferences()
         rocksdb.rocksdb_optimistictransactiondb_open(options.native, path, error)?.let { native ->
             wrapOpenedDb(

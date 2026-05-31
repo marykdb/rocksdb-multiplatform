@@ -18,53 +18,78 @@ import rocksdb.rocksdb_writeoptions_set_no_slowdown
 import rocksdb.rocksdb_writeoptions_set_sync
 
 actual class WriteOptions internal constructor(
-    internal val native: CPointer<rocksdb_writeoptions_t>
+    internal val native: CPointer<rocksdb_writeoptions_t>,
+    private val ownsNative: Boolean = true,
 ) : RocksObject() {
-    actual constructor() : this(rocksdb_writeoptions_create()!!)
+    init {
+        if (!ownsNative) {
+            borrowHandle()
+        }
+    }
+
+    actual constructor() : this(requireNotNull(rocksdb_writeoptions_create()) { "Unable to allocate RocksDB write options" })
 
     override fun close() {
-        if (tryClose()) {
+        if (ownsNative && tryClose()) {
             rocksdb_writeoptions_destroy(native)
+            super.close()
+        } else if (!ownsNative && tryCloseBorrowed()) {
             super.close()
         }
     }
 
     actual fun setSync(flag: Boolean): WriteOptions {
+        checkOpenHandle()
         rocksdb_writeoptions_set_sync(native, flag.toUByte())
         return this
     }
 
-    actual fun sync() =
-        rocksdb_writeoptions_get_sync(native).toBoolean()
+    actual fun sync(): Boolean {
+        checkOpenHandle()
+        return rocksdb_writeoptions_get_sync(native).toBoolean()
+    }
 
     actual fun setDisableWAL(flag: Boolean): WriteOptions {
+        checkOpenHandle()
         rocksdb_writeoptions_disable_WAL(native, if (flag) 1 else 0)
         return this
     }
 
-    actual fun disableWAL() = rocksdb_writeoptions_get_disable_WAL(native).toBoolean()
+    actual fun disableWAL(): Boolean {
+        checkOpenHandle()
+        return rocksdb_writeoptions_get_disable_WAL(native).toBoolean()
+    }
 
     actual fun setIgnoreMissingColumnFamilies(ignoreMissingColumnFamilies: Boolean): WriteOptions {
+        checkOpenHandle()
         rocksdb_writeoptions_set_ignore_missing_column_families(native, ignoreMissingColumnFamilies.toUByte())
         return this
     }
 
-    actual fun ignoreMissingColumnFamilies() =
-        rocksdb_writeoptions_get_ignore_missing_column_families(native).toBoolean()
+    actual fun ignoreMissingColumnFamilies(): Boolean {
+        checkOpenHandle()
+        return rocksdb_writeoptions_get_ignore_missing_column_families(native).toBoolean()
+    }
 
     actual fun setNoSlowdown(noSlowdown: Boolean): WriteOptions {
+        checkOpenHandle()
         rocksdb_writeoptions_set_no_slowdown(native, noSlowdown.toUByte())
         return this
     }
 
-    actual fun noSlowdown() =
-        rocksdb_writeoptions_get_no_slowdown(native).toBoolean()
+    actual fun noSlowdown(): Boolean {
+        checkOpenHandle()
+        return rocksdb_writeoptions_get_no_slowdown(native).toBoolean()
+    }
 
     actual fun setLowPri(lowPri: Boolean): WriteOptions {
+        checkOpenHandle()
         rocksdb_writeoptions_set_low_pri(native, lowPri.toUByte())
         return this
     }
 
-    actual fun lowPri() =
-        rocksdb_writeoptions_get_low_pri(native).toBoolean()
+    actual fun lowPri(): Boolean {
+        checkOpenHandle()
+        return rocksdb_writeoptions_get_low_pri(native).toBoolean()
+    }
 }

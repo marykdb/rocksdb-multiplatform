@@ -1,7 +1,6 @@
 package maryk.rocksdb
 
-import cnames.structs.rocksdb_statistics_histogram_data_t
-import kotlinx.cinterop.CPointer
+import maryk.toCheckedLong
 
 actual class HistogramData(
     val median: Double,
@@ -26,9 +25,9 @@ actual class HistogramData(
 
     actual fun getMax(): Double = max
 
-    actual fun getCount(): Long = count.toLong()
+    actual fun getCount(): Long = count.toCheckedLong("histogram count")
 
-    actual fun getSum(): Long = sum.toLong()
+    actual fun getSum(): Long = sum.toCheckedLong("histogram sum")
 
     actual fun getMin(): Double = min
 }

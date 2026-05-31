@@ -11,7 +11,10 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
 import maryk.asSizeT
+import maryk.sizeTToInt
+import maryk.sizeTToLong
 import maryk.toByteArray
+import maryk.toCheckedLong
 import platform.posix.size_t
 import platform.posix.size_tVar
 import rocksdb.rocksdb_compactionjobinfo_base_input_level
@@ -62,23 +65,25 @@ actual class CompactionJobInfo internal constructor(
     internal constructor(native: CPointer<rocksdb_compactionjobinfo_t>) : this(
         columnFamilyNameValue = memScoped {
             val length = alloc<size_tVar>()
-            rocksdb_compactionjobinfo_cf_name(native, length.ptr)!!
+            requireNotNull(rocksdb_compactionjobinfo_cf_name(native, length.ptr)) {
+                "RocksDB returned null compaction column family name"
+            }
                 .toByteArray(length.value)
         },
         baseInputLevelValue = rocksdb_compactionjobinfo_base_input_level(native),
         outputLevelValue = rocksdb_compactionjobinfo_output_level(native),
         inputFilesValue = collectPaths(native, ::rocksdb_compactionjobinfo_input_files_count, ::rocksdb_compactionjobinfo_input_file_at),
         outputFilesValue = collectPaths(native, ::rocksdb_compactionjobinfo_output_files_count, ::rocksdb_compactionjobinfo_output_file_at),
-        elapsedMicrosValue = rocksdb_compactionjobinfo_elapsed_micros(native).toLong(),
-        numCorruptKeysValue = rocksdb_compactionjobinfo_num_corrupt_keys(native).toLong(),
-        inputRecordsValue = rocksdb_compactionjobinfo_input_records(native).toLong(),
-        outputRecordsValue = rocksdb_compactionjobinfo_output_records(native).toLong(),
-        totalInputBytesValue = rocksdb_compactionjobinfo_total_input_bytes(native).toLong(),
-        totalOutputBytesValue = rocksdb_compactionjobinfo_total_output_bytes(native).toLong(),
+        elapsedMicrosValue = rocksdb_compactionjobinfo_elapsed_micros(native).toCheckedLong("compaction elapsed micros"),
+        numCorruptKeysValue = rocksdb_compactionjobinfo_num_corrupt_keys(native).toCheckedLong("compaction corrupt key count"),
+        inputRecordsValue = rocksdb_compactionjobinfo_input_records(native).toCheckedLong("compaction input record count"),
+        outputRecordsValue = rocksdb_compactionjobinfo_output_records(native).toCheckedLong("compaction output record count"),
+        totalInputBytesValue = rocksdb_compactionjobinfo_total_input_bytes(native).toCheckedLong("compaction total input bytes"),
+        totalOutputBytesValue = rocksdb_compactionjobinfo_total_output_bytes(native).toCheckedLong("compaction total output bytes"),
         compactionReasonValue = compactionReasonFromValue(rocksdb_compactionjobinfo_compaction_reason(native)),
-        numInputFilesValue = rocksdb_compactionjobinfo_num_input_files(native).toLong(),
+        numInputFilesValue = sizeTToLong(rocksdb_compactionjobinfo_num_input_files(native), "compaction input file count"),
         numInputFilesAtOutputLevelValue =
-            rocksdb_compactionjobinfo_num_input_files_at_output_level(native).toLong(),
+            sizeTToLong(rocksdb_compactionjobinfo_num_input_files_at_output_level(native), "compaction output-level input file count"),
     )
 
     actual fun columnFamilyName(): ByteArray = columnFamilyNameValue
@@ -117,12 +122,14 @@ private fun collectPaths(
     count: (CPointer<rocksdb_compactionjobinfo_t>) -> size_t,
     fetch: (CPointer<rocksdb_compactionjobinfo_t>, size_t, CPointer<size_tVar>) -> CPointer<ByteVar>?
 ): List<String> = buildList {
-    val total = count(native).toInt()
+    val total = sizeTToInt(count(native), "compaction job file count")
     if (total == 0) return@buildList
     memScoped {
         val length = alloc<size_tVar>()
         repeat(total) { index ->
-            val ptr = fetch(native, index.asSizeT(), length.ptr) ?: return@repeat
+            val ptr = requireNotNull(fetch(native, index.asSizeT(), length.ptr)) {
+                "RocksDB returned null compaction file path at index $index"
+            }
             add(ptr.toByteArray(length.value).decodeToString())
         }
     }

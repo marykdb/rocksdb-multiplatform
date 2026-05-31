@@ -4,6 +4,7 @@ import cnames.structs.rocksdb_options_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.UnsafeNumber
 import maryk.asSizeT
+import maryk.asUInt64
 import maryk.toUByte
 import rocksdb.rocksdb_block_based_options_create
 import rocksdb.rocksdb_block_based_options_destroy
@@ -47,13 +48,15 @@ actual class BlockBasedTableConfig actual constructor() : TableFormatConfig() {
 
     @OptIn(UnsafeNumber::class)
     internal fun applyToOptions(options: CPointer<rocksdb_options_t>) {
-        val native = rocksdb_block_based_options_create()!!
+        val native = requireNotNull(rocksdb_block_based_options_create()) {
+            "Unable to allocate block-based table options"
+        }
         try {
             rocksdb_block_based_options_set_no_block_cache(native, noBlockCache.toUByte())
             rocksdb_block_based_options_set_block_size(native, blockSize.asSizeT())
             rocksdb_block_based_options_set_block_size_deviation(native, blockSizeDeviation)
             rocksdb_block_based_options_set_block_restart_interval(native, blockRestartInterval)
-            rocksdb_block_based_options_set_metadata_block_size(native, metadataBlockSize.toULong())
+            rocksdb_block_based_options_set_metadata_block_size(native, metadataBlockSize.asUInt64())
             rocksdb_block_based_options_set_partition_filters(native, partitionFilters.toUByte())
             rocksdb_block_based_options_set_cache_index_and_filter_blocks(native, cacheIndexAndFilterBlocks.toUByte())
             rocksdb_block_based_options_set_cache_index_and_filter_blocks_with_high_priority(
@@ -75,6 +78,7 @@ actual class BlockBasedTableConfig actual constructor() : TableFormatConfig() {
             rocksdb_block_based_options_set_data_block_index_type(native, dataBlockIndexType.ordinal)
             rocksdb_block_based_options_set_data_block_hash_ratio(native, dataBlockHashTableUtilRatio)
             blockCache?.let { cache ->
+                cache.checkOwningHandle()
                 rocksdb_block_based_options_set_block_cache(native, cache.native)
             }
 

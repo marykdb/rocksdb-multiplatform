@@ -6,7 +6,8 @@ import rocksdb.rocksdb_envoptions_create
 import rocksdb.rocksdb_envoptions_destroy
 
 actual class EnvOptions actual constructor() : RocksObject() {
-    internal val native: CPointer<rocksdb_envoptions_t> = rocksdb_envoptions_create()!!
+    internal val native: CPointer<rocksdb_envoptions_t> =
+        requireNotNull(rocksdb_envoptions_create()) { "Unable to allocate RocksDB environment options" }
 
     override fun close() {
         if (tryClose()) {

@@ -14,6 +14,12 @@ actual abstract class AbstractImmutableNativeReference(): AbstractNativeReferenc
         check(isOwningHandle()) { "Native handle is already closed or transferred." }
     }
 
+    internal fun checkOpenHandle() {
+        check(ownershipState.value == 0 || ownershipState.value == 3) {
+            "Native handle is already closed or transferred."
+        }
+    }
+
     internal fun disownHandle(): Boolean {
         return ownershipState.compareAndSet(0, 2)
     }

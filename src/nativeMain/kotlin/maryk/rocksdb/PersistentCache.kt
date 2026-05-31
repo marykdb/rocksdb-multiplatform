@@ -2,6 +2,7 @@ package maryk.rocksdb
 
 import cnames.structs.rocksdb_persistent_cache_t
 import kotlinx.cinterop.CPointer
+import maryk.asUInt64
 import maryk.toUByte
 import maryk.wrapWithNullErrorThrower
 import rocksdb.rocksdb_persistent_cache_create
@@ -35,13 +36,14 @@ private fun createPersistentCache(
     logger: Logger,
     optimizedForNvm: Boolean,
 ): CPointer<rocksdb_persistent_cache_t> {
+    env.checkOwningHandle()
     check(logger.disownHandle()) { "Logger is already closed or registered." }
     return try {
         Unit.wrapWithNullErrorThrower { error ->
             rocksdb_persistent_cache_create(
                 env.native,
                 path,
-                size.toULong(),
+                size.asUInt64(),
                 logger.native,
                 optimizedForNvm.toUByte(),
                 error,

@@ -10,7 +10,11 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.toKString
 import kotlinx.cinterop.value
+import maryk.asUInt32
+import maryk.sizeTToInt
 import maryk.toUByte
+import maryk.toCheckedInt
+import maryk.toCheckedLong
 import maryk.wrapWithErrorThrower
 import platform.posix.size_tVar
 import rocksdb.rocksdb_backup_engine_close
@@ -37,12 +41,16 @@ internal constructor(
 )
     : RocksObject(), AutoCloseable {
     actual fun createNewBackup(db: RocksDB) {
+        checkOwningHandle()
+        db.checkOwningHandle()
         wrapWithErrorThrower { error ->
             rocksdb_backup_engine_create_new_backup(native, db.native, error)
         }
     }
 
     actual fun createNewBackup(db: RocksDB, flushBeforeBackup: Boolean) {
+        checkOwningHandle()
+        db.checkOwningHandle()
         wrapWithErrorThrower { error ->
             rocksdb_backup_engine_create_new_backup_flush(native, db.native, flushBeforeBackup.toUByte(), error)
         }
@@ -53,6 +61,8 @@ internal constructor(
         metadata: String,
         flushBeforeBackup: Boolean
     ) {
+        checkOwningHandle()
+        db.checkOwningHandle()
         wrapWithErrorThrower { error ->
             val options = requireNotNull(rocksdb.rocksdb_create_backup_options_create()) {
                 "Unable to allocate RocksDB backup creation options"
@@ -70,7 +80,10 @@ internal constructor(
     }
 
     actual fun getBackupInfo(): List<BackupInfo> {
-        val info = rocksdb_backup_engine_get_backup_info(native)
+        checkOwningHandle()
+        val info = requireNotNull(rocksdb_backup_engine_get_backup_info(native)) {
+            "RocksDB returned null backup info"
+        }
         try {
             return buildList {
                 val count = rocksdb_backup_engine_info_count(info)
@@ -79,10 +92,10 @@ internal constructor(
                     val appMetaData = rocksdb.rocksdb_backup_engine_info_app_metadata(info, i)
                     try {
                         this += BackupInfo(
-                            backupId = rocksdb_backup_engine_info_backup_id(info, i).toInt(),
+                            backupId = rocksdb_backup_engine_info_backup_id(info, i).toCheckedInt("backup id"),
                             timestamp = rocksdb_backup_engine_info_timestamp(info, i),
-                            size = rocksdb_backup_engine_info_size(info, i).toLong(),
-                            numberFiles = rocksdb_backup_engine_info_number_files(info, i).toInt(),
+                            size = rocksdb_backup_engine_info_size(info, i).toCheckedLong("backup size"),
+                            numberFiles = rocksdb_backup_engine_info_number_files(info, i).toCheckedInt("backup file count"),
                             appMetadata = appMetaData?.toKString(),
                         )
                     } finally {
@@ -96,13 +109,19 @@ internal constructor(
     }
 
     actual fun getCorruptedBackups(): IntArray {
+        checkOwningHandle()
         return memScoped {
             wrapWithErrorThrower { _ ->
                 val size = alloc<size_tVar>()
                 val idsPtr = rocksdb.rocksdb_backup_engine_get_corrupted_backups(native, size.ptr)
                 try {
-                    IntArray(size.value.toInt()) { index ->
-                        idsPtr?.get(index)!!
+                    val count = sizeTToInt(size.value, "corrupted backup count")
+                    if (count == 0) return@wrapWithErrorThrower IntArray(0)
+                    val ids = requireNotNull(idsPtr) {
+                        "RocksDB returned null corrupted backup ids for $count backups"
+                    }
+                    IntArray(count) { index ->
+                        ids[index]
                     }
                 } finally {
                     rocksdb.rocksdb_free(idsPtr)
@@ -112,20 +131,23 @@ internal constructor(
     }
 
     actual fun garbageCollect() {
+        checkOwningHandle()
         wrapWithErrorThrower { error ->
             rocksdb.rocksdb_backup_engine_garbage_collect(native, error)
         }
     }
 
     actual fun purgeOldBackups(numBackupsToKeep: Int) {
+        checkOwningHandle()
         wrapWithErrorThrower { error ->
-            rocksdb_backup_engine_purge_old_backups(native, numBackupsToKeep.toUInt(), error)
+            rocksdb_backup_engine_purge_old_backups(native, numBackupsToKeep.asUInt32(), error)
         }
     }
 
     actual fun deleteBackup(backupId: Int) {
+        checkOwningHandle()
         wrapWithErrorThrower { error ->
-            rocksdb.rocksdb_backup_engine_delete_backup(native, backupId.toUInt(), error)
+            rocksdb.rocksdb_backup_engine_delete_backup(native, backupId.asUInt32(), error)
         }
     }
 
@@ -135,13 +157,15 @@ internal constructor(
         walDir: String,
         restoreOptions: RestoreOptions
     ) {
+        checkOwningHandle()
+        restoreOptions.checkOwningHandle()
         wrapWithErrorThrower { error ->
             rocksdb_backup_engine_restore_db_from_backup(
                 native,
                 dbDir,
                 walDir,
                 restoreOptions.native,
-                backupId.toUInt(),
+                backupId.asUInt32(),
                 error,
             )
         }
@@ -152,6 +176,8 @@ internal constructor(
         walDir: String,
         restoreOptions: RestoreOptions
     ) {
+        checkOwningHandle()
+        restoreOptions.checkOwningHandle()
         wrapWithErrorThrower { error ->
             rocksdb_backup_engine_restore_db_from_latest_backup(
                 native,
@@ -177,8 +203,12 @@ actual fun openBackupEngine(
     env: Env,
     options: BackupEngineOptions
 ) = Unit.wrapWithErrorThrower { error ->
+    env.checkOwningHandle()
+    options.checkOwningHandle()
     BackupEngine(
-        rocksdb_backup_engine_open_opts(options.native, env.native, error)!!,
+        requireNotNull(rocksdb_backup_engine_open_opts(options.native, env.native, error)) {
+            "RocksDB returned null backup engine without an error"
+        },
         env,
         options.backupEnv(),
     )

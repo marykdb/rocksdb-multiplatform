@@ -8,7 +8,6 @@ import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.set
-import maryk.byteArrayToCPointer
 import maryk.wrapWithNullErrorThrower
 import rocksdb.rocksdb_close
 import rocksdb.rocksdb_open
@@ -25,6 +24,7 @@ actual fun openRocksDB(path: String): RocksDB {
 }
 
 actual fun openRocksDB(options: Options, path: String): RocksDB {
+    options.checkOwningHandle()
     return Unit.wrapWithNullErrorThrower { error ->
         val retainedReferences = options.retainedNativeReferences()
         rocksdb_open(options.native, path, error)?.let { native ->
@@ -54,6 +54,9 @@ actual fun openRocksDB(
     columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ): RocksDB =
     Unit.wrapWithNullErrorThrower { error ->
+        require(columnFamilyDescriptors.isNotEmpty()) { "columnFamilyDescriptors must not be empty" }
+        options.checkOwningHandle()
+        columnFamilyDescriptors.forEach { it.getOptions().checkOwningHandle() }
         memScoped {
             val retainedReferences = options.retainedNativeReferences()
             val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
@@ -61,7 +64,7 @@ actual fun openRocksDB(
 
             columnFamilyDescriptors.forEachIndexed { index, cfDesc ->
                 val name = cfDesc.getName()
-                namesArray[index] = byteArrayToCPointer(name, 0, name.size)
+                namesArray[index] = columnFamilyNameToCString(name)
                 optionsArray[index] = cfDesc.getOptions().native
             }
 
@@ -94,6 +97,7 @@ actual fun openReadOnlyRocksDB(path: String): RocksDB =
     }
 
 actual fun openReadOnlyRocksDB(options: Options, path: String): RocksDB = Unit.wrapWithNullErrorThrower { error ->
+    options.checkOwningHandle()
     val retainedReferences = options.retainedNativeReferences()
     rocksdb_open_for_read_only(options.native, path, 0u, error)?.let { native ->
         wrapOpenedDb(
@@ -121,6 +125,9 @@ actual fun openReadOnlyRocksDB(
     columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ): RocksDB =
     Unit.wrapWithNullErrorThrower { error ->
+        require(columnFamilyDescriptors.isNotEmpty()) { "columnFamilyDescriptors must not be empty" }
+        options.checkOwningHandle()
+        columnFamilyDescriptors.forEach { it.getOptions().checkOwningHandle() }
         memScoped {
             val retainedReferences = options.retainedNativeReferences()
             val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
@@ -128,7 +135,7 @@ actual fun openReadOnlyRocksDB(
 
             columnFamilyDescriptors.forEachIndexed { index, cfDesc ->
                 val name = cfDesc.getName()
-                namesArray[index] = byteArrayToCPointer(name, 0, name.size)
+                namesArray[index] = columnFamilyNameToCString(name)
                 optionsArray[index] = cfDesc.getOptions().native
             }
 

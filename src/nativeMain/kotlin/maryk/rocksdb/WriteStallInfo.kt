@@ -24,10 +24,9 @@ actual class WriteStallInfo internal constructor(
     internal constructor(native: CPointer<rocksdb_writestallinfo_t>) : this(
         columnFamilyNameValue = memScoped {
             val length = alloc<size_tVar>()
-            rocksdb.rocksdb_writestallinfo_cf_name(native, length.ptr)
-                ?.toByteArray(length.value)
-                ?.decodeToString()
-                ?: ""
+            requireNotNull(rocksdb.rocksdb_writestallinfo_cf_name(native, length.ptr)) {
+                "RocksDB returned null write-stall column family name"
+            }.toByteArray(length.value).decodeToString()
         },
         currentConditionValue = native.toCondition { rocksdb.rocksdb_writestallinfo_cur(it) },
         previousConditionValue = native.toCondition { rocksdb.rocksdb_writestallinfo_prev(it) }

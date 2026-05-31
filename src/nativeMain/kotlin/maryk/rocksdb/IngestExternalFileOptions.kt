@@ -13,7 +13,9 @@ import rocksdb.rocksdb_ingestexternalfileoptions_set_snapshot_consistency
 
 actual class IngestExternalFileOptions actual constructor() : RocksObject() {
     internal val native: CPointer<rocksdb_ingestexternalfileoptions_t> =
-        rocksdb_ingestexternalfileoptions_create()!!
+        requireNotNull(rocksdb_ingestexternalfileoptions_create()) {
+            "Unable to allocate ingest external file options"
+        }
 
     private var moveFiles = false
     private var snapshotConsistency = true
@@ -29,43 +31,63 @@ actual class IngestExternalFileOptions actual constructor() : RocksObject() {
     }
 
     actual fun setMoveFiles(moveFiles: Boolean): IngestExternalFileOptions {
+        checkOwningHandle()
         rocksdb_ingestexternalfileoptions_set_move_files(native, moveFiles.toUByte())
         this.moveFiles = moveFiles
         return this
     }
 
-    actual fun moveFiles(): Boolean = moveFiles
+    actual fun moveFiles(): Boolean {
+        checkOwningHandle()
+        return moveFiles
+    }
 
     actual fun setSnapshotConsistency(snapshotConsistency: Boolean): IngestExternalFileOptions {
+        checkOwningHandle()
         rocksdb_ingestexternalfileoptions_set_snapshot_consistency(native, snapshotConsistency.toUByte())
         this.snapshotConsistency = snapshotConsistency
         return this
     }
 
-    actual fun snapshotConsistency(): Boolean = snapshotConsistency
+    actual fun snapshotConsistency(): Boolean {
+        checkOwningHandle()
+        return snapshotConsistency
+    }
 
     actual fun setAllowGlobalSeqNo(allowGlobalSeqNo: Boolean): IngestExternalFileOptions {
+        checkOwningHandle()
         rocksdb_ingestexternalfileoptions_set_allow_global_seqno(native, allowGlobalSeqNo.toUByte())
         this.allowGlobalSeqNo = allowGlobalSeqNo
         return this
     }
 
-    actual fun allowGlobalSeqNo(): Boolean = allowGlobalSeqNo
+    actual fun allowGlobalSeqNo(): Boolean {
+        checkOwningHandle()
+        return allowGlobalSeqNo
+    }
 
     actual fun setAllowBlockingFlush(allowBlockingFlush: Boolean): IngestExternalFileOptions {
+        checkOwningHandle()
         rocksdb_ingestexternalfileoptions_set_allow_blocking_flush(native, allowBlockingFlush.toUByte())
         this.allowBlockingFlush = allowBlockingFlush
         return this
     }
 
-    actual fun allowBlockingFlush(): Boolean = allowBlockingFlush
+    actual fun allowBlockingFlush(): Boolean {
+        checkOwningHandle()
+        return allowBlockingFlush
+    }
 
     actual fun setIngestBehind(ingestBehind: Boolean): IngestExternalFileOptions {
+        checkOwningHandle()
         rocksdb_ingestexternalfileoptions_set_ingest_behind(native, ingestBehind.toUByte())
         this.ingestBehind = ingestBehind
         return this
     }
 
-    actual fun ingestBehind(): Boolean = ingestBehind
+    actual fun ingestBehind(): Boolean {
+        checkOwningHandle()
+        return ingestBehind
+    }
 
 }

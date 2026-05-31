@@ -17,16 +17,7 @@ actual class WriteBufferManager internal constructor(
         bufferSize: Long,
         cache: Cache,
         allowStall: Boolean,
-    ) : this(
-        requireNotNull(
-            rocksdb_write_buffer_manager_create_with_cache(
-                bufferSize.asSizeT(),
-                cache.native,
-                allowStall,
-            ),
-        ),
-        allowStall,
-    )
+    ) : this(createWriteBufferManager(bufferSize, cache, allowStall), allowStall)
 
     actual constructor(
         bufferSize: Long,
@@ -41,4 +32,19 @@ actual class WriteBufferManager internal constructor(
             super.close()
         }
     }
+}
+
+private fun createWriteBufferManager(
+    bufferSize: Long,
+    cache: Cache,
+    allowStall: Boolean,
+): CPointer<rocksdb_write_buffer_manager_t> {
+    cache.checkOwningHandle()
+    return requireNotNull(
+        rocksdb_write_buffer_manager_create_with_cache(
+            bufferSize.asSizeT(),
+            cache.native,
+            allowStall,
+        ),
+    )
 }

@@ -1759,6 +1759,21 @@ expect open class RocksDB : RocksObject {
     fun getUpdatesSince(sequenceNumber: Long): TransactionLogIterator
 
     /**
+     * Flushes all memtables for the default column family.
+     */
+    fun flush(flushOptions: FlushOptions)
+
+    /**
+     * Flushes the memtable for a single column family.
+     */
+    fun flush(flushOptions: FlushOptions, columnFamilyHandle: ColumnFamilyHandle)
+
+    /**
+     * Flushes memtables for the provided column families.
+     */
+    fun flush(flushOptions: FlushOptions, columnFamilyHandles: List<ColumnFamilyHandle>)
+
+    /**
      * Flush the WAL memory buffer to the file. If `sync` is true,
      * it calls [.syncWal] afterwards.
      *

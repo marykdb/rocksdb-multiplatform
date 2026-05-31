@@ -9,10 +9,12 @@ actual class OptimisticTransactionOptions actual constructor(): RocksObject() {
     }
 
     actual fun isSetSnapshot(): Boolean {
+        checkOwningHandle()
         return rocksdb.rocksdb_optimistictransaction_options_get_set_snapshot(native).toBoolean()
     }
 
     actual fun setSetSnapshot(setSnapshot: Boolean): OptimisticTransactionOptions {
+        checkOwningHandle()
         rocksdb.rocksdb_optimistictransaction_options_set_set_snapshot(native, setSnapshot.toUByte())
         return this
     }
