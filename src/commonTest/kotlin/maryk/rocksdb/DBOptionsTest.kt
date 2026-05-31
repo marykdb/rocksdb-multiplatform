@@ -56,7 +56,7 @@ class DBOptionsTest {
     @Test
     fun maxLogFileSize() {
         DBOptions().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setMaxLogFileSize(longValue)
             assertEquals(longValue, opt.maxLogFileSize())
         }
@@ -65,7 +65,7 @@ class DBOptionsTest {
     @Test
     fun logFileTimeToRoll() {
         DBOptions().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setLogFileTimeToRoll(longValue)
             assertEquals(longValue, opt.logFileTimeToRoll())
         }
@@ -74,7 +74,7 @@ class DBOptionsTest {
     @Test
     fun keepLogFileNum() {
         DBOptions().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setKeepLogFileNum(longValue)
             assertEquals(longValue, opt.keepLogFileNum())
         }

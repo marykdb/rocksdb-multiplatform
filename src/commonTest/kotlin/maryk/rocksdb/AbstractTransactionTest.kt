@@ -305,6 +305,74 @@ abstract class AbstractTransactionTest {
     }
 
     @Test
+    fun multiGetAsListSupportsEmptyValue() {
+        val emptyValueKey = "empty-value".encodeToByteArray()
+        val missingKey = "missing".encodeToByteArray()
+
+        startDb().use { dbContainer ->
+            val readOptions = ReadOptions()
+
+            dbContainer.beginTransaction().use { txn ->
+                val testCf = dbContainer.getTestColumnFamily()
+                txn.put(emptyValueKey, ByteArray(0))
+                txn.put(testCf, emptyValueKey, ByteArray(0))
+
+                val defaultResult = txn.multiGetAsList(readOptions, listOf(emptyValueKey, missingKey))
+                assertEquals(2, defaultResult.size)
+                assertContentEquals(ByteArray(0), defaultResult[0])
+                assertEquals(null, defaultResult[1])
+
+                val cfResult = txn.multiGetAsList(readOptions, listOf(testCf, testCf), listOf(emptyValueKey, missingKey))
+                assertEquals(2, cfResult.size)
+                assertContentEquals(ByteArray(0), cfResult[0])
+                assertEquals(null, cfResult[1])
+            }
+        }
+    }
+
+    @Test
+    fun getSupportsEmptyValue() {
+        val key = "empty-value".encodeToByteArray()
+
+        startDb().use { dbContainer ->
+            val readOptions = ReadOptions()
+
+            dbContainer.beginTransaction().use { txn ->
+                txn.put(key, ByteArray(0))
+
+                assertContentEquals(ByteArray(0), txn.get(readOptions, key))
+
+                val target = ByteArray(4) { 7 }
+                val status = txn.get(readOptions, key, target)
+                assertEquals(StatusCode.Ok, status.getStatus().getCode())
+                assertEquals(0, status.getRequiredSize())
+                assertContentEquals(ByteArray(4) { 7 }, target)
+            }
+        }
+    }
+
+    @Test
+    fun getForUpdateSupportsEmptyValue() {
+        val key = "empty-value".encodeToByteArray()
+
+        startDb().use { dbContainer ->
+            val readOptions = ReadOptions()
+
+            dbContainer.beginTransaction().use { txn ->
+                txn.put(key, ByteArray(0))
+
+                assertContentEquals(ByteArray(0), txn.getForUpdate(readOptions, key, true))
+
+                val target = ByteArray(4) { 7 }
+                val status = txn.getForUpdate(readOptions, key, target, true)
+                assertEquals(StatusCode.Ok, status.getStatus().getCode())
+                assertEquals(0, status.getRequiredSize())
+                assertContentEquals(ByteArray(4) { 7 }, target)
+            }
+        }
+    }
+
+    @Test
     fun getForUpdate_cf() {
         val k1 = "key1".encodeToByteArray()
         val v1 = "value1".encodeToByteArray()
@@ -435,6 +503,36 @@ abstract class AbstractTransactionTest {
     }
 
     @Test
+    fun getByteBufferReturnsRequiredSizeForSmallDestination() {
+        startDb().use { dbContainer ->
+            val readOptions = ReadOptions()
+            val keyBytes = "key1".encodeToByteArray()
+            val valueBytes = "value1".encodeToByteArray()
+
+            dbContainer.beginTransaction().use { txn ->
+                txn.put(keyBytes, valueBytes)
+
+                allocateDirectByteBuffer(20) { key ->
+                    key.put(keyBytes)
+                    key.flip()
+
+                    allocateDirectByteBuffer(3) { value ->
+                        val status = txn.get(readOptions, key, value)
+
+                        assertEquals(StatusCode.Ok, status.getStatus().getCode())
+                        assertEquals(valueBytes.size, status.getRequiredSize())
+
+                        allocateDirectByteBuffer(3) { expected ->
+                            expected.put(valueBytes.copyOfRange(0, 3))
+                            assertBufferEquals(expected, value)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun getForUpdateDirectByteBuffer_cf() {
         getForUpdateByteBuffer_cf(::allocateDirectByteBuffer)
     }
@@ -554,6 +652,32 @@ abstract class AbstractTransactionTest {
                 for (i in values.indices) {
                     assertContentEquals(values[i], result[i])
                 }
+            }
+        }
+    }
+
+    @Test
+    fun multiGetForUpdateAsListSupportsEmptyValue() {
+        val emptyValueKey = "empty-value".encodeToByteArray()
+        val missingKey = "missing".encodeToByteArray()
+
+        startDb().use { dbContainer ->
+            val readOptions = ReadOptions()
+
+            dbContainer.beginTransaction().use { txn ->
+                val testCf = dbContainer.getTestColumnFamily()
+                txn.put(emptyValueKey, ByteArray(0))
+                txn.put(testCf, emptyValueKey, ByteArray(0))
+
+                val defaultResult = txn.multiGetForUpdateAsList(readOptions, listOf(emptyValueKey, missingKey))
+                assertEquals(2, defaultResult.size)
+                assertContentEquals(ByteArray(0), defaultResult[0])
+                assertEquals(null, defaultResult[1])
+
+                val cfResult = txn.multiGetForUpdateAsList(readOptions, listOf(testCf, testCf), listOf(emptyValueKey, missingKey))
+                assertEquals(2, cfResult.size)
+                assertContentEquals(ByteArray(0), cfResult[0])
+                assertEquals(null, cfResult[1])
             }
         }
     }
@@ -1088,6 +1212,10 @@ abstract class AbstractTransactionTest {
                 assertNotNull(writeBatch)
                 assertFalse(writeBatch.isOwningHandle())
                 assertEquals(1, writeBatch.count())
+                assertFailsWith<IllegalStateException> {
+                    writeBatch.getWriteBatch()
+                }
+                writeBatch.close()
             }
         }
     }
@@ -1130,6 +1258,8 @@ abstract class AbstractTransactionTest {
                 assertNotSame(writeOptions, updatedWriteOptions)
                 assertTrue(updatedWriteOptions.disableWAL())
                 assertFalse(updatedWriteOptions.sync())
+                txnWriteOptions.close()
+                updatedWriteOptions.close()
             }
         }
     }
@@ -1211,6 +1341,7 @@ abstract class AbstractTransactionTest {
 
                 assertNotNull(writeBatch)
                 assertEquals(0, writeBatch.count())
+                writeBatch.close()
             }
         }
     }
@@ -1220,7 +1351,7 @@ abstract class AbstractTransactionTest {
         startDb().use { dbContainer ->
             dbContainer.beginTransaction().use { txn ->
                 assertEquals(0, txn.getLogNumber())
-                val logNumber = Random.Default.nextLong()
+                val logNumber = Random.Default.nextLong(0, Int.MAX_VALUE.toLong())
                 txn.setLogNumber(logNumber)
                 assertEquals(logNumber, txn.getLogNumber())
             }

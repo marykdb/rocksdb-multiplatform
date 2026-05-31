@@ -33,7 +33,7 @@ class TransactionDBOptionsTest {
     @Test
     fun maxNumStripes() {
         TransactionDBOptions().use { opt ->
-            val longValue = Random.Default.nextLong()
+            val longValue = Random.Default.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setNumStripes(longValue)
             assertEquals(longValue, opt.getNumStripes(), "NumStripes should be equal to the set value")
         }

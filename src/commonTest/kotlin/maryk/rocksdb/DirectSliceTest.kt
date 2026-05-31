@@ -30,6 +30,14 @@ class DirectSliceTest {
     }
 
     @Test
+    fun directSliceEmptyString() {
+        DirectSlice("").use { directSlice ->
+            assertTrue(directSlice.empty())
+            assertEquals("", directSlice.toString())
+        }
+    }
+
+    @Test
     fun directSliceWithByteBuffer() {
         val data = "Some text".encodeToByteArray()
         allocateDirectByteBuffer(data.size + 1) { buffer ->
@@ -107,4 +115,5 @@ class DirectSliceTest {
             assertEquals("bc", directSlice.toString())
         }
     }
+
 }

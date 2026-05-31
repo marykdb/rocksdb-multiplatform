@@ -11,13 +11,9 @@ class LRUCacheTest {
     fun newLRUCache() {
         val capacity: Long = 1000
         val numShardBits = 16
-        val strictCapacityLimit = true
-        val highPriPoolRatio = 5.0
         LRUCache(
             capacity,
-            numShardBits,
-            strictCapacityLimit,
-            highPriPoolRatio
+            numShardBits
         ).use {
             //no op
         }

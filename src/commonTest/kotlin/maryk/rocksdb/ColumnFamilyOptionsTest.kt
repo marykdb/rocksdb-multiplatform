@@ -3,6 +3,7 @@ package maryk.rocksdb
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class ColumnFamilyOptionsTest {
     init {
@@ -12,7 +13,7 @@ class ColumnFamilyOptionsTest {
     @Test
     fun writeBufferSize() {
         ColumnFamilyOptions().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setWriteBufferSize(longValue)
             assertEquals(longValue, opt.writeBufferSize())
         }
@@ -48,7 +49,7 @@ class ColumnFamilyOptionsTest {
     @Test
     fun targetFileSizeBase() {
         ColumnFamilyOptions().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setTargetFileSizeBase(longValue)
             assertEquals(longValue, opt.targetFileSizeBase())
         }
@@ -66,7 +67,7 @@ class ColumnFamilyOptionsTest {
     @Test
     fun maxBytesForLevelBase() {
         ColumnFamilyOptions().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setMaxBytesForLevelBase(longValue)
             assertEquals(longValue, opt.maxBytesForLevelBase())
         }
@@ -111,7 +112,7 @@ class ColumnFamilyOptionsTest {
     @Test
     fun arenaBlockSize() {
         ColumnFamilyOptions().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setArenaBlockSize(longValue)
             assertEquals(longValue, opt.arenaBlockSize())
         }
@@ -129,7 +130,7 @@ class ColumnFamilyOptionsTest {
     @Test
     fun maxSequentialSkipInIterations() {
         ColumnFamilyOptions().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setMaxSequentialSkipInIterations(longValue)
             assertEquals(longValue, opt.maxSequentialSkipInIterations())
         }
@@ -147,7 +148,7 @@ class ColumnFamilyOptionsTest {
     @Test
     fun memtableHugePageSize() {
         ColumnFamilyOptions().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setMemtableHugePageSize(longValue)
             assertEquals(longValue, opt.memtableHugePageSize())
         }
@@ -156,16 +157,19 @@ class ColumnFamilyOptionsTest {
     @Test
     fun bloomLocality() {
         ColumnFamilyOptions().use { opt ->
-            val intValue = Random.nextInt()
+            val intValue = Random.nextInt(0, Int.MAX_VALUE)
             opt.setBloomLocality(intValue)
             assertEquals(intValue, opt.bloomLocality())
+            assertFailsWith<IllegalArgumentException> {
+                opt.setBloomLocality(-1)
+            }
         }
     }
 
     @Test
     fun maxSuccessiveMerges() {
         ColumnFamilyOptions().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setMaxSuccessiveMerges(longValue)
             assertEquals(longValue, opt.maxSuccessiveMerges())
         }

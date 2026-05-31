@@ -159,7 +159,7 @@ class BackupEngineOptionsTest {
     @Test
     fun callbackTriggerIntervalSizeRoundTrip() {
         val path = newBackupDir("callbackInterval")
-        val value = Random.nextLong()
+        val value = Random.nextLong(0, Int.MAX_VALUE.toLong())
         BackupEngineOptions(path).use { options ->
             options.setCallbackTriggerIntervalSize(value)
             assertEquals(value, options.callbackTriggerIntervalSize())

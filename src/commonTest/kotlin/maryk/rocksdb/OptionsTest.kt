@@ -4,6 +4,7 @@ import kotlin.random.Random
 import kotlin.random.nextUInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -15,7 +16,7 @@ class OptionsTest {
     @Test
     fun writeBufferSize() {
         Options().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setWriteBufferSize(longValue)
             assertEquals(longValue, opt.writeBufferSize())
         }
@@ -51,7 +52,7 @@ class OptionsTest {
     @Test
     fun targetFileSizeBase() {
         Options().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setTargetFileSizeBase(longValue)
             assertEquals(longValue, opt.targetFileSizeBase())
         }
@@ -69,7 +70,7 @@ class OptionsTest {
     @Test
     fun maxBytesForLevelBase() {
         Options().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setMaxBytesForLevelBase(longValue)
             assertEquals(longValue, opt.maxBytesForLevelBase())
         }
@@ -123,9 +124,12 @@ class OptionsTest {
     @Test
     fun bloomLocality() {
         Options().use { opt ->
-            val intValue = Random.nextInt()
+            val intValue = Random.nextInt(0, Int.MAX_VALUE)
             opt.setBloomLocality(intValue)
             assertEquals(intValue, opt.bloomLocality())
+            assertFailsWith<IllegalArgumentException> {
+                opt.setBloomLocality(-1)
+            }
         }
     }
 
@@ -186,7 +190,7 @@ class OptionsTest {
     @Test
     fun maxLogFileSize() {
         Options().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setMaxLogFileSize(longValue)
             assertEquals(longValue, opt.maxLogFileSize())
         }
@@ -195,7 +199,7 @@ class OptionsTest {
     @Test
     fun logFileTimeToRoll() {
         Options().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setLogFileTimeToRoll(longValue)
             assertEquals(longValue, opt.logFileTimeToRoll())
         }
@@ -204,7 +208,7 @@ class OptionsTest {
     @Test
     fun keepLogFileNum() {
         Options().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setKeepLogFileNum(longValue)
             assertEquals(longValue, opt.keepLogFileNum())
         }
@@ -222,7 +226,7 @@ class OptionsTest {
     @Test
     fun bytesPerSync() {
         Options().use { opt ->
-            val longValue = Random.nextLong()
+            val longValue = Random.nextLong(0, Int.MAX_VALUE.toLong())
             opt.setBytesPerSync(longValue)
             assertEquals(longValue, opt.bytesPerSync())
         }

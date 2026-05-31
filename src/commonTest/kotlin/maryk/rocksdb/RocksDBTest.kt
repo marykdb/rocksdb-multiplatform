@@ -4,6 +4,7 @@ import maryk.assertContains
 import maryk.assertContainsExactly
 import maryk.assertContentEquals
 import maryk.doesFolderExist
+import maryk.rocksdb.util.BytewiseComparator
 import maryk.rocksdb.util.createTestDBFolder
 import kotlin.random.Random
 import kotlin.test.Test
@@ -139,6 +140,22 @@ class RocksDBTest {
             } finally {
                 for (cfHandle in cfHandles) {
                     cfHandle.close()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun failedCreateColumnFamiliesRetainsComparatorForPartialSuccess() {
+        val col1Name = "partial_cf".encodeToByteArray()
+        val testFolder = createTestFolder()
+
+        openRocksDB(testFolder).use { db ->
+            BytewiseComparator(ComparatorOptions()).use { comparator ->
+                assertFailsWith<RocksDBException> {
+                    ColumnFamilyOptions().setComparator(comparator).use { cfOpts ->
+                        db.createColumnFamilies(cfOpts, listOf(col1Name, col1Name))
+                    }
                 }
             }
         }
@@ -305,6 +322,20 @@ class RocksDBTest {
     }
 
     @Test
+    fun getSupportsEmptyValue() {
+        openRocksDB(createTestFolder()).use { db ->
+            val key = "empty-value".encodeToByteArray()
+            db.put(key, ByteArray(0))
+
+            assertContentEquals(ByteArray(0), db.get(key))
+
+            val outValue = ByteArray(4) { 7 }
+            assertEquals(0, db.get(key, outValue))
+            assertContentEquals(ByteArray(4) { 7 }, outValue)
+        }
+    }
+
+    @Test
     fun multiGetAsList() {
         openRocksDB(createTestFolder()).use { db ->
             ReadOptions().use { rOpt ->
@@ -335,6 +366,40 @@ class RocksDBTest {
                 assertNotNull(results)
                 assertContains(results, "value".encodeToByteArray())
             }
+        }
+    }
+
+    @Test
+    fun multiGetAsListSupportsEmptyKey() {
+        openRocksDB(createTestFolder()).use { db ->
+            val emptyKey = ByteArray(0)
+            val presentKey = "key".encodeToByteArray()
+            db.put(emptyKey, "empty".encodeToByteArray())
+            db.put(presentKey, "value".encodeToByteArray())
+
+            val results = db.multiGetAsList(listOf(emptyKey, presentKey, "missing".encodeToByteArray()))
+
+            assertContainsExactly(
+                results,
+                "empty".encodeToByteArray(),
+                "value".encodeToByteArray(),
+                null,
+            )
+        }
+    }
+
+    @Test
+    fun multiGetAsListSupportsEmptyValue() {
+        openRocksDB(createTestFolder()).use { db ->
+            val emptyValueKey = "empty-value".encodeToByteArray()
+            val missingKey = "missing".encodeToByteArray()
+            db.put(emptyValueKey, ByteArray(0))
+
+            assertContainsExactly(
+                db.multiGetAsList(listOf(emptyValueKey, missingKey)),
+                ByteArray(0),
+                null,
+            )
         }
     }
 
@@ -403,6 +468,15 @@ class RocksDBTest {
                     assertTrue(db.getLongProperty("rocksdb.num-entries-active-mem-table") > 0)
                     assertTrue(db.getLongProperty("rocksdb.cur-size-active-mem-table") > 0)
                 }
+            }
+        }
+    }
+
+    @Test
+    fun getLongPropertyRejectsUnknownProperty() {
+        openRocksDB(createTestFolder()).use { db ->
+            assertFailsWith<RocksDBException> {
+                db.getLongProperty("rocksdb.property-that-does-not-exist")
             }
         }
     }

@@ -276,11 +276,62 @@ class WriteBatchTest {
             batch.put("k1".encodeToByteArray(), "v1".encodeToByteArray())
 
             val writeBatch = batch.getWriteBatch()
+            assertFalse(writeBatch.isOwningHandle())
             assertEquals(1, writeBatch.count())
 
             batch.put("k2".encodeToByteArray(), "v2".encodeToByteArray())
 
             assertEquals(2, writeBatch.count())
+            writeBatch.close()
+        }
+    }
+
+    @Test
+    fun writeBatchWithIndexGetFromBatchSupportsEmptyValue() {
+        DBOptions().use { options ->
+            WriteBatchWithIndex().use { batch ->
+                val key = "empty-value".encodeToByteArray()
+                batch.put(key, ByteArray(0))
+
+                assertContentEquals(ByteArray(0), batch.getFromBatch(options, key))
+
+                batch.delete(key)
+                assertNull(batch.getFromBatch(options, key))
+            }
+        }
+    }
+
+    @Test
+    fun writeBatchWithIndexGetFromBatchDoesNotResurrectEmptyValueAfterSingleDelete() {
+        DBOptions().use { options ->
+            WriteBatchWithIndex().use { batch ->
+                val key = "empty-value".encodeToByteArray()
+                batch.put(key, ByteArray(0))
+                batch.singleDelete(key)
+
+                assertNull(batch.getFromBatch(options, key))
+            }
+        }
+    }
+
+    @Test
+    fun writeBatchWithIndexGetFromBatchColumnFamilySupportsEmptyValue() {
+        Options().setCreateIfMissing(true).use { options ->
+            DBOptions().use { dbOptions ->
+                openRocksDB(options, createTestFolder()).use { db ->
+                    db.createColumnFamily(ColumnFamilyDescriptor("new_cf".encodeToByteArray())).use { columnFamily ->
+                        WriteBatchWithIndex().use { batch ->
+                            val key = "empty-value".encodeToByteArray()
+                            batch.put(columnFamily, key, ByteArray(0))
+
+                            assertContentEquals(ByteArray(0), batch.getFromBatch(columnFamily, dbOptions, key))
+
+                            batch.delete(columnFamily, key)
+                            assertNull(batch.getFromBatch(columnFamily, dbOptions, key))
+                        }
+                    }
+                }
+            }
         }
     }
 

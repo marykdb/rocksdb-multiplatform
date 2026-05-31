@@ -162,4 +162,23 @@ class KeyMayExistTest {
             }
         }
     }
+
+    @Test
+    fun keyMayExistSupportsEmptyValue() {
+        Options().apply {
+            setCreateIfMissing(true)
+        }.use { options ->
+            openRocksDB(
+                options,
+                createTestFolder()
+            ).use { db ->
+                val key = "empty-value".encodeToByteArray()
+                val holder = Holder<ByteArray>()
+                db.put(key, ByteArray(0))
+
+                assertTrue(db.keyMayExist(key, holder))
+                assertContentEquals(ByteArray(0), holder.getValue())
+            }
+        }
+    }
 }

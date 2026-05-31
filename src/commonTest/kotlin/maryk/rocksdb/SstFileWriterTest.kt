@@ -22,9 +22,15 @@ class SstFileWriterTest {
                         writer.open(sstPath)
                         writer.put("a".encodeToByteArray(), "1".encodeToByteArray())
                         writer.put("b".encodeToByteArray(), "2".encodeToByteArray())
+                        writer.put("c".encodeToByteArray(), ByteArray(0))
                         writer.finish()
                         assertTrue(writer.fileSize() > 0)
                     }
+                }
+
+                SstFileReader(options).use { reader ->
+                    reader.open(sstPath)
+                    reader.verifyChecksum()
                 }
 
                 IngestExternalFileOptions().use { ingestOptions ->
@@ -35,6 +41,10 @@ class SstFileWriterTest {
                 val loaded = db["a".encodeToByteArray()]
                 assertNotNull(loaded)
                 assertContentEquals("1".encodeToByteArray(), loaded)
+
+                val emptyValue = db["c".encodeToByteArray()]
+                assertNotNull(emptyValue)
+                assertContentEquals(ByteArray(0), emptyValue)
             }
         }
     }

@@ -92,6 +92,29 @@ class RocksIteratorTest {
     }
 
     @Test
+    fun rocksIteratorSupportsEmptyKeyAndValue() {
+        Options().apply {
+            setCreateIfMissing(true)
+        }.use { options ->
+            openRocksDB(
+                options,
+                createTestFolder()
+            ).use { db ->
+                db.put(ByteArray(0), ByteArray(0))
+
+                db.newIterator().use { iterator ->
+                    iterator.seekToFirst()
+                    assertTrue(iterator.isValid())
+                    assertContentEquals(ByteArray(0), iterator.key())
+                    assertContentEquals(ByteArray(0), iterator.value())
+                    iterator.next()
+                    assertFalse(iterator.isValid())
+                }
+            }
+        }
+    }
+
+    @Test
     fun rocksIteratorWithPrefix() {
         Options().apply {
             setCreateIfMissing(true)
@@ -137,6 +160,29 @@ class RocksIteratorTest {
                         assertContentEquals("key1".encodeToByteArray(), iterator.key())
 
                         iterator.prev()
+                        assertFalse(iterator.isValid())
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun emptyUpperBoundExcludesAllKeys() {
+        Options().apply {
+            setCreateIfMissing(true)
+        }.use { options ->
+            openRocksDB(
+                options,
+                createTestFolder() + "-empty-upper-bound"
+            ).use { db ->
+                db.put("key".encodeToByteArray(), "value".encodeToByteArray())
+
+                ReadOptions().apply {
+                    setIterateUpperBound(Slice(ByteArray(0)))
+                }.use { readOptions ->
+                    db.newIterator(readOptions).use { iterator ->
+                        iterator.seekToFirst()
                         assertFalse(iterator.isValid())
                     }
                 }

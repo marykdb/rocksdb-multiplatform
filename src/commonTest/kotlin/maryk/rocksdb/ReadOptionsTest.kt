@@ -90,6 +90,21 @@ class ReadOptionsTest {
     }
 
     @Test
+    fun iterateBoundsAcceptEmptySlices() {
+        ReadOptions().use { opt ->
+            val empty = Slice(ByteArray(0))
+
+            opt.setIterateLowerBound(empty)
+            opt.setIterateUpperBound(empty)
+
+            assertNotNull(opt.iterateLowerBound())
+            assertNotNull(opt.iterateUpperBound())
+            assertContentEquals(ByteArray(0), opt.iterateLowerBound()?.data())
+            assertContentEquals(ByteArray(0), opt.iterateUpperBound()?.data())
+        }
+    }
+
+    @Test
     fun readTierSelection() {
         ReadOptions().use { opt ->
             assertEquals(ReadTier.READ_ALL_TIER, opt.readTier())
