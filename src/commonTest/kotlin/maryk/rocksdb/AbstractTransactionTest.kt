@@ -1212,9 +1212,6 @@ abstract class AbstractTransactionTest {
                 assertNotNull(writeBatch)
                 assertFalse(writeBatch.isOwningHandle())
                 assertEquals(1, writeBatch.count())
-                assertFailsWith<IllegalStateException> {
-                    writeBatch.getWriteBatch()
-                }
                 writeBatch.close()
             }
         }

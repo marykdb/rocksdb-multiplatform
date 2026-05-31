@@ -2,9 +2,38 @@ package maryk.rocksdb
 
 import maryk.rocksdb.util.createTestDBFolder
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 
 class TransactionOwnerNativeTest {
+    @Test
+    fun transactionWriteBatchBorrowedWrapperRejectsNestedBatchAccess() {
+        val dbPath = createTestDBFolder("TransactionOwnerNativeTest_write_batch")
+
+        Options().setCreateIfMissing(true).use { options ->
+            TransactionDBOptions().use { transactionDbOptions ->
+                openTransactionDB(options, transactionDbOptions, dbPath).use { db ->
+                    WriteOptions().use { writeOptions ->
+                        db.beginTransaction(writeOptions).use { transaction ->
+                            transaction.put("key".encodeToByteArray(), "value".encodeToByteArray())
+
+                            val writeBatch = transaction.getWriteBatch()
+                            assertNotNull(writeBatch)
+                            assertFalse(writeBatch.isOwningHandle())
+                            assertEquals(1, writeBatch.count())
+                            assertFailsWith<IllegalStateException> {
+                                writeBatch.getWriteBatch()
+                            }
+                            writeBatch.close()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     @Test
     fun transactionDbCloseInvalidatesOpenTransaction() {
         val dbPath = createTestDBFolder("TransactionOwnerNativeTest_transaction")

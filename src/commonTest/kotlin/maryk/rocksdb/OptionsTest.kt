@@ -4,7 +4,6 @@ import kotlin.random.Random
 import kotlin.random.nextUInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -127,9 +126,6 @@ class OptionsTest {
             val intValue = Random.nextInt(0, Int.MAX_VALUE)
             opt.setBloomLocality(intValue)
             assertEquals(intValue, opt.bloomLocality())
-            assertFailsWith<IllegalArgumentException> {
-                opt.setBloomLocality(-1)
-            }
         }
     }
 

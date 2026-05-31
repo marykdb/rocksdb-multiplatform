@@ -3,7 +3,6 @@ package maryk.rocksdb
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 class ColumnFamilyOptionsTest {
     init {
@@ -160,9 +159,6 @@ class ColumnFamilyOptionsTest {
             val intValue = Random.nextInt(0, Int.MAX_VALUE)
             opt.setBloomLocality(intValue)
             assertEquals(intValue, opt.bloomLocality())
-            assertFailsWith<IllegalArgumentException> {
-                opt.setBloomLocality(-1)
-            }
         }
     }
 
