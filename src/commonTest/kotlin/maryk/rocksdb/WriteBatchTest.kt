@@ -336,6 +336,158 @@ class WriteBatchTest {
     }
 
     @Test
+    fun writeBatchWithIndexGetFromBatchAndDBReadsDbAndBatchValues() {
+        Options().setCreateIfMissing(true).use { options ->
+            openRocksDB(options, createTestFolder()).use { db ->
+                ReadOptions().use { readOptions ->
+                    WriteBatchWithIndex().use { batch ->
+                        val dbOnlyKey = "db-only".encodeToByteArray()
+                        val batchKey = "batch-key".encodeToByteArray()
+                        val emptyKey = "empty-key".encodeToByteArray()
+
+                        db.put(dbOnlyKey, "db-value".encodeToByteArray())
+                        db.put(batchKey, "old-value".encodeToByteArray())
+                        db.put(emptyKey, "old-empty-value".encodeToByteArray())
+
+                        assertContentEquals(
+                            "db-value".encodeToByteArray(),
+                            batch.getFromBatchAndDB(db, readOptions, dbOnlyKey)
+                        )
+
+                        batch.put(batchKey, "batch-value".encodeToByteArray())
+                        batch.put(emptyKey, ByteArray(0))
+                        batch.delete(dbOnlyKey)
+
+                        assertContentEquals(
+                            "batch-value".encodeToByteArray(),
+                            batch.getFromBatchAndDB(db, readOptions, batchKey)
+                        )
+                        assertContentEquals(ByteArray(0), batch.getFromBatchAndDB(db, readOptions, emptyKey))
+                        assertNull(batch.getFromBatchAndDB(db, readOptions, dbOnlyKey))
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun writeBatchWithIndexGetFromBatchAndDBColumnFamilyReadsDbAndBatchValues() {
+        DBOptions().apply {
+            setCreateIfMissing(true)
+            setCreateMissingColumnFamilies(true)
+        }.use { dbOptions ->
+            val columnFamilies = listOf(
+                ColumnFamilyDescriptor(defaultColumnFamily),
+                ColumnFamilyDescriptor("new_cf".encodeToByteArray())
+            )
+            val handles = mutableListOf<ColumnFamilyHandle>()
+            openRocksDB(dbOptions, createTestFolder(), columnFamilies, handles).use { db ->
+                try {
+                    ReadOptions().use { readOptions ->
+                        WriteBatchWithIndex().use { batch ->
+                            val columnFamily = handles[1]
+                            val dbOnlyKey = "cf-db-only".encodeToByteArray()
+                            val batchKey = "cf-batch-key".encodeToByteArray()
+
+                            db.put(columnFamily, dbOnlyKey, "cf-db-value".encodeToByteArray())
+                            db.put(columnFamily, batchKey, "cf-old-value".encodeToByteArray())
+
+                            assertContentEquals(
+                                "cf-db-value".encodeToByteArray(),
+                                batch.getFromBatchAndDB(db, columnFamily, readOptions, dbOnlyKey)
+                            )
+
+                            batch.put(columnFamily, batchKey, "cf-batch-value".encodeToByteArray())
+                            batch.delete(columnFamily, dbOnlyKey)
+
+                            assertContentEquals(
+                                "cf-batch-value".encodeToByteArray(),
+                                batch.getFromBatchAndDB(db, columnFamily, readOptions, batchKey)
+                            )
+                            assertNull(batch.getFromBatchAndDB(db, columnFamily, readOptions, dbOnlyKey))
+                        }
+                    }
+                } finally {
+                    handles.forEach { it.close() }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun writeBatchWithIndexDirectIteratorReturnsEntries() {
+        WriteBatchWithIndex().use { batch ->
+            val key = "iter-key".encodeToByteArray()
+            val value = "iter-value".encodeToByteArray()
+            batch.put(key, value)
+
+            batch.newIterator().use { iterator ->
+                iterator.seekToFirst()
+                assertTrue(iterator.isValid())
+                iterator.entry().use { entry ->
+                    assertEquals(WriteType.PUT, entry.getType())
+                    assertEquals("iter-key", entry.getKey().toString(false))
+                    assertEquals("iter-value", entry.getValue()?.toString(false))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun writeBatchWithIndexDirectIteratorDeleteEntryHasNoValue() {
+        WriteBatchWithIndex().use { batch ->
+            batch.delete("iter-delete-key".encodeToByteArray())
+
+            batch.newIterator().use { iterator ->
+                iterator.seekToFirst()
+                assertTrue(iterator.isValid())
+                iterator.entry().use { entry ->
+                    assertEquals(WriteType.DELETE, entry.getType())
+                    assertEquals("iter-delete-key", entry.getKey().toString(false))
+                    assertNull(entry.getValue())
+                }
+            }
+        }
+    }
+
+    @Test
+    fun writeBatchWithIndexDirectIteratorColumnFamilyReturnsEntries() {
+        DBOptions().apply {
+            setCreateIfMissing(true)
+            setCreateMissingColumnFamilies(true)
+        }.use { dbOptions ->
+            val columnFamilies = listOf(
+                ColumnFamilyDescriptor(defaultColumnFamily),
+                ColumnFamilyDescriptor("iter_cf".encodeToByteArray())
+            )
+            val handles = mutableListOf<ColumnFamilyHandle>()
+            openRocksDB(dbOptions, createTestFolder(), columnFamilies, handles).use {
+                try {
+                    WriteBatchWithIndex().use { batch ->
+                        val columnFamily = handles[1]
+                        batch.put("default-key".encodeToByteArray(), "default-value".encodeToByteArray())
+                        batch.put(columnFamily, "cf-key".encodeToByteArray(), "cf-value".encodeToByteArray())
+
+                        batch.newIterator(columnFamily).use { iterator ->
+                            iterator.seekToFirst()
+                            assertTrue(iterator.isValid())
+                            iterator.entry().use { entry ->
+                                assertEquals(WriteType.PUT, entry.getType())
+                                assertEquals("cf-key", entry.getKey().toString(false))
+                                assertEquals("cf-value", entry.getValue()?.toString(false))
+                            }
+                            iterator.next()
+                            assertFalse(iterator.isValid())
+                        }
+                    }
+                } finally {
+                    handles.forEach { it.close() }
+                }
+            }
+        }
+    }
+
+    @Test
     fun newIteratorWithBaseTransfersBaseIteratorOwnership() {
         openRocksDB(createTestFolder()).use { db ->
             db.put("a".encodeToByteArray(), "db".encodeToByteArray())
@@ -356,6 +508,71 @@ class WriteBatchTest {
                     assertTrue(iterator.isValid())
                     assertContentEquals("b".encodeToByteArray(), iterator.key())
                     assertContentEquals("batch".encodeToByteArray(), iterator.value())
+                }
+            }
+        }
+    }
+
+    @Test
+    fun newIteratorWithBaseReadOptionsReadsDbAndBatchValues() {
+        openRocksDB(createTestFolder()).use { db ->
+            db.put("a".encodeToByteArray(), "db".encodeToByteArray())
+
+            ReadOptions().use { readOptions ->
+                WriteBatchWithIndex().use { batch ->
+                    batch.put("b".encodeToByteArray(), "batch".encodeToByteArray())
+
+                    batch.newIteratorWithBase(db.newIterator(), readOptions).use { iterator ->
+                        iterator.seekToFirst()
+                        assertTrue(iterator.isValid())
+                        assertContentEquals("a".encodeToByteArray(), iterator.key())
+                        assertContentEquals("db".encodeToByteArray(), iterator.value())
+
+                        iterator.next()
+                        assertTrue(iterator.isValid())
+                        assertContentEquals("b".encodeToByteArray(), iterator.key())
+                        assertContentEquals("batch".encodeToByteArray(), iterator.value())
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun newIteratorWithBaseColumnFamilyReadOptionsReadsDbAndBatchValues() {
+        DBOptions().apply {
+            setCreateIfMissing(true)
+            setCreateMissingColumnFamilies(true)
+        }.use { dbOptions ->
+            val columnFamilies = listOf(
+                ColumnFamilyDescriptor(defaultColumnFamily),
+                ColumnFamilyDescriptor("base_cf".encodeToByteArray())
+            )
+            val handles = mutableListOf<ColumnFamilyHandle>()
+            openRocksDB(dbOptions, createTestFolder(), columnFamilies, handles).use { db ->
+                try {
+                    val columnFamily = handles[1]
+                    db.put(columnFamily, "a".encodeToByteArray(), "cf-db".encodeToByteArray())
+
+                    ReadOptions().use { readOptions ->
+                        WriteBatchWithIndex().use { batch ->
+                            batch.put(columnFamily, "b".encodeToByteArray(), "cf-batch".encodeToByteArray())
+
+                            batch.newIteratorWithBase(columnFamily, db.newIterator(columnFamily), readOptions).use { iterator ->
+                                iterator.seekToFirst()
+                                assertTrue(iterator.isValid())
+                                assertContentEquals("a".encodeToByteArray(), iterator.key())
+                                assertContentEquals("cf-db".encodeToByteArray(), iterator.value())
+
+                                iterator.next()
+                                assertTrue(iterator.isValid())
+                                assertContentEquals("b".encodeToByteArray(), iterator.key())
+                                assertContentEquals("cf-batch".encodeToByteArray(), iterator.value())
+                            }
+                        }
+                    }
+                } finally {
+                    handles.forEach { it.close() }
                 }
             }
         }

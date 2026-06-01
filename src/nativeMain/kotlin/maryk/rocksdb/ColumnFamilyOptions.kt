@@ -14,6 +14,8 @@ import maryk.sizeTToLong
 import maryk.toBoolean
 import maryk.toCheckedInt
 import maryk.toCheckedLong
+import maryk.usePointer
+import maryk.wrapWithErrorThrower
 import rocksdb.rocksdb_options_create
 import rocksdb.rocksdb_options_destroy
 import rocksdb.rocksdb_options_get_arena_block_size
@@ -40,6 +42,8 @@ import rocksdb.rocksdb_options_set_arena_block_size
 import rocksdb.rocksdb_options_set_bloom_locality
 import rocksdb.rocksdb_options_set_compaction_style
 import rocksdb.rocksdb_options_set_comparator
+import rocksdb.rocksdb_options_set_compaction_filter
+import rocksdb.rocksdb_options_set_compaction_filter_factory
 import rocksdb.rocksdb_options_set_compression
 import rocksdb.rocksdb_options_set_disable_auto_compactions
 import rocksdb.rocksdb_options_set_level0_file_num_compaction_trigger
@@ -66,6 +70,8 @@ actual class ColumnFamilyOptions private constructor(
 ) : RocksObject() {
     private var tableFormatConfig: TableFormatConfig? = null
     private var ownedComparator: AbstractComparator? = null
+    private var compactionFilter: AbstractCompactionFilter<out AbstractSlice<*>>? = null
+    private var compactionFilterFactory: AbstractCompactionFilterFactory<out AbstractCompactionFilter<*>>? = null
 
     actual constructor() : this(requireNotNull(rocksdb_options_create()) { "Unable to allocate RocksDB column-family options" })
 
@@ -89,6 +95,8 @@ actual class ColumnFamilyOptions private constructor(
             rocksdb_options_destroy(native)
             comparator?.closeFromOptions()
             tableFormatConfig = null
+            compactionFilter = null
+            compactionFilterFactory = null
             super.close()
         }
     }
@@ -103,6 +111,9 @@ actual class ColumnFamilyOptions private constructor(
             ownedComparator = null
         }
     }
+
+    internal fun retainedNativeReferences(): List<Any> =
+        listOfNotNull(compactionFilter, compactionFilterFactory)
 
     actual fun setTableFormatConfig(tableFormatConfig: TableFormatConfig): ColumnFamilyOptions {
         checkOwningHandle()
@@ -190,6 +201,47 @@ actual class ColumnFamilyOptions private constructor(
         checkOwningHandle()
         mergeOperator.transferOwnershipToNative()
         rocksdb.rocksdb_options_set_merge_operator(native, mergeOperator.native)
+        return this
+    }
+
+    actual fun setMergeOperatorName(name: String): ColumnFamilyOptions {
+        checkOwningHandle()
+        val nameBytes = name.encodeToByteArray()
+        wrapWithErrorThrower { error ->
+            nameBytes.usePointer { namePointer ->
+                rocksdb.rocksdb_options_set_merge_operator_name(
+                    native,
+                    namePointer,
+                    nameBytes.size.asSizeT(),
+                    error
+                )
+            }
+        }
+        return this
+    }
+
+    actual fun setCompactionFilter(
+        compactionFilter: AbstractCompactionFilter<out AbstractSlice<*>>
+    ): ColumnFamilyOptions {
+        checkOwningHandle()
+        compactionFilter.checkOwningHandle()
+        rocksdb_options_set_compaction_filter(native, compactionFilter.native)
+        this.compactionFilter = compactionFilter
+        return this
+    }
+
+    actual fun compactionFilter(): AbstractCompactionFilter<out AbstractSlice<*>>? {
+        checkOwningHandle()
+        return compactionFilter
+    }
+
+    actual fun setCompactionFilterFactory(
+        compactionFilterFactory: AbstractCompactionFilterFactory<out AbstractCompactionFilter<*>>
+    ): ColumnFamilyOptions {
+        checkOwningHandle()
+        val nativeFactory = compactionFilterFactory.transferOwnershipToNative()
+        rocksdb_options_set_compaction_filter_factory(native, nativeFactory)
+        this.compactionFilterFactory = compactionFilterFactory
         return this
     }
 

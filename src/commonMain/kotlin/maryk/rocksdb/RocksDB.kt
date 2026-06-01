@@ -1821,9 +1821,9 @@ expect open class RocksDB : RocksObject {
     fun enableFileDeletions()
 
     /**
-     * Delete files in multiple ranges at once.
-     * Deleting files in a lot of ranges one at a time can be slow; use this API for
-     * better performance in that case.
+     * Delete files in multiple ranges.
+     * Platform implementations may execute the ranges one at a time when the
+     * native library does not expose a true multi-range API.
      *
      * @param columnFamilyHandle The column family for operation (use the overload without
      * [columnFamilyHandle] for the default column family).

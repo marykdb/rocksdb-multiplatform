@@ -76,6 +76,18 @@ expect abstract class AbstractRocksIterator<P : RocksObject> : RocksObject, Rock
     override fun prev()
 
     /**
+     * Refreshes the iterator to the latest DB state.
+     * The iterator is invalidated after refresh and must be repositioned.
+     */
+    fun refresh()
+
+    /**
+     * Refreshes the iterator to read under the given snapshot.
+     * The iterator is invalidated after refresh and must be repositioned.
+     */
+    fun refresh(snapshot: Snapshot)
+
+    /**
      * If an error has occurred, return it.  Else return an ok status.
      * If non-blocking IO is requested and this operation cannot be
      * satisfied without doing some IO, then this returns Status::Incomplete().

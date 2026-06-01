@@ -29,7 +29,8 @@ actual fun openTransactionDB(
 
     return Unit.wrapWithNullErrorThrower { error ->
         memScoped {
-            val retainedReferences = dbOptions.retainedNativeReferences()
+            val retainedReferences = dbOptions.retainedNativeReferences() +
+                columnFamilyDescriptors.flatMap { it.getOptions().retainedNativeReferences() }
             val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
             val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
 

@@ -11,7 +11,10 @@ actual class WriteEntry actual constructor(
 
     actual fun getValue() = value
 
-    actual override fun close() {}
+    actual override fun close() {
+        key.close()
+        value?.close()
+    }
 
     override fun equals(other: Any?) = when {
         this === other -> true

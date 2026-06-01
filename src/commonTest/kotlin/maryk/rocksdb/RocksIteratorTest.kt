@@ -10,6 +10,49 @@ class RocksIteratorTest {
     private fun createTestFolder() = createTestDBFolder("RocksIteratorTest")
 
     @Test
+    fun refresh() {
+        Options().setCreateIfMissing(true).use { options ->
+            openRocksDB(options, createTestFolder()).use { db ->
+                db.put("key1".encodeToByteArray(), "value1".encodeToByteArray())
+
+                db.newIterator().use { iterator ->
+                    iterator.seekToFirst()
+                    assertTrue(iterator.isValid())
+
+                    db.put("key2".encodeToByteArray(), "value2".encodeToByteArray())
+                    iterator.refresh()
+                    iterator.seek("key2".encodeToByteArray())
+
+                    assertTrue(iterator.isValid())
+                    assertContentEquals("key2".encodeToByteArray(), iterator.key())
+                }
+            }
+        }
+    }
+
+    @Test
+    fun refreshWithSnapshot() {
+        Options().setCreateIfMissing(true).use { options ->
+            openRocksDB(options, createTestFolder()).use { db ->
+                db.put("key1".encodeToByteArray(), "value1".encodeToByteArray())
+                val snapshot = requireNotNull(db.getSnapshot())
+                try {
+                    db.newIterator().use { iterator ->
+                        db.put("key2".encodeToByteArray(), "value2".encodeToByteArray())
+                        iterator.refresh(snapshot)
+                        iterator.seek("key2".encodeToByteArray())
+
+                        assertFalse(iterator.isValid())
+                    }
+                } finally {
+                    db.releaseSnapshot(snapshot)
+                    snapshot.close()
+                }
+            }
+        }
+    }
+
+    @Test
     fun rocksIterator() {
         Options().apply {
             setCreateIfMissing(true)

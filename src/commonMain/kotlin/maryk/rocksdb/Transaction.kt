@@ -987,39 +987,39 @@ expect class Transaction : RocksObject {
         columnFamilyHandle: ColumnFamilyHandle
     ): RocksIterator
 
-//    /**
-//     * Similar to [`RocksDB.put(ColumnFamilyHandle, ByteArray, ByteArray)`](#RocksDB.put), but
-//     * will also perform conflict checking on the keys to be written.
-//     *
-//     * If this transaction was created on an [`OptimisticTransactionDB`](#OptimisticTransactionDB),
-//     * these functions should always succeed.
-//     *
-//     * If this transaction was created on a [`TransactionDB`](#TransactionDB), an
-//     * [`RocksDBException`](#RocksDBException) may be thrown with an accompanying [`Status`](#Status)
-//     * when:
-//     * - `StatusCode.Busy` if there is a write conflict,
-//     * - `StatusCode.TimedOut` if a lock could not be acquired,
-//     * - `StatusCode.TryAgain` if the memtable history size is not large
-//     *   enough. See
-//     *   [`ColumnFamilyOptions.maxWriteBufferNumberToMaintain()`](#ColumnFamilyOptions.maxWriteBufferNumberToMaintain)
-//     *
-//     * @param columnFamilyHandle The column family to put the key/value into
-//     * @param key The specified key to be inserted.
-//     * @param value The value associated with the specified key.
-//     * @param assumeTracked `true` when it is expected that the key is already
-//     *     tracked. More specifically, it means the key was previously tracked
-//     *     in the same savepoint, with the same exclusive flag, and at a lower
-//     *     sequence number. If valid, it skips snapshot validation; throws an error otherwise.
-//     *
-//     * @throws RocksDBException when one of the TransactionDB conditions
-//     *     described above occurs, or in the case of an unexpected error
-//     */
-//    fun put(
-//        columnFamilyHandle: ColumnFamilyHandle,
-//        key: ByteArray,
-//        value: ByteArray,
-//        assumeTracked: Boolean
-//    )
+    /**
+     * Similar to [`RocksDB.put(ColumnFamilyHandle, ByteArray, ByteArray)`](#RocksDB.put), but
+     * will also perform conflict checking on the keys to be written.
+     *
+     * If this transaction was created on an [`OptimisticTransactionDB`](#OptimisticTransactionDB),
+     * these functions should always succeed.
+     *
+     * If this transaction was created on a [`TransactionDB`](#TransactionDB), an
+     * [`RocksDBException`](#RocksDBException) may be thrown with an accompanying [`Status`](#Status)
+     * when:
+     * - `StatusCode.Busy` if there is a write conflict,
+     * - `StatusCode.TimedOut` if a lock could not be acquired,
+     * - `StatusCode.TryAgain` if the memtable history size is not large
+     *   enough. See
+     *   [`ColumnFamilyOptions.maxWriteBufferNumberToMaintain()`](#ColumnFamilyOptions.maxWriteBufferNumberToMaintain)
+     *
+     * @param columnFamilyHandle The column family to put the key/value into
+     * @param key The specified key to be inserted.
+     * @param value The value associated with the specified key.
+     * @param assumeTracked `true` when it is expected that the key is already
+     *     tracked. More specifically, it means the key was previously tracked
+     *     in the same savepoint, with the same exclusive flag, and at a lower
+     *     sequence number. If valid, it skips snapshot validation; throws an error otherwise.
+     *
+     * @throws RocksDBException when one of the TransactionDB conditions
+     *     described above occurs, or in the case of an unexpected error
+     */
+    fun put(
+        columnFamilyHandle: ColumnFamilyHandle,
+        key: ByteArray,
+        value: ByteArray,
+        assumeTracked: Boolean
+    )
 
     /**
      * Similar to [`put`](#put) but with `assumeTracked = false`.
@@ -1078,28 +1078,27 @@ expect class Transaction : RocksObject {
         value: ByteArray
     )
 
-//    /**
-//     * Similar to [`put`](#put) but allows
-//     * you to specify the key and value in several parts that will be
-//     * concatenated together.
-//     *
-//     * @param columnFamilyHandle The column family to put the key/value into
-//     * @param keyParts The specified key to be inserted, split into parts.
-//     * @param valueParts The value associated with the specified key, split into parts.
-//     * @param assumeTracked `true` when it is expected that the key is already
-//     *     tracked. More specifically, it means the key was previously tracked
-//     *     in the same savepoint, with the same exclusive flag, and at a lower
-//     *     sequence number. If valid, it skips snapshot validation; throws an error otherwise.
-//     *
-//     * @throws RocksDBException when one of the TransactionDB conditions
-//     *     described above occurs, or in the case of an unexpected error
-//     */
-//    fun put(
-//        columnFamilyHandle: ColumnFamilyHandle,
-//        keyParts: Array<ByteArray>,
-//        valueParts: Array<ByteArray>,
-//        assumeTracked: Boolean
-//    )
+    /**
+     * Similar to [`put`](#put) but allows you to specify the key and value in
+     * several parts that will be concatenated together.
+     *
+     * @param columnFamilyHandle The column family to put the key/value into
+     * @param keyParts The specified key to be inserted, split into parts.
+     * @param valueParts The value associated with the specified key, split into parts.
+     * @param assumeTracked `true` when it is expected that the key is already
+     *     tracked. More specifically, it means the key was previously tracked
+     *     in the same savepoint, with the same exclusive flag, and at a lower
+     *     sequence number. If valid, it skips snapshot validation; throws an error otherwise.
+     *
+     * @throws RocksDBException when one of the TransactionDB conditions
+     *     described above occurs, or in the case of an unexpected error
+     */
+    fun put(
+        columnFamilyHandle: ColumnFamilyHandle,
+        keyParts: Array<ByteArray>,
+        valueParts: Array<ByteArray>,
+        assumeTracked: Boolean
+    )
 
     /**
      * Similar to [`put`](#put) but with `assumeTracked = false`.
@@ -1158,35 +1157,35 @@ expect class Transaction : RocksObject {
      */
     fun put(key: ByteBuffer, value: ByteBuffer)
 
-//    /**
-//     * Similar to `RocksDB.put(byte[], byte[])`, but
-//     * will also perform conflict checking on the keys being written.
-//     *
-//     * If this transaction was created on an `OptimisticTransactionDB`,
-//     * these functions should always succeed.
-//     *
-//     * If this transaction was created on a `TransactionDB`, a `RocksDBException`
-//     * may be thrown with an accompanying `Status` when:
-//     * - `StatusCode.Busy` if there is a write conflict,
-//     * - `StatusCode.TimedOut` if a lock could not be acquired,
-//     * - `StatusCode.TryAgain` if the memtable history size is not large
-//     *   enough. See `ColumnFamilyOptions.maxWriteBufferNumberToMaintain()`
-//     *
-//     * @param columnFamilyHandle the column family to put the key/value into.
-//     * @param key the specified key to be inserted.
-//     * @param value the value associated with the specified key.
-//     * @param assumeTracked true when it is expected that the key is already
-//     * tracked. If valid, skips snapshot validation; throws an error otherwise.
-//     *
-//     * @throws RocksDBException when one of the `TransactionDB` conditions
-//     * described above occurs, or in the case of an unexpected error.
-//     */
-//    fun put(
-//        columnFamilyHandle: ColumnFamilyHandle,
-//        key: ByteBuffer,
-//        value: ByteBuffer,
-//        assumeTracked: Boolean
-//    )
+    /**
+     * Similar to `RocksDB.put(byte[], byte[])`, but will also perform conflict
+     * checking on the keys being written.
+     *
+     * If this transaction was created on an `OptimisticTransactionDB`, these
+     * functions should always succeed.
+     *
+     * If this transaction was created on a `TransactionDB`, a `RocksDBException`
+     * may be thrown with an accompanying `Status` when:
+     * - `StatusCode.Busy` if there is a write conflict,
+     * - `StatusCode.TimedOut` if a lock could not be acquired,
+     * - `StatusCode.TryAgain` if the memtable history size is not large
+     *   enough. See `ColumnFamilyOptions.maxWriteBufferNumberToMaintain()`
+     *
+     * @param columnFamilyHandle the column family to put the key/value into.
+     * @param key the specified key to be inserted.
+     * @param value the value associated with the specified key.
+     * @param assumeTracked true when it is expected that the key is already
+     * tracked. If valid, skips snapshot validation; throws an error otherwise.
+     *
+     * @throws RocksDBException when one of the `TransactionDB` conditions
+     * described above occurs, or in the case of an unexpected error.
+     */
+    fun put(
+        columnFamilyHandle: ColumnFamilyHandle,
+        key: ByteBuffer,
+        value: ByteBuffer,
+        assumeTracked: Boolean
+    )
 
     /**
      * Similar to `put(columnFamilyHandle, key, value, assumeTracked)` but assumes
@@ -1204,40 +1203,39 @@ expect class Transaction : RocksObject {
         key: ByteBuffer,
         value: ByteBuffer
     )
-//
-//    /**
-//     * Similar to [`RocksDB.merge(ColumnFamilyHandle, ByteArray, ByteArray)`](#RocksDB.merge), but
-//     * will also perform conflict checking on the keys to be written.
-//     *
-//     * If this transaction was created on an [`OptimisticTransactionDB`](#OptimisticTransactionDB),
-//     * these functions should always succeed.
-//     *
-//     * If this transaction was created on a [`TransactionDB`](#TransactionDB), an
-//     * [`RocksDBException`](#RocksDBException) may be thrown with an accompanying [`Status`](#Status)
-//     * when:
-//     * - `StatusCode.Busy` if there is a write conflict,
-//     * - `StatusCode.TimedOut` if a lock could not be acquired,
-//     * - `StatusCode.TryAgain` if the memtable history size is not large
-//     *   enough. See
-//     *   [`ColumnFamilyOptions.maxWriteBufferNumberToMaintain()`](#ColumnFamilyOptions.maxWriteBufferNumberToMaintain)
-//     *
-//     * @param columnFamilyHandle The column family to merge the key/value into
-//     * @param key The specified key to be merged.
-//     * @param value The value associated with the specified key.
-//     * @param assumeTracked `true` when it is expected that the key is already
-//     *     tracked. More specifically, it means the key was previously tracked
-//     *     in the same savepoint, with the same exclusive flag, and at a lower
-//     *     sequence number. If valid, it skips snapshot validation; throws an error otherwise.
-//     *
-//     * @throws RocksDBException when one of the TransactionDB conditions
-//     *     described above occurs, or in the case of an unexpected error
-//     */
-//    fun merge(
-//        columnFamilyHandle: ColumnFamilyHandle,
-//        key: ByteArray,
-//        value: ByteArray,
-//        assumeTracked: Boolean
-//    )
+    /**
+     * Similar to [`RocksDB.merge(ColumnFamilyHandle, ByteArray, ByteArray)`](#RocksDB.merge), but
+     * will also perform conflict checking on the keys to be written.
+     *
+     * If this transaction was created on an [`OptimisticTransactionDB`](#OptimisticTransactionDB),
+     * these functions should always succeed.
+     *
+     * If this transaction was created on a [`TransactionDB`](#TransactionDB), an
+     * [`RocksDBException`](#RocksDBException) may be thrown with an accompanying [`Status`](#Status)
+     * when:
+     * - `StatusCode.Busy` if there is a write conflict,
+     * - `StatusCode.TimedOut` if a lock could not be acquired,
+     * - `StatusCode.TryAgain` if the memtable history size is not large
+     *   enough. See
+     *   [`ColumnFamilyOptions.maxWriteBufferNumberToMaintain()`](#ColumnFamilyOptions.maxWriteBufferNumberToMaintain)
+     *
+     * @param columnFamilyHandle The column family to merge the key/value into
+     * @param key The specified key to be merged.
+     * @param value The value associated with the specified key.
+     * @param assumeTracked `true` when it is expected that the key is already
+     *     tracked. More specifically, it means the key was previously tracked
+     *     in the same savepoint, with the same exclusive flag, and at a lower
+     *     sequence number. If valid, it skips snapshot validation; throws an error otherwise.
+     *
+     * @throws RocksDBException when one of the TransactionDB conditions
+     *     described above occurs, or in the case of an unexpected error
+     */
+    fun merge(
+        columnFamilyHandle: ColumnFamilyHandle,
+        key: ByteArray,
+        value: ByteArray,
+        assumeTracked: Boolean
+    )
 
     /**
      * Similar to [`merge`](#merge) but with `assumeTracked = false`.
@@ -1313,34 +1311,34 @@ expect class Transaction : RocksObject {
      */
     fun merge(key: ByteBuffer, value: ByteBuffer)
 
-//    /**
-//     * Similar to `RocksDB.merge(byte[], byte[])`, but
-//     * will also perform conflict checking on the keys being written.
-//     *
-//     * If this transaction was created on an `OptimisticTransactionDB`,
-//     * these functions should always succeed.
-//     *
-//     * If this transaction was created on a `TransactionDB`, a `RocksDBException`
-//     * may be thrown with an accompanying `Status` when:
-//     * - `StatusCode.Busy` if there is a write conflict,
-//     * - `StatusCode.TimedOut` if a lock could not be acquired,
-//     * - `StatusCode.TryAgain` if the memtable history size is not large
-//     *   enough. See `ColumnFamilyOptions.maxWriteBufferNumberToMaintain()`
-//     *
-//     * @param columnFamilyHandle The column family in which to apply the merge.
-//     * @param key The specified key to be merged.
-//     * @param value The value associated with the specified key.
-//     * @param assumeTracked Expects the key to already be tracked.
-//     *
-//     * @throws RocksDBException when one of the `TransactionDB` conditions
-//     * described above occurs, or in the case of an unexpected error.
-//     */
-//    fun merge(
-//        columnFamilyHandle: ColumnFamilyHandle,
-//        key: ByteBuffer,
-//        value: ByteBuffer,
-//        assumeTracked: Boolean
-//    )
+    /**
+     * Similar to `RocksDB.merge(byte[], byte[])`, but will also perform conflict
+     * checking on the keys being written.
+     *
+     * If this transaction was created on an `OptimisticTransactionDB`, these
+     * functions should always succeed.
+     *
+     * If this transaction was created on a `TransactionDB`, a `RocksDBException`
+     * may be thrown with an accompanying `Status` when:
+     * - `StatusCode.Busy` if there is a write conflict,
+     * - `StatusCode.TimedOut` if a lock could not be acquired,
+     * - `StatusCode.TryAgain` if the memtable history size is not large
+     *   enough. See `ColumnFamilyOptions.maxWriteBufferNumberToMaintain()`
+     *
+     * @param columnFamilyHandle The column family in which to apply the merge.
+     * @param key The specified key to be merged.
+     * @param value The value associated with the specified key.
+     * @param assumeTracked Expects the key to already be tracked.
+     *
+     * @throws RocksDBException when one of the `TransactionDB` conditions
+     * described above occurs, or in the case of an unexpected error.
+     */
+    fun merge(
+        columnFamilyHandle: ColumnFamilyHandle,
+        key: ByteBuffer,
+        value: ByteBuffer,
+        assumeTracked: Boolean
+    )
 
     /**
      * Similar to `merge(columnFamilyHandle, key, value, assumeTracked)` but assumes
@@ -1359,37 +1357,37 @@ expect class Transaction : RocksObject {
         value: ByteBuffer
     )
 
-//    /**
-//     * Similar to [`RocksDB.delete(ColumnFamilyHandle, ByteArray)`](#RocksDB.delete), but
-//     * will also perform conflict checking on the keys to be deleted.
-//     *
-//     * If this transaction was created on an [`OptimisticTransactionDB`](#OptimisticTransactionDB),
-//     * these functions should always succeed.
-//     *
-//     * If this transaction was created on a [`TransactionDB`](#TransactionDB), an
-//     * [`RocksDBException`](#RocksDBException) may be thrown with an accompanying [`Status`](#Status)
-//     * when:
-//     * - `StatusCode.Busy` if there is a write conflict,
-//     * - `StatusCode.TimedOut` if a lock could not be acquired,
-//     * - `StatusCode.TryAgain` if the memtable history size is not large
-//     *   enough. See
-//     *   [`ColumnFamilyOptions.maxWriteBufferNumberToMaintain()`](#ColumnFamilyOptions.maxWriteBufferNumberToMaintain)
-//     *
-//     * @param columnFamilyHandle The column family to delete the key from
-//     * @param key The specified key to be deleted.
-//     * @param assumeTracked `true` when it is expected that the key is already
-//     *     tracked. More specifically, it means the key was previously tracked
-//     *     in the same savepoint, with the same exclusive flag, and at a lower
-//     *     sequence number. If valid, it skips snapshot validation; throws an error otherwise.
-//     *
-//     * @throws RocksDBException when one of the TransactionDB conditions
-//     *     described above occurs, or in the case of an unexpected error
-//     */
-//    fun delete(
-//        columnFamilyHandle: ColumnFamilyHandle,
-//        key: ByteArray,
-//        assumeTracked: Boolean
-//    )
+    /**
+     * Similar to [`RocksDB.delete(ColumnFamilyHandle, ByteArray)`](#RocksDB.delete), but
+     * will also perform conflict checking on the keys to be deleted.
+     *
+     * If this transaction was created on an [`OptimisticTransactionDB`](#OptimisticTransactionDB),
+     * these functions should always succeed.
+     *
+     * If this transaction was created on a [`TransactionDB`](#TransactionDB), an
+     * [`RocksDBException`](#RocksDBException) may be thrown with an accompanying [`Status`](#Status)
+     * when:
+     * - `StatusCode.Busy` if there is a write conflict,
+     * - `StatusCode.TimedOut` if a lock could not be acquired,
+     * - `StatusCode.TryAgain` if the memtable history size is not large
+     *   enough. See
+     *   [`ColumnFamilyOptions.maxWriteBufferNumberToMaintain()`](#ColumnFamilyOptions.maxWriteBufferNumberToMaintain)
+     *
+     * @param columnFamilyHandle The column family to delete the key from
+     * @param key The specified key to be deleted.
+     * @param assumeTracked `true` when it is expected that the key is already
+     *     tracked. More specifically, it means the key was previously tracked
+     *     in the same savepoint, with the same exclusive flag, and at a lower
+     *     sequence number. If valid, it skips snapshot validation; throws an error otherwise.
+     *
+     * @throws RocksDBException when one of the TransactionDB conditions
+     *     described above occurs, or in the case of an unexpected error
+     */
+    fun delete(
+        columnFamilyHandle: ColumnFamilyHandle,
+        key: ByteArray,
+        assumeTracked: Boolean
+    )
 
     /**
      * Similar to [`delete`](#delete) but with `assumeTracked = false`.
@@ -1420,6 +1418,39 @@ expect class Transaction : RocksObject {
     )
 
     /**
+     * Similar to [`delete`](#delete) but allows the key to be supplied in
+     * several parts that will be concatenated together.
+     *
+     * @param columnFamilyHandle The column family to delete the key from.
+     * @param keyParts The specified key to be deleted, split into parts.
+     * @param assumeTracked `true` when it is expected that the key is already tracked.
+     *
+     * @throws RocksDBException when one of the TransactionDB conditions
+     *     described above occurs, or in the case of an unexpected error.
+     */
+    fun delete(
+        columnFamilyHandle: ColumnFamilyHandle,
+        keyParts: Array<ByteArray>,
+        assumeTracked: Boolean
+    )
+
+    /**
+     * Similar to [`delete`](#delete) but with `assumeTracked = false`.
+     *
+     * Allows the key to be supplied in several parts that will be concatenated together.
+     *
+     * @param columnFamilyHandle The column family to delete the key from.
+     * @param keyParts The specified key to be deleted, split into parts.
+     *
+     * @throws RocksDBException when one of the TransactionDB conditions
+     *     described above occurs, or in the case of an unexpected error.
+     */
+    fun delete(
+        columnFamilyHandle: ColumnFamilyHandle,
+        keyParts: Array<ByteArray>
+    )
+
+    /**
      * Similar to [`delete`](#delete) but with `assumeTracked = false`.
      *
      * Will also perform conflict checking on the keys to be deleted.
@@ -1443,6 +1474,19 @@ expect class Transaction : RocksObject {
      */
     fun delete(
         key: ByteArray
+    )
+
+    /**
+     * Similar to [`delete`](#delete), but allows the key to be supplied in
+     * several parts that will be concatenated together.
+     *
+     * @param keyParts The specified key to be deleted, split into parts.
+     *
+     * @throws RocksDBException when one of the TransactionDB conditions
+     *     described above occurs, or in the case of an unexpected error.
+     */
+    fun delete(
+        keyParts: Array<ByteArray>
     )
 
     /**

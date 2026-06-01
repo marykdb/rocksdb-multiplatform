@@ -58,7 +58,8 @@ actual fun openRocksDB(
         options.checkOwningHandle()
         columnFamilyDescriptors.forEach { it.getOptions().checkOwningHandle() }
         memScoped {
-            val retainedReferences = options.retainedNativeReferences()
+            val retainedReferences = options.retainedNativeReferences() +
+                columnFamilyDescriptors.flatMap { it.getOptions().retainedNativeReferences() }
             val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
             val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
 
@@ -129,7 +130,8 @@ actual fun openReadOnlyRocksDB(
         options.checkOwningHandle()
         columnFamilyDescriptors.forEach { it.getOptions().checkOwningHandle() }
         memScoped {
-            val retainedReferences = options.retainedNativeReferences()
+            val retainedReferences = options.retainedNativeReferences() +
+                columnFamilyDescriptors.flatMap { it.getOptions().retainedNativeReferences() }
             val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
             val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
 

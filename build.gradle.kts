@@ -491,6 +491,9 @@ kotlin {
         }
         getByName("androidHostTest") {
             kotlin.srcDirs("src/jvmTest/kotlin")
+            dependencies {
+                runtimeOnly("org.rocksdb:rocksdbjni:$rocksDBJVMVersion")
+            }
         }
     }
 

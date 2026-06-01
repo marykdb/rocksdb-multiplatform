@@ -4,7 +4,7 @@ package maryk.rocksdb
  * Checksum types used in conjunction with BlockBasedTable.
  */
 expect enum class ChecksumType {
-    /** Not implemented yet. */
+    /** Disable block checksum. */
     kNoChecksum,
     /** CRC32 Checksum */
     kCRC32c,

@@ -88,14 +88,14 @@ expect class TransactionDB : RocksDB {
         oldTransaction: Transaction
     ): Transaction
 
-//    /**
-//     * Retrieves a transaction by its name.
-//     *
-//     * @param transactionName The name of the transaction to retrieve.
-//     *
-//     * @return A [Transaction] instance if found; otherwise, `null`.
-//     */
-//    fun getTransactionByName(transactionName: String): Transaction?
+    /**
+     * Retrieves a transaction by its name.
+     *
+     * @param transactionName The name of the transaction to retrieve.
+     *
+     * @return A [Transaction] instance if found; otherwise, `null`.
+     */
+    fun getTransactionByName(transactionName: String): Transaction?
 
     /**
      * Retrieves all prepared transactions currently held by the database.
@@ -104,19 +104,19 @@ expect class TransactionDB : RocksDB {
      */
     fun getAllPreparedTransactions(): List<Transaction>
 
-//    /**
-//     * Retrieves the current status of all locks held by the database.
-//     *
-//     * @return A map where each key is a transaction ID, and each value is a [KeyLockInfo] instance detailing the lock information.
-//     */
-//    fun getLockStatusData(): Map<Long, KeyLockInfo>
-//
-//    /**
-//     * Retrieves the deadlock information buffer.
-//     *
-//     * @return An array of [DeadlockPath] instances representing detected deadlocks.
-//     */
-//    fun getDeadlockInfoBuffer(): Array<DeadlockPath>
+    /**
+     * Retrieves the current status of all locks held by the database.
+     *
+     * @return A map where each key is a column-family ID, and each value is a [KeyLockInfo] instance detailing the lock information.
+     */
+    fun getLockStatusData(): Map<Long, KeyLockInfo>
+
+    /**
+     * Retrieves the deadlock information buffer.
+     *
+     * @return An array of [DeadlockPath] instances representing detected deadlocks.
+     */
+    fun getDeadlockInfoBuffer(): Array<DeadlockPath>
 
     /**
      * Sets the size of the deadlock information buffer.
@@ -126,48 +126,51 @@ expect class TransactionDB : RocksDB {
     fun setDeadlockInfoBufferSize(targetSize: Int)
 }
 
-//
-///**
-// * Represents information about a specific key lock.
-// *
-// * This data class contains details about the key being locked, the transactions
-// * holding the lock, and whether the lock is exclusive.
-// */
-//expect class KeyLockInfo(
-//    key: String,
-//    transactionIDs: LongArray,
-//    exclusive: Boolean
-//) {
-//    fun getKey(): String
-//    fun getTransactionIDs(): LongArray
-//    fun isExclusive(): Boolean
-//}
-//
-///**
-// * Represents information about a deadlock involving transactions.
-// *
-// * This data class contains details about the transactions involved in a deadlock,
-// * including the transaction IDs, column family IDs, waiting keys, and lock statuses.
-// */
-//expect class DeadlockInfo {
-//    fun getTransactionID(): Long
-//    fun getColumnFamilyId(): Long
-//    fun getWaitingKey(): String
-//    fun isExclusive(): Boolean
-//}
-//
-///**
-// * Represents a path of transactions involved in a deadlock.
-// *
-// * This data class contains an array of [DeadlockInfo] instances representing the
-// * sequence of transactions and their dependencies, as well as a flag indicating
-// * whether the deadlock detection limit was exceeded.
-// */
-//expect class DeadlockPath {
-//    /**
-//     * Checks if the deadlock path is empty and the limit has not been exceeded.
-//     *
-//     * @return `true` if the path is empty and the limit is not exceeded; otherwise, `false`.
-//     */
-//    fun isEmpty(): Boolean
-//}
+/**
+ * Information about a key lock currently held in a [TransactionDB].
+ *
+ * @param key The locked key.
+ * @param transactionIDs Transaction IDs currently holding the lock.
+ * @param exclusive Whether the lock is exclusive.
+ */
+expect class KeyLockInfo(
+    key: String,
+    transactionIDs: LongArray,
+    exclusive: Boolean
+) {
+    /** The locked key. */
+    fun getKey(): String
+
+    /** Transaction IDs currently holding the lock. */
+    fun getTransactionIDs(): LongArray
+
+    /** Whether the lock is exclusive. */
+    fun isExclusive(): Boolean
+}
+
+/**
+ * One transaction wait entry in a detected deadlock path.
+ */
+expect class DeadlockInfo {
+    /** The waiting transaction ID. */
+    fun getTransactionID(): Long
+
+    /** The column-family ID of the key being waited on. */
+    fun getColumnFamilyId(): Long
+
+    /** The key being waited on. */
+    fun getWaitingKey(): String
+
+    /** Whether the waited-on lock is exclusive. */
+    fun isExclusive(): Boolean
+}
+
+/**
+ * A detected deadlock path returned by [TransactionDB.getDeadlockInfoBuffer].
+ */
+expect class DeadlockPath {
+    /**
+     * Returns `true` when the path is empty and the deadlock detection limit was not exceeded.
+     */
+    fun isEmpty(): Boolean
+}

@@ -13,6 +13,8 @@ import rocksdb.rocksdb_iter_destroy
 import rocksdb.rocksdb_iter_get_error
 import rocksdb.rocksdb_iter_next
 import rocksdb.rocksdb_iter_prev
+import rocksdb.rocksdb_iter_refresh
+import rocksdb.rocksdb_iter_refresh_snapshot
 import rocksdb.rocksdb_iter_seek
 import rocksdb.rocksdb_iter_seek_for_prev
 import rocksdb.rocksdb_iter_seek_to_first
@@ -107,6 +109,21 @@ protected constructor(
     actual override fun prev() {
         checkOwningHandle()
         rocksdb_iter_prev(native)
+    }
+
+    actual fun refresh() {
+        checkOwningHandle()
+        wrapWithErrorThrower { error ->
+            rocksdb_iter_refresh(native, error)
+        }
+    }
+
+    actual fun refresh(snapshot: Snapshot) {
+        checkOwningHandle()
+        snapshot.checkOwningHandle()
+        wrapWithErrorThrower { error ->
+            rocksdb_iter_refresh_snapshot(native, snapshot.native, error)
+        }
     }
 
     /**

@@ -127,18 +127,17 @@ class OptimisticTransactionDBTest {
             }
         }
     }
-//
-//    @Test
-//    fun baseDB() {
-//        val tempFolder = createTestFolder()
-//        Options().setCreateIfMissing(true).use { options ->
-//            openOptimisticTransactionDB(options, tempFolder).use { otdb ->
-//                val db = otdb.getBaseDB()
-//                assertNotNull(db, "Base RocksDB should not be null")
-//                assertFalse(db.isOwningHandle, "Base RocksDB should not be owning handle")
-//            }
-//        }
-//    }
+    @Test
+    fun baseDB() {
+        val tempFolder = createTestFolder()
+        Options().setCreateIfMissing(true).use { options ->
+            openOptimisticTransactionDB(options, tempFolder).use { otdb ->
+                otdb.getBaseDB().use { db ->
+                    assertNotNull(db, "Base RocksDB should not be null")
+                }
+            }
+        }
+    }
 
     @Test
     fun otdbSimpleIterator() {

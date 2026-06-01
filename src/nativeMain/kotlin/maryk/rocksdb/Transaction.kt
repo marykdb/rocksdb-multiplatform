@@ -36,6 +36,7 @@ import maryk.asUInt64
 import maryk.sizeTToInt
 import maryk.toByteArray
 import maryk.toCheckedLong
+import maryk.toUByte
 import maryk.usePointer
 import maryk.usePointers
 import maryk.wrapWithErrorThrower
@@ -154,6 +155,8 @@ internal interface TransactionOwner {
 
 actual class Transaction(
     internal val native: CPointer<rocksdb_transaction_t>,
+    private val ownsNative: Boolean = true,
+    private val freeBorrowedWrapper: Boolean = false,
 ): RocksObject() {
     private var owner: TransactionOwner? = null
     private val defaultReadOptions = ReadOptions()
@@ -182,11 +185,20 @@ actual class Transaction(
         val transactionOwner = owner
         owner = null
         transactionOwner?.unregisterBorrowedTransaction(this)
-        if (tryClose()) {
+        if (ownsNative && tryClose()) {
             disposePendingSnapshotNotifier()
             invalidateBorrowedSnapshots()
             invalidateBorrowedIterators()
             rocksdb.rocksdb_transaction_destroy(native)
+            defaultReadOptions.close()
+            super.close()
+        } else if (!ownsNative && tryClose()) {
+            disposePendingSnapshotNotifier()
+            invalidateBorrowedSnapshots()
+            invalidateBorrowedIterators()
+            if (freeBorrowedWrapper) {
+                rocksdb.rocksdb_transaction_destroy_wrapper(native)
+            }
             defaultReadOptions.close()
             super.close()
         }
@@ -194,11 +206,20 @@ actual class Transaction(
 
     internal fun invalidateFromOwner() {
         owner = null
-        if (tryClose()) {
+        if (ownsNative && tryClose()) {
             disposePendingSnapshotNotifier()
             invalidateBorrowedSnapshots()
             invalidateBorrowedIterators()
             rocksdb.rocksdb_transaction_destroy(native)
+            defaultReadOptions.close()
+            super.close()
+        } else if (!ownsNative && tryClose()) {
+            disposePendingSnapshotNotifier()
+            invalidateBorrowedSnapshots()
+            invalidateBorrowedIterators()
+            if (freeBorrowedWrapper) {
+                rocksdb.rocksdb_transaction_destroy_wrapper(native)
+            }
             defaultReadOptions.close()
             super.close()
         }
@@ -857,17 +878,22 @@ actual class Transaction(
 
 
     actual fun put(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, value: ByteArray) {
+        put(columnFamilyHandle, key, value, false)
+    }
+
+    actual fun put(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, value: ByteArray, assumeTracked: Boolean) {
         checkOwningHandle()
         checkOpenColumnFamily(columnFamilyHandle)
         wrapWithErrorThrower { error ->
             usePointers(key, value) { keyPointer, valuePointer ->
-                rocksdb.rocksdb_transaction_put_cf(
+                rocksdb.rocksdb_transaction_put_cf_assume_tracked(
                     native,
                     columnFamilyHandle.native,
                     keyPointer,
                     key.size.asSizeT(),
                     valuePointer,
                     value.size.asSizeT(),
+                    assumeTracked.toUByte(),
                     error
                 )
             }
@@ -895,9 +921,18 @@ actual class Transaction(
         keyParts: Array<ByteArray>,
         valueParts: Array<ByteArray>
     ) {
+        put(columnFamilyHandle, keyParts, valueParts, false)
+    }
+
+    actual fun put(
+        columnFamilyHandle: ColumnFamilyHandle,
+        keyParts: Array<ByteArray>,
+        valueParts: Array<ByteArray>,
+        assumeTracked: Boolean
+    ) {
         val key = concatParts(keyParts, "key")
         val value = concatParts(valueParts, "value")
-        put(columnFamilyHandle, key, value)
+        put(columnFamilyHandle, key, value, assumeTracked)
     }
 
     actual fun put(keyParts: Array<ByteArray>, valueParts: Array<ByteArray>) {
@@ -915,25 +950,34 @@ actual class Transaction(
     }
 
     actual fun put(columnFamilyHandle: ColumnFamilyHandle, key: ByteBuffer, value: ByteBuffer) {
+        put(columnFamilyHandle, key, value, false)
+    }
+
+    actual fun put(columnFamilyHandle: ColumnFamilyHandle, key: ByteBuffer, value: ByteBuffer, assumeTracked: Boolean) {
         val keyArray = ByteArray(key.remaining())
         key[keyArray]
         val valueArray = ByteArray(value.remaining())
         value[valueArray]
-        put(columnFamilyHandle, keyArray, valueArray)
+        put(columnFamilyHandle, keyArray, valueArray, assumeTracked)
     }
 
     actual fun merge(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, value: ByteArray) {
+        merge(columnFamilyHandle, key, value, false)
+    }
+
+    actual fun merge(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, value: ByteArray, assumeTracked: Boolean) {
         checkOwningHandle()
         checkOpenColumnFamily(columnFamilyHandle)
         wrapWithErrorThrower { error ->
             usePointers(key, value) { keyPointer, valuePointer ->
-                rocksdb.rocksdb_transaction_merge_cf(
+                rocksdb.rocksdb_transaction_merge_cf_assume_tracked(
                     native,
                     columnFamilyHandle.native,
                     keyPointer,
                     key.size.asSizeT(),
                     valuePointer,
                     value.size.asSizeT(),
+                    assumeTracked.toUByte(),
                     error
                 )
             }
@@ -965,23 +1009,32 @@ actual class Transaction(
     }
 
     actual fun merge(columnFamilyHandle: ColumnFamilyHandle, key: ByteBuffer, value: ByteBuffer) {
+        merge(columnFamilyHandle, key, value, false)
+    }
+
+    actual fun merge(columnFamilyHandle: ColumnFamilyHandle, key: ByteBuffer, value: ByteBuffer, assumeTracked: Boolean) {
         val keyArray = ByteArray(key.remaining())
         key[keyArray]
         val valueArray = ByteArray(value.remaining())
         value[valueArray]
-        merge(columnFamilyHandle, keyArray, valueArray)
+        merge(columnFamilyHandle, keyArray, valueArray, assumeTracked)
     }
 
     actual fun delete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray) {
+        delete(columnFamilyHandle, key, false)
+    }
+
+    actual fun delete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, assumeTracked: Boolean) {
         checkOwningHandle()
         checkOpenColumnFamily(columnFamilyHandle)
         wrapWithErrorThrower { error ->
             key.usePointer { keyPointer ->
-               rocksdb.rocksdb_transaction_delete_cf(
+               rocksdb.rocksdb_transaction_delete_cf_assume_tracked(
                     native,
                     columnFamilyHandle.native,
                     keyPointer,
                     key.size.asSizeT(),
+                    assumeTracked.toUByte(),
                     error
                 )
             }
@@ -1000,6 +1053,25 @@ actual class Transaction(
                 )
             }
         }
+    }
+
+    actual fun delete(
+        columnFamilyHandle: ColumnFamilyHandle,
+        keyParts: Array<ByteArray>,
+        assumeTracked: Boolean
+    ) {
+        delete(columnFamilyHandle, concatParts(keyParts, "key"), assumeTracked)
+    }
+
+    actual fun delete(
+        columnFamilyHandle: ColumnFamilyHandle,
+        keyParts: Array<ByteArray>
+    ) {
+        delete(columnFamilyHandle, keyParts, false)
+    }
+
+    actual fun delete(keyParts: Array<ByteArray>) {
+        delete(concatParts(keyParts, "key"))
     }
 
     actual fun putUntracked(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, value: ByteArray) {

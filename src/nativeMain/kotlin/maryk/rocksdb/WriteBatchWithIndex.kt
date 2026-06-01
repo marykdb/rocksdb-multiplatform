@@ -165,6 +165,7 @@ actual class WriteBatchWithIndex(
     // after records it cannot observe.
     private var batchOnlyFallbackSafe = true
     private val borrowedIterators = mutableSetOf<RocksIterator>()
+    private val borrowedWBWIIterators = mutableSetOf<WBWIRocksIterator>()
 
     init {
         if (!ownsNative) {
@@ -184,6 +185,29 @@ actual class WriteBatchWithIndex(
         createWithComparator(fallbackIndexComparator, reservedBytes, overwriteKey),
         fallbackIndexComparator,
     )
+
+    actual fun newIterator(columnFamilyHandle: ColumnFamilyHandle): WBWIRocksIterator {
+        checkOpenHandle()
+        columnFamilyHandle.checkOwningHandle()
+        val iterator = rocksdb.rocksdb_writebatch_wi_create_iterator_cf(native, columnFamilyHandle.native)
+        return borrowWBWIIterator(WBWIRocksIterator(
+            requireNotNull(iterator) {
+                "RocksDB returned null write-batch-with-index column-family iterator"
+            },
+            this,
+        ))
+    }
+
+    actual fun newIterator(): WBWIRocksIterator {
+        checkOpenHandle()
+        val iterator = rocksdb.rocksdb_writebatch_wi_create_iterator(native)
+        return borrowWBWIIterator(WBWIRocksIterator(
+            requireNotNull(iterator) {
+                "RocksDB returned null write-batch-with-index iterator"
+            },
+            this,
+        ))
+    }
 
     actual fun newIteratorWithBase(columnFamilyHandle: ColumnFamilyHandle, baseIterator: RocksIterator): RocksIterator {
         checkOpenHandle()
@@ -205,11 +229,59 @@ actual class WriteBatchWithIndex(
         ))
     }
 
+    actual fun newIteratorWithBase(
+        columnFamilyHandle: ColumnFamilyHandle,
+        baseIterator: RocksIterator,
+        readOptions: ReadOptions?
+    ): RocksIterator {
+        if (readOptions == null) return newIteratorWithBase(columnFamilyHandle, baseIterator)
+        checkOpenHandle()
+        columnFamilyHandle.checkOwningHandle()
+        readOptions.checkOwningHandle()
+        check(baseIterator.isOwningHandle()) { "Base iterator is already closed or transferred." }
+        val baseOwners = baseIterator.transferWrapperOwnershipToNativeAndDetachOwners()
+        val iterator = rocksdb.rocksdb_writebatch_wi_create_iterator_with_base_cf_readopts(
+            native,
+            baseIterator.native,
+            columnFamilyHandle.native,
+            readOptions.native,
+        )
+        return borrowIterator(RocksIterator(
+            requireNotNull(iterator) {
+                "RocksDB returned null write-batch-with-index column-family iterator"
+            },
+            dbOwner = baseOwners.dbOwner,
+            transactionOwner = baseOwners.transactionOwner,
+            writeBatchWithIndexOwner = this,
+        ))
+    }
+
     actual fun newIteratorWithBase(baseIterator: RocksIterator): RocksIterator {
         checkOpenHandle()
         check(baseIterator.isOwningHandle()) { "Base iterator is already closed or transferred." }
         val baseOwners = baseIterator.transferWrapperOwnershipToNativeAndDetachOwners()
         val iterator = rocksdb.rocksdb_writebatch_wi_create_iterator_with_base(native, baseIterator.native)
+        return borrowIterator(RocksIterator(
+            requireNotNull(iterator) {
+                "RocksDB returned null write-batch-with-index iterator"
+            },
+            dbOwner = baseOwners.dbOwner,
+            transactionOwner = baseOwners.transactionOwner,
+            writeBatchWithIndexOwner = this,
+        ))
+    }
+
+    actual fun newIteratorWithBase(baseIterator: RocksIterator, readOptions: ReadOptions?): RocksIterator {
+        if (readOptions == null) return newIteratorWithBase(baseIterator)
+        checkOpenHandle()
+        readOptions.checkOwningHandle()
+        check(baseIterator.isOwningHandle()) { "Base iterator is already closed or transferred." }
+        val baseOwners = baseIterator.transferWrapperOwnershipToNativeAndDetachOwners()
+        val iterator = rocksdb.rocksdb_writebatch_wi_create_iterator_with_base_readopts(
+            native,
+            baseIterator.native,
+            readOptions.native,
+        )
         return borrowIterator(RocksIterator(
             requireNotNull(iterator) {
                 "RocksDB returned null write-batch-with-index iterator"
@@ -280,6 +352,75 @@ actual class WriteBatchWithIndex(
         return a ?: if (batchOnlyFallbackSafe) findDefaultBatchValueByIterating(key) else null
     }
 
+    actual fun getFromBatchAndDB(
+        db: RocksDB,
+        columnFamilyHandle: ColumnFamilyHandle,
+        options: ReadOptions,
+        key: ByteArray
+    ): ByteArray? {
+        checkOpenHandle()
+        db.checkOwningHandle()
+        columnFamilyHandle.checkOwningHandle()
+        options.checkOwningHandle()
+        return memScoped {
+            var result: ByteArray? = null
+            wrapWithErrorThrower { error ->
+                val length = alloc<size_tVar>()
+                val value = key.usePointer { keyPointer ->
+                    rocksdb.rocksdb_writebatch_wi_get_from_batch_and_db_cf(
+                        native,
+                        db.native,
+                        options.native,
+                        columnFamilyHandle.native,
+                        keyPointer,
+                        key.size.asSizeT(),
+                        length.ptr,
+                        error,
+                    )
+                }
+                result = value?.let {
+                    try {
+                        it.toByteArray(length.value)
+                    } finally {
+                        rocksdb_free(it)
+                    }
+                }
+            }
+            result
+        }
+    }
+
+    actual fun getFromBatchAndDB(db: RocksDB, options: ReadOptions, key: ByteArray): ByteArray? {
+        checkOpenHandle()
+        db.checkOwningHandle()
+        options.checkOwningHandle()
+        return memScoped {
+            var result: ByteArray? = null
+            wrapWithErrorThrower { error ->
+                val length = alloc<size_tVar>()
+                val value = key.usePointer { keyPointer ->
+                    rocksdb.rocksdb_writebatch_wi_get_from_batch_and_db(
+                        native,
+                        db.native,
+                        options.native,
+                        keyPointer,
+                        key.size.asSizeT(),
+                        length.ptr,
+                        error,
+                    )
+                }
+                result = value?.let {
+                    try {
+                        it.toByteArray(length.value)
+                    } finally {
+                        rocksdb_free(it)
+                    }
+                }
+            }
+            result
+        }
+    }
+
     private fun findDefaultBatchValueByIterating(key: ByteArray): ByteArray? {
         val state = WriteBatchWithIndexLookupState(key)
         val ref = StableRef.create(state)
@@ -322,12 +463,14 @@ actual class WriteBatchWithIndex(
     override fun close() {
         if (ownsNative && tryClose()) {
             invalidateBorrowedIterators()
+            invalidateBorrowedWBWIIterators()
             rocksdb.rocksdb_writebatch_wi_destroy(native)
             ownedComparator?.closeFromOptions()
             ownedComparator = null
             super.close()
         } else if (!ownsNative && tryCloseBorrowed()) {
             invalidateBorrowedIterators()
+            invalidateBorrowedWBWIIterators()
             if (freeBorrowedWrapper) {
                 free(native)
             }
@@ -343,13 +486,27 @@ actual class WriteBatchWithIndex(
         borrowedIterators.add(iterator)
     }
 
+    internal fun unregisterBorrowedWBWIIterator(iterator: WBWIRocksIterator) {
+        borrowedWBWIIterators.remove(iterator)
+    }
+
     private fun borrowIterator(iterator: RocksIterator): RocksIterator =
         iterator.also(borrowedIterators::add)
+
+    private fun borrowWBWIIterator(iterator: WBWIRocksIterator): WBWIRocksIterator =
+        iterator.also(borrowedWBWIIterators::add)
 
     private fun invalidateBorrowedIterators() {
         if (borrowedIterators.isEmpty()) return
         val iterators = borrowedIterators.toList()
         borrowedIterators.clear()
+        iterators.forEach { it.invalidateFromOwner() }
+    }
+
+    private fun invalidateBorrowedWBWIIterators() {
+        if (borrowedWBWIIterators.isEmpty()) return
+        val iterators = borrowedWBWIIterators.toList()
+        borrowedWBWIIterators.clear()
         iterators.forEach { it.invalidateFromOwner() }
     }
 
@@ -482,13 +639,38 @@ actual class WriteBatchWithIndex(
 
     override fun deleteRange(beginKey: ByteArray, endKey: ByteArray) {
         checkOpenHandle()
-        throw UnsupportedOperationException("RocksDB C API does not support WriteBatchWithIndex.deleteRange.")
+        batchOnlyFallbackSafe = false
+        wrapWithErrorThrower { error ->
+            usePointers(beginKey, endKey) { beginPointer, endPointer ->
+                rocksdb.rocksdb_writebatch_wi_delete_range(
+                    native,
+                    beginPointer,
+                    beginKey.size.asSizeT(),
+                    endPointer,
+                    endKey.size.asSizeT(),
+                    error,
+                )
+            }
+        }
     }
 
     override fun deleteRange(columnFamilyHandle: ColumnFamilyHandle, beginKey: ByteArray, endKey: ByteArray) {
         checkOpenHandle()
         columnFamilyHandle.checkOwningHandle()
-        throw UnsupportedOperationException("RocksDB C API does not support WriteBatchWithIndex.deleteRange with column families.")
+        batchOnlyFallbackSafe = false
+        wrapWithErrorThrower { error ->
+            usePointers(beginKey, endKey) { beginPointer, endPointer ->
+                rocksdb.rocksdb_writebatch_wi_delete_range_cf(
+                    native,
+                    columnFamilyHandle.native,
+                    beginPointer,
+                    beginKey.size.asSizeT(),
+                    endPointer,
+                    endKey.size.asSizeT(),
+                    error,
+                )
+            }
+        }
     }
 
     override fun putLogData(blob: ByteArray) {
@@ -506,6 +688,7 @@ actual class WriteBatchWithIndex(
             rocksdb.rocksdb_writebatch_wi_clear(native)
         }
         invalidateBorrowedIterators()
+        invalidateBorrowedWBWIIterators()
         batchOnlyFallbackSafe = true
     }
 
@@ -521,6 +704,7 @@ actual class WriteBatchWithIndex(
             rocksdb.rocksdb_writebatch_wi_rollback_to_save_point(native, error)
         }
         invalidateBorrowedIterators()
+        invalidateBorrowedWBWIIterators()
     }
 
     override fun popSavePoint() {

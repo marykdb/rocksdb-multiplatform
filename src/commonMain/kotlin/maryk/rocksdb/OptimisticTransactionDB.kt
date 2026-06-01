@@ -5,6 +5,11 @@ package maryk.rocksdb
  */
 expect class OptimisticTransactionDB : RocksDB {
     /**
+     * Returns a wrapper around the underlying base DB.
+     */
+    fun getBaseDB(): RocksDB
+
+    /**
      * Starts a new Transaction.
      *
      * Caller is responsible for calling [Transaction.close] on the returned
@@ -62,49 +67,3 @@ expect class OptimisticTransactionDB : RocksDB {
         oldTransaction: Transaction
     ): Transaction
 }
-
-//
-///**
-// * Represents information about a specific key lock.
-// *
-// * This data class contains details about the key being locked, the transactions
-// * holding the lock, and whether the lock is exclusive.
-// */
-//expect class KeyLockInfo(
-//    key: String,
-//    transactionIDs: LongArray,
-//    exclusive: Boolean
-//) {
-//    fun getKey(): String
-//    fun getTransactionIDs(): LongArray
-//    fun isExclusive(): Boolean
-//}
-//
-///**
-// * Represents information about a deadlock involving transactions.
-// *
-// * This data class contains details about the transactions involved in a deadlock,
-// * including the transaction IDs, column family IDs, waiting keys, and lock statuses.
-// */
-//expect class DeadlockInfo {
-//    fun getTransactionID(): Long
-//    fun getColumnFamilyId(): Long
-//    fun getWaitingKey(): String
-//    fun isExclusive(): Boolean
-//}
-//
-///**
-// * Represents a path of transactions involved in a deadlock.
-// *
-// * This data class contains an array of [DeadlockInfo] instances representing the
-// * sequence of transactions and their dependencies, as well as a flag indicating
-// * whether the deadlock detection limit was exceeded.
-// */
-//expect class DeadlockPath {
-//    /**
-//     * Checks if the deadlock path is empty and the limit has not been exceeded.
-//     *
-//     * @return `true` if the path is empty and the limit is not exceeded; otherwise, `false`.
-//     */
-//    fun isEmpty(): Boolean
-//}

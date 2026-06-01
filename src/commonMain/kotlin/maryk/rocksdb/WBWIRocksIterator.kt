@@ -15,15 +15,15 @@ package maryk.rocksdb
  * **Thread Safety:** This iterator is not thread-safe with respect to the [WriteEntry]
  * as it performs a non-atomic update across the fields of the [WriteEntry].
  */
-expect class WBWIRocksIterator : AbstractRocksIterator<WriteBatchWithIndex> {
-//    /**
-//     * Retrieves the current [WriteEntry] that the iterator is pointing to.
-//     *
-//     * The [WriteEntry] includes the type of write operation, the key, and the value.
-//     *
-//     * @return The current [WriteEntry].
-//     */
-//    fun entry(): WriteEntry
+expect class WBWIRocksIterator : RocksObject, RocksIteratorInterface {
+    /**
+     * Retrieves the current [WriteEntry] that the iterator is pointing to.
+     *
+     * The [WriteEntry] includes the type of write operation, the key, and the value.
+     *
+     * @return The current [WriteEntry].
+     */
+    fun entry(): WriteEntry
 
     /**
      * Closes the iterator and releases any associated resources.

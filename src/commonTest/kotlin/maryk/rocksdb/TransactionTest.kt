@@ -1,10 +1,104 @@
 package maryk.rocksdb
 
+import maryk.allocateDirectByteBuffer
 import maryk.assertContainsExactly
+import maryk.flip
+import maryk.wrapByteBuffer
 import kotlin.random.Random
 import kotlin.test.*
 
 class TransactionTest : AbstractTransactionTest() {
+    @Test
+    fun putAndDeleteAssumeTrackedAfterGetForUpdate() {
+        val key = "assume-tracked-key".encodeToByteArray()
+        val value = "assume-tracked-value".encodeToByteArray()
+
+        startDb().use { dbContainer ->
+            val readOptions = ReadOptions()
+            val testCf = dbContainer.getTestColumnFamily()
+
+            dbContainer.beginTransaction().use { txn ->
+                txn.getForUpdate(readOptions, testCf, key, true)
+                txn.put(testCf, key, value, true)
+                txn.commit()
+            }
+
+            dbContainer.beginTransaction().use { txn ->
+                txn.getForUpdate(readOptions, testCf, key, true)
+                txn.delete(testCf, arrayOf("assume-".encodeToByteArray(), "tracked-key".encodeToByteArray()), true)
+                txn.commit()
+            }
+        }
+    }
+
+    @Test
+    fun mergeAssumeTrackedAfterGetForUpdate() {
+        val key = "assume-tracked-merge-key".encodeToByteArray()
+        val value1 = "value1".encodeToByteArray()
+        val value2 = "value2".encodeToByteArray()
+
+        startDb().use { dbContainer ->
+            val readOptions = ReadOptions()
+            val testCf = dbContainer.getTestColumnFamily()
+
+            dbContainer.beginTransaction().use { txn ->
+                txn.put(testCf, key, value1)
+                txn.commit()
+            }
+
+            dbContainer.beginTransaction().use { txn ->
+                txn.getForUpdate(readOptions, testCf, key, true)
+                txn.merge(testCf, key, value2, true)
+                txn.commit()
+            }
+
+            assertContentEquals("value1**value2".encodeToByteArray(), dbContainer.txnDb.get(testCf, key))
+        }
+    }
+
+    @Test
+    fun byteBufferAssumeTrackedPutMergeAndDeleteAfterGetForUpdate() {
+        val key = "assume-tracked-buffer-key".encodeToByteArray()
+
+        startDb().use { dbContainer ->
+            val readOptions = ReadOptions()
+            val testCf = dbContainer.getTestColumnFamily()
+
+            dbContainer.beginTransaction().use { txn ->
+                txn.getForUpdate(readOptions, testCf, key, true)
+                wrapByteBuffer(key) { keyBuffer ->
+                    wrapByteBuffer("value1".encodeToByteArray()) { valueBuffer ->
+                        txn.put(testCf, keyBuffer, valueBuffer, true)
+                    }
+                }
+                txn.commit()
+            }
+
+            dbContainer.beginTransaction().use { txn ->
+                txn.getForUpdate(readOptions, testCf, key, true)
+                allocateDirectByteBuffer(key.size) { keyBuffer ->
+                    keyBuffer.put(key)
+                    keyBuffer.flip()
+                    allocateDirectByteBuffer("value2".length) { valueBuffer ->
+                        valueBuffer.put("value2".encodeToByteArray())
+                        valueBuffer.flip()
+                        txn.merge(testCf, keyBuffer, valueBuffer, true)
+                    }
+                }
+                txn.commit()
+            }
+
+            assertContentEquals("value1**value2".encodeToByteArray(), dbContainer.txnDb.get(testCf, key))
+
+            dbContainer.beginTransaction().use { txn ->
+                txn.getForUpdate(readOptions, testCf, key, true)
+                txn.delete(testCf, key, true)
+                txn.commit()
+            }
+
+            assertNull(dbContainer.txnDb.get(testCf, key))
+        }
+    }
 
     @Test
     fun getForUpdate_cf_conflict() {
@@ -123,6 +217,56 @@ class TransactionTest : AbstractTransactionTest() {
                         assertContentEquals(v12, txn.get(readOptions, k1))
                     }
                 }
+            }
+        }
+    }
+
+    @Test
+    fun getTransactionByNameReturnsBorrowedTransaction() {
+        val k1 = "key-by-name".encodeToByteArray()
+        val v1 = "value-by-name".encodeToByteArray()
+        val transactionName = "txn-by-name"
+
+        startDb().use { dbContainer ->
+            val txnPrepare = dbContainer.beginTransaction()
+            try {
+                txnPrepare.setName(transactionName)
+                txnPrepare.put(k1, v1)
+                txnPrepare.prepare()
+
+                val byName = dbContainer.txnDb.getTransactionByName(transactionName)
+                assertNotNull(byName)
+                byName.close()
+
+                txnPrepare.commit()
+            } finally {
+                txnPrepare.close()
+            }
+        }
+    }
+
+    @Test
+    fun getAllPreparedTransactionsReturnsBorrowedTransactions() {
+        val k1 = "key-prepared-list".encodeToByteArray()
+        val v1 = "value-prepared-list".encodeToByteArray()
+
+        startDb().use { dbContainer ->
+            val txnPrepare = dbContainer.beginTransaction()
+            try {
+                txnPrepare.setName("txn-prepared-list")
+                txnPrepare.put(k1, v1)
+                txnPrepare.prepare()
+
+                val preparedTransactions = dbContainer.txnDb.getAllPreparedTransactions()
+                try {
+                    assertEquals(1, preparedTransactions.size)
+                } finally {
+                    preparedTransactions.forEach { it.close() }
+                }
+
+                txnPrepare.commit()
+            } finally {
+                txnPrepare.close()
             }
         }
     }

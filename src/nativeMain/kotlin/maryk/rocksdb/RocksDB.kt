@@ -403,6 +403,10 @@ internal constructor(
         ownedComparators += comparator
     }
 
+    private fun retainNativeReferences(references: List<Any>) {
+        retainedReferences.addAll(references)
+    }
+
     internal fun closeNonOwningReferences() {
         closeDefaultReferences()
         closeOwnedComparators()
@@ -431,6 +435,7 @@ internal constructor(
                 columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
                     retainOwnedComparator(it)
                 }
+                retainNativeReferences(columnFamilyDescriptor.getOptions().retainedNativeReferences())
             } catch (throwable: Throwable) {
                 handle.close()
                 throw throwable
@@ -461,6 +466,7 @@ internal constructor(
             columnFamilyOptions.releaseOwnedComparator()?.let {
                 retainOwnedComparator(it)
             }
+            retainNativeReferences(columnFamilyOptions.retainedNativeReferences())
             return createdHandles.toList()
         } catch (throwable: Throwable) {
             if (createdHandles.isNotEmpty()) {
@@ -494,6 +500,7 @@ internal constructor(
                 descriptor.getOptions().releaseOwnedComparator()?.let {
                     retainOwnedComparator(it)
                 }
+                retainNativeReferences(descriptor.getOptions().retainedNativeReferences())
             }
             return createdHandles.toList()
         } catch (throwable: Throwable) {

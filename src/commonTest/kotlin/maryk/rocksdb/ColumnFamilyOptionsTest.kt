@@ -177,6 +177,13 @@ class ColumnFamilyOptionsTest {
     }
 
     @Test
+    fun mergeOperatorName() {
+        ColumnFamilyOptions().use { opt ->
+            assertEquals(opt, opt.setMergeOperatorName("stringappend"))
+        }
+    }
+
+    @Test
     fun shouldSetTestPrefixExtractor() {
         ColumnFamilyOptions().use { options ->
             options.useFixedLengthPrefixExtractor(100)

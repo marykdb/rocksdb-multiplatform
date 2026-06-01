@@ -10,9 +10,9 @@ class WriteBatchWithIndexNativeTest {
     }
 
     @Test
-    fun deleteRangeIsRejectedBeforeUnsupportedNativeCall() {
+    fun deleteRangeReportsUpstreamUnsupportedOperation() {
         WriteBatchWithIndex().use { batch ->
-            assertFailsWith<UnsupportedOperationException> {
+            assertFailsWith<RocksDBException> {
                 batch.deleteRange("a".encodeToByteArray(), "z".encodeToByteArray())
             }
         }

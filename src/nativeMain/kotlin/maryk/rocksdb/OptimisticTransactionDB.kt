@@ -19,10 +19,12 @@ internal constructor(
 ) : RocksDB(optimisticTransactionBaseDb(tnative), ownedComparators, retainedReferences), TransactionOwner {
     val defaultTransactionOptions: OptimisticTransactionOptions = OptimisticTransactionOptions()
     private val borrowedTransactions = mutableSetOf<Transaction>()
+    private val borrowedBaseDbs = mutableSetOf<BorrowedOptimisticBaseDB>()
 
     override fun close() {
         if (tryClose()) {
             invalidateBorrowedTransactions()
+            invalidateBorrowedBaseDbs()
             invalidateBorrowedIterators()
             invalidateBorrowedTransactionLogIterators()
             releaseBorrowedSnapshots()
@@ -50,6 +52,27 @@ internal constructor(
         val transactions = borrowedTransactions.toList()
         borrowedTransactions.clear()
         transactions.forEach { it.invalidateFromOwner() }
+    }
+
+    private fun invalidateBorrowedBaseDbs() {
+        if (borrowedBaseDbs.isEmpty()) return
+        val baseDbs = borrowedBaseDbs.toList()
+        borrowedBaseDbs.clear()
+        baseDbs.forEach { it.invalidateFromOwner() }
+    }
+
+    internal fun unregisterBorrowedBaseDb(db: BorrowedOptimisticBaseDB) {
+        borrowedBaseDbs -= db
+    }
+
+    actual fun getBaseDB(): RocksDB {
+        checkOwningHandle()
+        return BorrowedOptimisticBaseDB(
+            requireNotNull(rocksdb.rocksdb_optimistictransactiondb_get_base_db(tnative)) {
+                "RocksDB returned null optimistic transaction base DB"
+            },
+            this
+        ).also { borrowedBaseDbs += it }
     }
 
     actual fun beginTransaction(writeOptions: WriteOptions): Transaction {
@@ -95,5 +118,22 @@ internal constructor(
         oldTransaction.prepareForReuse()
         rocksdb.rocksdb_optimistictransaction_begin(tnative, writeOptions.native, transactionOptions.native, oldTransaction.native)
         return oldTransaction.attachTo(this)
+    }
+}
+
+internal class BorrowedOptimisticBaseDB(
+    native: CPointer<cnames.structs.rocksdb_t>,
+    private var owner: OptimisticTransactionDB?,
+) : RocksDB(native) {
+    override fun close() {
+        val dbOwner = owner
+        owner = null
+        dbOwner?.unregisterBorrowedBaseDb(this)
+        super.close()
+    }
+
+    internal fun invalidateFromOwner() {
+        owner = null
+        super.close()
     }
 }
