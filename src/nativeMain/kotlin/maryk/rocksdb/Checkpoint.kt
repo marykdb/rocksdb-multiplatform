@@ -4,6 +4,7 @@ import cnames.structs.rocksdb_checkpoint_t
 import kotlinx.cinterop.CPointer
 import maryk.wrapWithErrorThrower
 import maryk.wrapWithNullErrorThrower
+import rocksdb.rocksdb_checkpoint_export_column_family
 import rocksdb.rocksdb_checkpoint_create
 import rocksdb.rocksdb_checkpoint_object_create
 import rocksdb.rocksdb_checkpoint_object_destroy
@@ -20,6 +21,19 @@ internal constructor(
         wrapWithErrorThrower { error ->
             rocksdb_checkpoint_create(native, checkpointPath, 1024u, error)
         }
+    }
+
+    actual fun exportColumnFamily(
+        columnFamilyHandle: ColumnFamilyHandle,
+        exportPath: String
+    ): ExportImportFilesMetaData {
+        checkOwningHandle()
+        owner.checkOwningHandle()
+        columnFamilyHandle.checkOwningHandle()
+        val metadata = Unit.wrapWithNullErrorThrower { error ->
+            rocksdb_checkpoint_export_column_family(native, columnFamilyHandle.native, exportPath, error)
+        } ?: throw RocksDBException("Unable to export column family to $exportPath")
+        return ExportImportFilesMetaData(metadata)
     }
 
     override fun close() {

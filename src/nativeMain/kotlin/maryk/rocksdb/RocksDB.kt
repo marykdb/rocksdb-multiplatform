@@ -6,6 +6,7 @@ package maryk.rocksdb
 import kotlinx.cinterop.ptr
 import cnames.structs.rocksdb_column_family_handle_t
 import cnames.structs.rocksdb_column_family_metadata_t
+import cnames.structs.rocksdb_export_import_files_metadata_t
 import cnames.structs.rocksdb_iterator_t
 import cnames.structs.rocksdb_pinnableslice_t
 import cnames.structs.rocksdb_t
@@ -442,6 +443,78 @@ internal constructor(
             }
             registerColumnFamilyHandle(handle)
         }
+
+    actual fun createColumnFamilyWithImport(
+        columnFamilyDescriptor: ColumnFamilyDescriptor,
+        importColumnFamilyOptions: ImportColumnFamilyOptions,
+        metadata: ExportImportFilesMetaData
+    ): ColumnFamilyHandle {
+        checkOwningHandle()
+        columnFamilyDescriptor.getOptions().checkOwningHandle()
+        importColumnFamilyOptions.checkOwningHandle()
+        metadata.checkOwningHandle()
+        val handle = createColumnFamilyHandle { error ->
+            memScoped {
+                rocksdb.maryk_rocksdb_create_column_family_with_import(
+                    native,
+                    columnFamilyDescriptor.getOptions().native,
+                    columnFamilyNameToCString(columnFamilyDescriptor.getName()),
+                    importColumnFamilyOptions.native,
+                    metadata.native,
+                    error
+                )
+            }
+        }
+        try {
+            columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
+                retainOwnedComparator(it)
+            }
+            retainNativeReferences(columnFamilyDescriptor.getOptions().retainedNativeReferences())
+        } catch (throwable: Throwable) {
+            handle.close()
+            throw throwable
+        }
+        return registerColumnFamilyHandle(handle)
+    }
+
+    actual fun createColumnFamilyWithImport(
+        columnFamilyDescriptor: ColumnFamilyDescriptor,
+        importColumnFamilyOptions: ImportColumnFamilyOptions,
+        metadata: List<ExportImportFilesMetaData>
+    ): ColumnFamilyHandle {
+        require(metadata.isNotEmpty()) { "metadata must not be empty" }
+        checkOwningHandle()
+        columnFamilyDescriptor.getOptions().checkOwningHandle()
+        importColumnFamilyOptions.checkOwningHandle()
+        metadata.forEach { it.checkOwningHandle() }
+        val handle = createColumnFamilyHandle { error ->
+            memScoped {
+                val metadataArray = allocArray<CPointerVar<rocksdb_export_import_files_metadata_t>>(metadata.size)
+                metadata.forEachIndexed { index, item ->
+                    metadataArray[index] = item.native
+                }
+                rocksdb.maryk_rocksdb_create_column_family_with_import_list(
+                    native,
+                    columnFamilyDescriptor.getOptions().native,
+                    columnFamilyNameToCString(columnFamilyDescriptor.getName()),
+                    importColumnFamilyOptions.native,
+                    metadataArray,
+                    metadata.size.asSizeT(),
+                    error
+                )
+            }
+        }
+        try {
+            columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
+                retainOwnedComparator(it)
+            }
+            retainNativeReferences(columnFamilyDescriptor.getOptions().retainedNativeReferences())
+        } catch (throwable: Throwable) {
+            handle.close()
+            throw throwable
+        }
+        return registerColumnFamilyHandle(handle)
+    }
 
     actual fun createColumnFamilies(
         columnFamilyOptions: ColumnFamilyOptions,

@@ -17,6 +17,20 @@ actual fun openRocksDB(
     columnFamilyHandles: MutableList<ColumnFamilyHandle>
 ) = RocksDB.open(options, path, columnFamilyDescriptors, columnFamilyHandles)
 
+actual fun openAsSecondaryRocksDB(
+    options: Options,
+    path: String,
+    secondaryPath: String
+) = RocksDB.openAsSecondary(options, path, secondaryPath)
+
+actual fun openAsSecondaryRocksDB(
+    options: DBOptions,
+    path: String,
+    secondaryPath: String,
+    columnFamilyDescriptors: List<ColumnFamilyDescriptor>,
+    columnFamilyHandles: MutableList<ColumnFamilyHandle>
+) = RocksDB.openAsSecondary(options, path, secondaryPath, columnFamilyDescriptors, columnFamilyHandles)
+
 actual fun openReadOnlyRocksDB(path: String) =
     RocksDB.openReadOnly(path)
 

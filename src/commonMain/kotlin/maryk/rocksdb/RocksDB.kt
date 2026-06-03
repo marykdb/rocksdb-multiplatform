@@ -54,6 +54,26 @@ expect open class RocksDB : RocksObject {
     ): ColumnFamilyHandle
 
     /**
+     * Creates a new column family and imports external SST files described by
+     * [metadata].
+     */
+    fun createColumnFamilyWithImport(
+        columnFamilyDescriptor: ColumnFamilyDescriptor,
+        importColumnFamilyOptions: ImportColumnFamilyOptions,
+        metadata: ExportImportFilesMetaData
+    ): ColumnFamilyHandle
+
+    /**
+     * Creates a new column family by importing multiple exported column family
+     * metadata objects.
+     */
+    fun createColumnFamilyWithImport(
+        columnFamilyDescriptor: ColumnFamilyDescriptor,
+        importColumnFamilyOptions: ImportColumnFamilyOptions,
+        metadata: List<ExportImportFilesMetaData>
+    ): ColumnFamilyHandle
+
+    /**
      * Bulk create column families with the same column family options.
      *
      * @param columnFamilyOptions the options for the column families.

@@ -3,6 +3,7 @@ package maryk.rocksdb
 import maryk.rocksdb.util.createTestDBFolder
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -31,6 +32,21 @@ class SstFileWriterTest {
                 SstFileReader(options).use { reader ->
                     reader.open(sstPath)
                     reader.verifyChecksum()
+                    val properties = reader.getTableProperties()
+                    assertEquals(3, properties.numEntries())
+
+                    ReadOptions().use { readOptions ->
+                        reader.newIterator(readOptions).use { iterator ->
+                            iterator.seekToFirst()
+                            assertTrue(iterator.isValid())
+                            assertContentEquals("a".encodeToByteArray(), iterator.key())
+                            assertContentEquals("1".encodeToByteArray(), iterator.value())
+                            iterator.next()
+                            assertTrue(iterator.isValid())
+                            assertContentEquals("b".encodeToByteArray(), iterator.key())
+                            assertContentEquals("2".encodeToByteArray(), iterator.value())
+                        }
+                    }
                 }
 
                 IngestExternalFileOptions().use { ingestOptions ->

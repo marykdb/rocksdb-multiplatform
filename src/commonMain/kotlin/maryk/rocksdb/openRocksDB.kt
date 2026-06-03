@@ -117,6 +117,29 @@ expect fun openRocksDB(
 ): RocksDB
 
 /**
+ * Opens RocksDB as a secondary instance of a primary database.
+ *
+ * The secondary instance can read from [path] while keeping its own metadata
+ * under [secondaryPath].
+ */
+expect fun openAsSecondaryRocksDB(
+    options: Options,
+    path: String,
+    secondaryPath: String
+): RocksDB
+
+/**
+ * Opens RocksDB as a secondary instance with explicit column families.
+ */
+expect fun openAsSecondaryRocksDB(
+    options: DBOptions,
+    path: String,
+    secondaryPath: String,
+    columnFamilyDescriptors: List<ColumnFamilyDescriptor>,
+    columnFamilyHandles: MutableList<ColumnFamilyHandle>
+): RocksDB
+
+/**
  * The factory constructor of RocksDB that opens a RocksDB instance in
  * Read-Only mode given the path to the database using the default
  * options.

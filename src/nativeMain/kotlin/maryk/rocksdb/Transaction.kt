@@ -1074,6 +1074,60 @@ actual class Transaction(
         delete(concatParts(keyParts, "key"))
     }
 
+    actual fun singleDelete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray) {
+        singleDelete(columnFamilyHandle, key, false)
+    }
+
+    actual fun singleDelete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, assumeTracked: Boolean) {
+        checkOwningHandle()
+        checkOpenColumnFamily(columnFamilyHandle)
+        wrapWithErrorThrower { error ->
+            key.usePointer { keyPointer ->
+                rocksdb.maryk_rocksdb_transaction_singledelete_cf_assume_tracked(
+                    native,
+                    columnFamilyHandle.native,
+                    keyPointer,
+                    key.size.asSizeT(),
+                    assumeTracked.toUByte(),
+                    error
+                )
+            }
+        }
+    }
+
+    actual fun singleDelete(key: ByteArray) {
+        checkOwningHandle()
+        wrapWithErrorThrower { error ->
+            key.usePointer { keyPointer ->
+                rocksdb.maryk_rocksdb_transaction_singledelete(
+                    native,
+                    keyPointer,
+                    key.size.asSizeT(),
+                    error
+                )
+            }
+        }
+    }
+
+    actual fun singleDelete(
+        columnFamilyHandle: ColumnFamilyHandle,
+        keyParts: Array<ByteArray>,
+        assumeTracked: Boolean
+    ) {
+        singleDelete(columnFamilyHandle, concatParts(keyParts, "key"), assumeTracked)
+    }
+
+    actual fun singleDelete(
+        columnFamilyHandle: ColumnFamilyHandle,
+        keyParts: Array<ByteArray>
+    ) {
+        singleDelete(columnFamilyHandle, keyParts, false)
+    }
+
+    actual fun singleDelete(keyParts: Array<ByteArray>) {
+        singleDelete(concatParts(keyParts, "key"))
+    }
+
     actual fun putUntracked(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, value: ByteArray) {
         checkOwningHandle()
         checkOpenColumnFamily(columnFamilyHandle)

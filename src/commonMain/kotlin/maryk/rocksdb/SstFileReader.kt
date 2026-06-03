@@ -6,5 +6,9 @@ package maryk.rocksdb
 expect class SstFileReader(options: Options) : RocksObject {
     fun open(filePath: String)
 
+    fun newIterator(readOptions: ReadOptions): SstFileReaderIterator
+
+    fun getTableProperties(): TableProperties
+
     fun verifyChecksum()
 }

@@ -1490,6 +1490,59 @@ expect class Transaction : RocksObject {
     )
 
     /**
+     * Similar to [`delete`](#delete), but expects the key to have been written
+     * only once and not modified by merge or delete operations.
+     *
+     * @param columnFamilyHandle The column family to single-delete the key from.
+     * @param key The specified key to single-delete.
+     * @param assumeTracked `true` when it is expected that the key is already tracked.
+     *
+     * @throws RocksDBException when one of the TransactionDB conditions
+     *     described above occurs, or in the case of an unexpected error.
+     */
+    fun singleDelete(
+        columnFamilyHandle: ColumnFamilyHandle,
+        key: ByteArray,
+        assumeTracked: Boolean
+    )
+
+    /**
+     * Similar to [`singleDelete`](#singleDelete) but with `assumeTracked = false`.
+     */
+    fun singleDelete(
+        columnFamilyHandle: ColumnFamilyHandle,
+        key: ByteArray
+    )
+
+    /**
+     * Single-deletes [key] in the default column family.
+     */
+    fun singleDelete(key: ByteArray)
+
+    /**
+     * Similar to [`singleDelete`](#singleDelete) but allows the key to be
+     * supplied in several parts that will be concatenated together.
+     */
+    fun singleDelete(
+        columnFamilyHandle: ColumnFamilyHandle,
+        keyParts: Array<ByteArray>,
+        assumeTracked: Boolean
+    )
+
+    /**
+     * Similar to [`singleDelete`](#singleDelete) but with `assumeTracked = false`.
+     */
+    fun singleDelete(
+        columnFamilyHandle: ColumnFamilyHandle,
+        keyParts: Array<ByteArray>
+    )
+
+    /**
+     * Single-deletes a default-column-family key supplied in several parts.
+     */
+    fun singleDelete(keyParts: Array<ByteArray>)
+
+    /**
      * Similar to [`put(ColumnFamilyHandle, ByteArray, ByteArray)`](#put), but operates on the transaction's write batch. This write will only happen
      * if this transaction gets committed successfully.
      *

@@ -11,6 +11,8 @@ import kotlinx.cinterop.set
 import maryk.wrapWithNullErrorThrower
 import rocksdb.rocksdb_close
 import rocksdb.rocksdb_open
+import rocksdb.rocksdb_open_as_secondary
+import rocksdb.rocksdb_open_as_secondary_column_families
 import rocksdb.rocksdb_open_column_families
 import rocksdb.rocksdb_open_for_read_only
 import rocksdb.rocksdb_open_for_read_only_column_families
@@ -91,6 +93,69 @@ actual fun openRocksDB(
             }
         }
     } ?: throw RocksDBException("No Database could be opened at $path with given descriptors and handles for column families")
+
+actual fun openAsSecondaryRocksDB(
+    options: Options,
+    path: String,
+    secondaryPath: String
+): RocksDB = Unit.wrapWithNullErrorThrower { error ->
+    options.checkOwningHandle()
+    val retainedReferences = options.retainedNativeReferences()
+    rocksdb_open_as_secondary(options.native, path, secondaryPath, error)?.let { native ->
+        wrapOpenedDb(
+            closeNativeDb = { rocksdb_close(native) },
+            releaseComparator = { options.releaseOwnedComparator() },
+        ) { ownedComparators ->
+            RocksDB(native, ownedComparators, retainedReferences)
+        }
+    }
+} ?: throw RocksDBException("No secondary Database could be opened at $path")
+
+actual fun openAsSecondaryRocksDB(
+    options: DBOptions,
+    path: String,
+    secondaryPath: String,
+    columnFamilyDescriptors: List<ColumnFamilyDescriptor>,
+    columnFamilyHandles: MutableList<ColumnFamilyHandle>
+): RocksDB =
+    Unit.wrapWithNullErrorThrower { error ->
+        require(columnFamilyDescriptors.isNotEmpty()) { "columnFamilyDescriptors must not be empty" }
+        options.checkOwningHandle()
+        columnFamilyDescriptors.forEach { it.getOptions().checkOwningHandle() }
+        memScoped {
+            val retainedReferences = options.retainedNativeReferences() +
+                columnFamilyDescriptors.flatMap { it.getOptions().retainedNativeReferences() }
+            val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
+            val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
+
+            columnFamilyDescriptors.forEachIndexed { index, cfDesc ->
+                namesArray[index] = columnFamilyNameToCString(cfDesc.getName())
+                optionsArray[index] = cfDesc.getOptions().native
+            }
+
+            val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyDescriptors.size)
+            val native = rocksdb_open_as_secondary_column_families(
+                options.native,
+                path,
+                secondaryPath,
+                columnFamilyDescriptors.size,
+                namesArray,
+                optionsArray,
+                handles,
+                error,
+            ) ?: return@memScoped null
+
+            wrapOpenedColumnFamilies(
+                handles = handles,
+                count = columnFamilyDescriptors.size,
+                columnFamilyDescriptors = columnFamilyDescriptors,
+                columnFamilyHandles = columnFamilyHandles,
+                closeNativeDb = { rocksdb_close(native) },
+            ) { ownedComparators ->
+                RocksDB(native, ownedComparators, retainedReferences)
+            }
+        }
+    } ?: throw RocksDBException("No secondary Database could be opened at $path with given descriptors and handles for column families")
 
 actual fun openReadOnlyRocksDB(path: String): RocksDB =
     Options().use {

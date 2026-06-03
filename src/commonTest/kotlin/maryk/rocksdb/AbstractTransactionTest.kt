@@ -182,6 +182,60 @@ abstract class AbstractTransactionTest {
     }
 
     @Test
+    fun singleDeleteDefaultColumnFamily() {
+        val key = "single-delete-key".encodeToByteArray()
+        val value = "single-delete-value".encodeToByteArray()
+
+        startDb().use { dbContainer ->
+            dbContainer.beginTransaction().use { txn ->
+                txn.put(key, value)
+                txn.commit()
+            }
+
+            dbContainer.beginTransaction().use { txn ->
+                txn.singleDelete(key)
+                txn.commit()
+            }
+
+            ReadOptions().use { readOptions ->
+                dbContainer.beginTransaction().use { txn ->
+                    assertNull(txn.get(readOptions, key))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun singleDeleteColumnFamilyWithKeyPartsAndAssumeTracked() {
+        val key = "single-delete-cf-key".encodeToByteArray()
+        val value = "single-delete-cf-value".encodeToByteArray()
+
+        startDb().use { dbContainer ->
+            val testCf = dbContainer.getTestColumnFamily()
+            ReadOptions().use { readOptions ->
+                dbContainer.beginTransaction().use { txn ->
+                    txn.put(testCf, key, value)
+                    txn.commit()
+                }
+
+                dbContainer.beginTransaction().use { txn ->
+                    txn.getForUpdate(readOptions, testCf, key, true)
+                    txn.singleDelete(
+                        testCf,
+                        arrayOf("single-delete-".encodeToByteArray(), "cf-key".encodeToByteArray()),
+                        true
+                    )
+                    txn.commit()
+                }
+
+                dbContainer.beginTransaction().use { txn ->
+                    assertNull(txn.get(readOptions, testCf, key))
+                }
+            }
+        }
+    }
+
+    @Test
     fun getPut_cf() {
         val k1 = "key1".encodeToByteArray()
         val v1 = "value1".encodeToByteArray()

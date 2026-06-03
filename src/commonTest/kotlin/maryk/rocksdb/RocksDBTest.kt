@@ -44,6 +44,28 @@ class RocksDBTest {
     }
 
     @Test
+    fun openAsSecondary() {
+        val dbPath = createTestFolder()
+        val secondaryPath = "${dbPath}_secondary"
+        val key = "secondary-key".encodeToByteArray()
+        val value = "secondary-value".encodeToByteArray()
+
+        Options().setCreateIfMissing(true).use { options ->
+            openRocksDB(options, dbPath).use { primary ->
+                primary.put(key, value)
+                FlushOptions().setWaitForFlush(true).use { flushOptions ->
+                    primary.flush(flushOptions)
+                }
+
+                openAsSecondaryRocksDB(options, dbPath, secondaryPath).use { secondary ->
+                    secondary.tryCatchUpWithPrimary()
+                    assertContentEquals(value, secondary[key])
+                }
+            }
+        }
+    }
+
+    @Test
     fun openWhenOpen() {
         val dbPath = createTestFolder()
 

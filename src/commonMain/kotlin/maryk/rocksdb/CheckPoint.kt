@@ -17,6 +17,18 @@ expect class Checkpoint : RocksObject {
      * part of the library.
      */
     fun createCheckpoint(checkpointPath: String)
+
+    /**
+     * Exports the data files for [columnFamilyHandle] into [exportPath].
+     *
+     * The returned metadata can be passed to
+     * [RocksDB.createColumnFamilyWithImport] to create a column family from
+     * the exported files.
+     */
+    fun exportColumnFamily(
+        columnFamilyHandle: ColumnFamilyHandle,
+        exportPath: String
+    ): ExportImportFilesMetaData
 }
 
 /**
