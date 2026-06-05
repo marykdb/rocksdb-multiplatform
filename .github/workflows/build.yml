@@ -19,12 +19,21 @@ jobs:
           - os: macos-latest
             display-name: macOS Arm & Simulators
             gradle-tasks: macosArm64Test iosSimulatorArm64Test tvosSimulatorArm64Test watchosSimulatorArm64Test
+          - os: macos-latest
+            display-name: Apple Device Link Checks
+            gradle-tasks: linkDebugTestIosArm64 linkDebugTestTvosArm64 linkDebugTestWatchosArm64 linkDebugTestWatchosDeviceArm64
           - os: macos-15-intel
             display-name: macOS Intel
             gradle-tasks: macosX64Test
           - os: ubuntu-latest
             display-name: Linux targets
             gradle-tasks: linuxX64Test jvmTest
+          - os: ubuntu-latest
+            display-name: Linux Arm64 Link Checks
+            gradle-tasks: linkDebugTestLinuxArm64
+          - os: ubuntu-latest
+            display-name: Android Host & Native Link Checks
+            gradle-tasks: testAndroidHostTest linkDebugTestAndroidNativeArm32 linkDebugTestAndroidNativeArm64 linkDebugTestAndroidNativeX64 linkDebugTestAndroidNativeX86
           - os: windows-latest
             display-name: Windows targets
             gradle-tasks: mingwX64Test
