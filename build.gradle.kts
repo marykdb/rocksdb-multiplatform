@@ -570,12 +570,14 @@ tasks.register("updateRocksdbShas") {
     }
 }
 
+val testDatabaseDir = layout.buildDirectory.dir("test-database")
+
 // Creates the folders for the database
 val createOrEraseDBFolders = tasks.register("createOrEraseDBFolders") {
     group = "verification"
 
     doLast {
-        val subdir = project.layout.buildDirectory.dir("test-database").get().asFile
+        val subdir = testDatabaseDir.get().asFile
 
         if (!subdir.exists()) {
             subdir.deleteOnExit()
@@ -594,7 +596,7 @@ tasks.getByName("clean", Delete::class) {
 tasks.withType<Test> {
     this.dependsOn(createOrEraseDBFolders)
     this.doLast {
-        project.layout.buildDirectory.dir("test-database").get().asFile.deleteRecursively()
+        testDatabaseDir.get().asFile.deleteRecursively()
     }
 }
 
@@ -603,7 +605,7 @@ kotlin.targets.withType<KotlinNativeTarget>().configureEach {
         tasks.findByName("${this.target.name}Test")?.apply {
             dependsOn(createOrEraseDBFolders)
             doLast {
-                project.layout.buildDirectory.dir("test-database").get().asFile.deleteRecursively()
+                testDatabaseDir.get().asFile.deleteRecursively()
             }
         }
     }
