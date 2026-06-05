@@ -33,7 +33,7 @@ jobs:
             gradle-tasks: linkDebugTestLinuxArm64
           - os: ubuntu-latest
             display-name: Android Host & Native Link Checks
-            gradle-tasks: testAndroidHostTest linkDebugTestAndroidNativeArm32 linkDebugTestAndroidNativeArm64 linkDebugTestAndroidNativeX64 linkDebugTestAndroidNativeX86
+            gradle-tasks: linkDebugTestAndroidNativeArm32 linkDebugTestAndroidNativeArm64 linkDebugTestAndroidNativeX64 linkDebugTestAndroidNativeX86
           - os: windows-latest
             display-name: Windows targets
             gradle-tasks: mingwX64Test

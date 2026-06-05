@@ -5,10 +5,10 @@ package maryk.rocksdb
 import kotlinx.cinterop.ByteVarOf
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.CPointerVarOf
-import kotlinx.cinterop.ULongVarOf
 import maryk.rocksdb.util.ThreadSafeCounter
 import maryk.rocksdb.util.createTestDBFolder
 import platform.posix.size_t
+import platform.posix.size_tVar
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -62,7 +62,7 @@ private class ThrowingMergeOperator(
         existingValue: CPointer<ByteVarOf<Byte>>?,
         existingValueLen: size_t,
         operands: CPointer<CPointerVarOf<CPointer<ByteVarOf<Byte>>>>?,
-        operandsLengths: CPointer<ULongVarOf<ULong>>?,
+        operandsLengths: CPointer<size_tVar>?,
         numOperands: Int
     ): Pair<Boolean, Pair<CPointer<ByteVarOf<Byte>>?, size_t>> {
         callbackCount.increment()
