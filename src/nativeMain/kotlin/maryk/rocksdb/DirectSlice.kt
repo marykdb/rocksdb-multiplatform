@@ -1,3 +1,5 @@
+@file:OptIn(UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import kotlinx.cinterop.Arena

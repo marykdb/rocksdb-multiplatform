@@ -16,6 +16,22 @@ package maryk.rocksdb
  * as it performs a non-atomic update across the fields of the [WriteEntry].
  */
 expect class WBWIRocksIterator : RocksObject, RocksIteratorInterface {
+    override fun isValid(): Boolean
+
+    override fun seekToFirst()
+
+    override fun seekToLast()
+
+    override fun seek(target: ByteArray)
+
+    override fun seekForPrev(target: ByteArray)
+
+    override fun next()
+
+    override fun prev()
+
+    override fun status()
+
     /**
      * Retrieves the current [WriteEntry] that the iterator is pointing to.
      *

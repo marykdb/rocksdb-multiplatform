@@ -34,46 +34,46 @@ actual class WBWIRocksIterator internal constructor(
     internal val native: CPointer<rocksdb_wbwi_iterator_t>,
     private val owner: WriteBatchWithIndex,
 ) : RocksObject(), RocksIteratorInterface {
-    override fun isValid(): Boolean {
+    actual override fun isValid(): Boolean {
         checkOwningHandle()
         return rocksdb_wbwi_iterator_valid(native).toBoolean()
     }
 
-    override fun seekToFirst() {
+    actual override fun seekToFirst() {
         checkOwningHandle()
         rocksdb_wbwi_iterator_seek_to_first(native)
     }
 
-    override fun seekToLast() {
+    actual override fun seekToLast() {
         checkOwningHandle()
         rocksdb_wbwi_iterator_seek_to_last(native)
     }
 
-    override fun seek(target: ByteArray) {
+    actual override fun seek(target: ByteArray) {
         checkOwningHandle()
         target.usePointer { targetPointer ->
             rocksdb_wbwi_iterator_seek(native, targetPointer, target.size.asSizeT())
         }
     }
 
-    override fun seekForPrev(target: ByteArray) {
+    actual override fun seekForPrev(target: ByteArray) {
         checkOwningHandle()
         target.usePointer { targetPointer ->
             rocksdb_wbwi_iterator_seek_for_prev(native, targetPointer, target.size.asSizeT())
         }
     }
 
-    override fun next() {
+    actual override fun next() {
         checkOwningHandle()
         rocksdb_wbwi_iterator_next(native)
     }
 
-    override fun prev() {
+    actual override fun prev() {
         checkOwningHandle()
         rocksdb_wbwi_iterator_prev(native)
     }
 
-    override fun status() {
+    actual override fun status() {
         checkOwningHandle()
         wrapWithErrorThrower { error ->
             rocksdb_wbwi_iterator_status(native, error)

@@ -1,8 +1,10 @@
+@file:OptIn(UnsafeNumber::class)
 
 package maryk
 
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.get

@@ -10,10 +10,12 @@ import java.security.MessageDigest
 import java.util.Locale
 import java.util.Properties
 import java.util.zip.ZipFile
+import com.vanniktech.maven.publish.MavenPublishBaseExtension
 import kotlin.text.Charsets
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.JavaVersion
+import org.gradle.api.Task
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
@@ -21,24 +23,27 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.named
 import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBinary
 import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 import org.jetbrains.kotlin.konan.target.Family
 
+plugins {
+    id("org.jetbrains.kotlin.multiplatform") version "2.4.0"
+    id("com.android.kotlin.multiplatform.library") version "9.1.0"
+    id("com.vanniktech.maven.publish") version "0.36.0"
+}
+
 repositories {
     google()
     mavenCentral()
-}
-
-plugins {
-    kotlin("multiplatform") version "2.3.20"
-    id("com.android.kotlin.multiplatform.library") version "9.1.0"
-    id("com.vanniktech.maven.publish") version "0.36.0"
 }
 
 group = "io.maryk.rocksdb"
@@ -47,31 +52,14 @@ version = "10.10.1"
 val rocksDBJVMVersion = "10.10.1.1"
 val rocksDBAndroidVersion = "10.10.1"
 
-val kotlinXDateTimeVersion = "0.7.1"
-val kotlinXCoroutinesVersion = "1.10.2"
+val kotlinVersion = "2.4.0"
+val kotlinXDateTimeVersion = "0.8.0"
+val kotlinXCoroutinesVersion = "1.11.0"
 val rocksdbPrebuiltBaseUrlValue = providers.gradleProperty("rocksdbPrebuiltBaseUrl").orElse("https://github.com/marykdb/build-rocksdb/releases/download").get()
 val rocksdbPrebuiltVersionValue = providers.gradleProperty("rocksdbPrebuiltVersion").get()
-val rocksdbSupportedNativeTargets = setOf(
-    "androidNativeArm32",
-    "androidNativeArm64",
-    "androidNativeX64",
-    "androidNativeX86",
-    "iosArm64",
-    "iosSimulatorArm64",
-    "linuxArm64",
-    "linuxX64",
-    "macosArm64",
-    "macosX64",
-    "mingwX64",
-    "tvosArm64",
-    "tvosSimulatorArm64",
-    "watchosArm64",
-    "watchosDeviceArm64",
-    "watchosSimulatorArm64"
-)
 
 object RocksdbArtifacts {
-    val names: Map<String, String> = mapOf(
+    val names = mapOf(
         "androidNativeArm32" to "rocksdb-android-arm32.zip",
         "androidNativeArm64" to "rocksdb-android-arm64.zip",
         "androidNativeX64" to "rocksdb-android-x64.zip",
@@ -91,6 +79,8 @@ object RocksdbArtifacts {
     )
 }
 
+val nativeSourceSetNames = setOf("nativeMain", "nativeTest", "appleMain", "appleTest")
+val nativeSourceSetPrefixes = listOf("androidNative", "ios", "linux", "macos", "mingw", "tvos", "watchos")
 
 @CacheableTask
 abstract class DownloadRocksdbTask : DefaultTask() {
@@ -287,7 +277,7 @@ fun rocksdbShaFor(targetName: String): String? =
 
 fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String) {
     val targetName = this.name
-    if (!rocksdbSupportedNativeTargets.contains(targetName)) return
+    if (!RocksdbArtifacts.names.containsKey(targetName)) return
 
     val project = this.project
     val capitalizedName = targetName.replaceFirstChar { character ->
@@ -333,7 +323,7 @@ fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String
     }
 
     if (konanTarget.family == Family.MINGW) {
-        binaries.all {
+        binaries.configureEach {
             linkerOpts("-lrpcrt4")
         }
     }
@@ -399,7 +389,7 @@ private fun fetchSha256WithRetry(url: String): String {
     throw GradleException("Unable to download RocksDB archive from $url", lastFailure ?: IllegalStateException("Unknown failure"))
 }
 
-kotlin {
+extensions.configure<KotlinMultiplatformExtension> {
     val toolchainVersion = JavaVersion.current().majorVersion.toInt()
     jvmToolchain(toolchainVersion)
 
@@ -432,6 +422,7 @@ kotlin {
     iosArm64()
     iosSimulatorArm64()
 
+    @Suppress("DEPRECATION")
     macosX64()
     macosArm64()
     linuxX64()
@@ -447,49 +438,58 @@ kotlin {
 
     targets.configureEach {
         compilations.configureEach {
-            compileTaskProvider.get().compilerOptions {
-                freeCompilerArgs.add("-Xexpect-actual-classes")
+            compileTaskProvider.configure {
+                compilerOptions {
+                    freeCompilerArgs.add("-Xexpect-actual-classes")
+                }
             }
         }
     }
 
     sourceSets {
-        all {
+        configureEach {
             languageSettings.apply {
-                languageVersion = "2.3"
-                apiVersion = "2.3"
+                languageVersion = "2.4"
+                apiVersion = "2.4"
                 progressiveMode = true
-                optIn("kotlinx.cinterop.ExperimentalForeignApi")
-                optIn("kotlinx.cinterop.BetaInteropApi")
+            }
+
+            val isNativeSourceSet = name in nativeSourceSetNames ||
+                nativeSourceSetPrefixes.any { prefix -> name.startsWith(prefix) }
+            if (isNativeSourceSet) {
+                languageSettings.apply {
+                    optIn("kotlinx.cinterop.ExperimentalForeignApi")
+                    optIn("kotlinx.cinterop.BetaInteropApi")
+                }
             }
         }
-        nativeMain {
+        maybeCreate("nativeMain").apply {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinXCoroutinesVersion")
             }
         }
-        commonTest {
+        maybeCreate("commonTest").apply {
             dependencies {
-                implementation(kotlin("test"))
+                implementation("org.jetbrains.kotlin:kotlin-test:$kotlinVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinXDateTimeVersion")
             }
         }
-        jvmMain {
+        maybeCreate("jvmMain").apply {
             dependencies {
                 api("org.rocksdb:rocksdbjni:$rocksDBJVMVersion")
             }
         }
-        jvmTest {
+        maybeCreate("jvmTest").apply {
             dependencies {
-                implementation(kotlin("test"))
+                implementation("org.jetbrains.kotlin:kotlin-test:$kotlinVersion")
             }
         }
-        androidMain {
+        maybeCreate("androidMain").apply {
             dependencies {
                 api("io.maryk.rocksdb:rocksdb-android:$rocksDBAndroidVersion")
             }
         }
-        getByName("androidHostTest") {
+        maybeCreate("androidHostTest").apply {
             kotlin.srcDirs("src/jvmTest/kotlin")
             dependencies {
                 runtimeOnly("org.rocksdb:rocksdbjni:$rocksDBJVMVersion")
@@ -575,48 +575,48 @@ val testDatabaseDir = layout.buildDirectory.dir("test-database")
 // Creates the folders for the database
 val createOrEraseDBFolders = tasks.register("createOrEraseDBFolders") {
     group = "verification"
+    description = "Recreate the temporary RocksDB test database directory."
 
     doLast {
         val subdir = testDatabaseDir.get().asFile
-
-        if (!subdir.exists()) {
-            subdir.deleteOnExit()
-            subdir.mkdirs()
-        } else {
-            subdir.deleteRecursively()
-            subdir.mkdirs()
-        }
+        subdir.deleteRecursively()
+        subdir.mkdirs()
     }
 }
 
-tasks.getByName("clean", Delete::class) {
+tasks.named<Delete>("clean") {
     delete("xcodeBuild")
 }
 
-tasks.withType<Test> {
-    this.dependsOn(createOrEraseDBFolders)
-    this.doLast {
+fun Task.usesTestDatabase() {
+    dependsOn(createOrEraseDBFolders)
+    doLast {
         testDatabaseDir.get().asFile.deleteRecursively()
     }
 }
 
-kotlin.targets.withType<KotlinNativeTarget>().configureEach {
-    binaries.withType<TestExecutable>().all {
-        tasks.findByName("${this.target.name}Test")?.apply {
-            dependsOn(createOrEraseDBFolders)
-            doLast {
-                testDatabaseDir.get().asFile.deleteRecursively()
+tasks.withType<Test>().configureEach {
+    usesTestDatabase()
+}
+
+extensions.configure<KotlinMultiplatformExtension> {
+    targets.withType<KotlinNativeTarget>().configureEach {
+        binaries.withType<TestExecutable>().configureEach {
+            tasks.matching { it.name == "${target.name}Test" }.configureEach {
+                usesTestDatabase()
             }
         }
     }
 }
 
-mavenPublishing {
+extensions.configure<MavenPublishBaseExtension> {
     publishToMavenCentral()
-    signAllPublications()
-}
-
-mavenPublishing {
+    val isPublishingToMavenLocal = gradle.startParameter.taskNames.any { taskName ->
+        taskName.substringAfterLast(':').equals("publishToMavenLocal", ignoreCase = true)
+    }
+    if (!isPublishingToMavenLocal) {
+        signAllPublications()
+    }
     coordinates(artifactId = "rocksdb-multiplatform")
 
     pom {

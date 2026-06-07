@@ -5,21 +5,21 @@ import maryk.ByteBuffer
 actual class SstFileReaderIterator internal constructor(
     private val delegate: org.rocksdb.SstFileReaderIterator
 ) : RocksObject(0L), RocksIteratorInterface {
-    override fun isValid(): Boolean = delegate.isValid
+    actual override fun isValid(): Boolean = delegate.isValid
 
-    override fun seekToFirst() {
+    actual override fun seekToFirst() {
         delegate.seekToFirst()
     }
 
-    override fun seekToLast() {
+    actual override fun seekToLast() {
         delegate.seekToLast()
     }
 
-    override fun seek(target: ByteArray) {
+    actual override fun seek(target: ByteArray) {
         delegate.seek(target)
     }
 
-    override fun seekForPrev(target: ByteArray) {
+    actual override fun seekForPrev(target: ByteArray) {
         delegate.seekForPrev(target)
     }
 
@@ -31,15 +31,15 @@ actual class SstFileReaderIterator internal constructor(
         delegate.seekForPrev(target)
     }
 
-    override fun next() {
+    actual override fun next() {
         delegate.next()
     }
 
-    override fun prev() {
+    actual override fun prev() {
         delegate.prev()
     }
 
-    override fun status() {
+    actual override fun status() {
         delegate.status()
     }
 
