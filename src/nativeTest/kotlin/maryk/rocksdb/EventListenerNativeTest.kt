@@ -1,5 +1,7 @@
 package maryk.rocksdb
 
+import kotlinx.cinterop.cstr
+import kotlinx.cinterop.memScoped
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertContentEquals
@@ -14,6 +16,16 @@ import maryk.rocksdb.util.sleepMillis
 class EventListenerNativeTest {
     init {
         loadRocksDBLibrary()
+    }
+
+    @Test
+    fun backgroundErrorCallbackDecodesBorrowedStatusMessage() = memScoped {
+        val status = decodeBackgroundErrorStatus("[5|4] background write failed".cstr.ptr)
+
+        assertNotNull(status)
+        assertEquals(StatusCode.IOError, status.getCode())
+        assertEquals(StatusSubCode.NoSpace, status.getSubCode())
+        assertEquals("background write failed", status.getState())
     }
 
     @Test

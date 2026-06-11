@@ -3,8 +3,6 @@
 
 #include "c.h"
 
-extern void rocksdb_status_ptr_get_error(rocksdb_status_ptr_t* status, char** errptr);
-
 static inline rocksdb_column_family_handle_t* maryk_rocksdb_create_column_family_with_import(
     rocksdb_t* db,
     const rocksdb_options_t* column_family_options,

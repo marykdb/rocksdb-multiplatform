@@ -21,4 +21,24 @@ class SnapshotNativeTest {
             snapshot.close()
         }
     }
+
+    @Test
+    fun transactionSnapshotWrapperCanBeClosed() {
+        val dbPath = createTestDBFolder("SnapshotNativeTest_transaction_wrapper")
+
+        Options().setCreateIfMissing(true).use { options ->
+            TransactionDBOptions().use { transactionDbOptions ->
+                openTransactionDB(options, transactionDbOptions, dbPath).use { db ->
+                    WriteOptions().use { writeOptions ->
+                        db.beginTransaction(writeOptions).use { transaction ->
+                            transaction.setSnapshot()
+
+                            val snapshot = requireNotNull(transaction.getSnapshot())
+                            snapshot.close()
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

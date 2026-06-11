@@ -3,7 +3,6 @@ package maryk.rocksdb
 import cnames.structs.rocksdb_snapshot_t
 import kotlinx.cinterop.CPointer
 import maryk.toCheckedLong
-import rocksdb.rocksdb_free
 
 actual class Snapshot internal constructor(
     internal val native: CPointer<rocksdb_snapshot_t>,
@@ -26,7 +25,7 @@ actual class Snapshot internal constructor(
             dbOwner != null -> releaseFrom(dbOwner)
             transactionOwner != null -> closeTransactionSnapshot()
             freeWrapperOnClose && tryClose() -> {
-                rocksdb_free(native)
+                rocksdb.rocksdb_transaction_snapshot_destroy(native)
                 super.close()
             }
             else -> super.close()
@@ -56,7 +55,7 @@ actual class Snapshot internal constructor(
         transactionOwner = null
         if (tryClose()) {
             if (freeWrapperOnClose) {
-                rocksdb_free(native)
+                rocksdb.rocksdb_transaction_snapshot_destroy(native)
             }
             owner?.unregisterBorrowedSnapshot(this)
             super.close()
@@ -67,7 +66,7 @@ actual class Snapshot internal constructor(
         transactionOwner = null
         if (tryClose()) {
             if (freeWrapperOnClose) {
-                rocksdb_free(native)
+                rocksdb.rocksdb_transaction_snapshot_destroy(native)
             }
             super.close()
         }

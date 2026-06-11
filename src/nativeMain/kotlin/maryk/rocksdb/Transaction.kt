@@ -1467,7 +1467,7 @@ actual class Transaction(
             }
         } finally {
             if (txnIdsPtr != null) {
-                rocksdb.rocksdb_free(txnIdsPtr)
+                rocksdb.rocksdb_transaction_waiting_txns_destroy(txnIdsPtr)
             }
         }
 

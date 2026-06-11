@@ -5,28 +5,19 @@ import cnames.structs.rocksdb_eventlistener_t
 import cnames.structs.rocksdb_externalfileingestioninfo_t
 import cnames.structs.rocksdb_flushjobinfo_t
 import cnames.structs.rocksdb_memtableinfo_t
-import cnames.structs.rocksdb_status_ptr_t
 import cnames.structs.rocksdb_subcompactionjobinfo_t
 import cnames.structs.rocksdb_t
 import cnames.structs.rocksdb_writestallinfo_t
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointer
-import kotlinx.cinterop.CPointerVar
 import kotlinx.cinterop.StableRef
-import kotlinx.cinterop.alloc
 import kotlinx.cinterop.asStableRef
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.ptr
-import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toKString
-import kotlinx.cinterop.value
 import maryk.convertToStatus
 import rocksdb.rocksdb_eventlistener_create
 import rocksdb.rocksdb_eventlistener_destroy
-import rocksdb.rocksdb_free
-import rocksdb.rocksdb_status_ptr_get_error
 
 actual abstract class EventListener : RocksCallbackObject() {
     internal val native: CPointer<rocksdb_eventlistener_t>
@@ -186,28 +177,19 @@ private fun eventListenerOnExternalFileIngested(
 private fun eventListenerOnBackgroundError(
     state: COpaquePointer?,
     reasonValue: UInt,
-    statusPointer: CPointer<ByteVar>?,
+    errorMessage: CPointer<ByteVar>?,
 ) {
     try {
         val listener = state?.asStableRef<EventListener>()?.get() ?: return
         val reason = backgroundErrorReasonFromValue(reasonValue)
-        val status = statusPointer?.let(::backgroundErrorStatus)
+        val status = decodeBackgroundErrorStatus(errorMessage)
         listener.onBackgroundErrorEvent(reason, status)
     } catch (_: Throwable) {
     }
 }
 
-private fun backgroundErrorStatus(statusPointer: CPointer<ByteVar>): Status? = memScoped {
-    val errorRef = alloc<CPointerVar<ByteVar>>()
-    errorRef.value = null
-    rocksdb_status_ptr_get_error(statusPointer.reinterpret<rocksdb_status_ptr_t>(), errorRef.ptr)
-    val errorPtr = errorRef.value ?: return@memScoped null
-    try {
-        convertToStatus(errorPtr.toKString())
-    } finally {
-        rocksdb_free(errorPtr)
-    }
-}
+internal fun decodeBackgroundErrorStatus(errorMessage: CPointer<ByteVar>?): Status? =
+    errorMessage?.toKString()?.let(::convertToStatus)
 
 private fun eventListenerOnStallConditionsChanged(
     state: COpaquePointer?,
