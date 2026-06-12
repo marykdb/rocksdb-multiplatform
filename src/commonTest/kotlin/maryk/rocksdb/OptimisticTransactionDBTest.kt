@@ -140,6 +140,22 @@ class OptimisticTransactionDBTest {
     }
 
     @Test
+    fun closingBaseDBWrapper_keepsOptimisticTransactionDBUsable() {
+        val tempFolder = createTestFolder()
+        Options().setCreateIfMissing(true).use { options ->
+            openOptimisticTransactionDB(options, tempFolder).use { otdb ->
+                otdb.getBaseDB().close()
+
+                val key = "after-base-close".encodeToByteArray()
+                val value = "value".encodeToByteArray()
+                otdb.put(key, value)
+
+                assertContentEquals(value, otdb.get(key))
+            }
+        }
+    }
+
+    @Test
     fun otdbSimpleIterator() {
         val tempFolder = createTestFolder()
         Options().setCreateIfMissing(true).setMaxCompactionBytes(0).use { options ->

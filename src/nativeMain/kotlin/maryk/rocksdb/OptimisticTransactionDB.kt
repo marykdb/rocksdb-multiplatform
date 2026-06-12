@@ -129,11 +129,24 @@ internal class BorrowedOptimisticBaseDB(
         val dbOwner = owner
         owner = null
         dbOwner?.unregisterBorrowedBaseDb(this)
-        super.close()
+        closeBorrowedBaseDb()
     }
 
     internal fun invalidateFromOwner() {
         owner = null
-        super.close()
+        closeBorrowedBaseDb()
+    }
+
+    private fun closeBorrowedBaseDb() {
+        if (tryClose()) {
+            invalidateBorrowedIterators()
+            invalidateBorrowedTransactionLogIterators()
+            releaseBorrowedSnapshots()
+            invalidateColumnFamilyHandles()
+            closeDefaultReferences()
+            rocksdb.rocksdb_optimistictransactiondb_close_base_db(native)
+            closeOwnedComparators()
+            clearRetainedReferences()
+        }
     }
 }
