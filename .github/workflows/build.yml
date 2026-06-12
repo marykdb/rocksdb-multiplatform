@@ -22,7 +22,7 @@ jobs:
           - os: macos-latest
             display-name: Apple Device Link Checks
             gradle-tasks: linkDebugTestIosArm64 linkDebugTestTvosArm64 linkDebugTestWatchosArm64 linkDebugTestWatchosDeviceArm64
-          - os: macos-15-intel
+          - os: macos-26-intel
             display-name: macOS Intel
             gradle-tasks: macosX64Test
           - os: ubuntu-latest
