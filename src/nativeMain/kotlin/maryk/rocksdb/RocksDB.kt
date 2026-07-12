@@ -52,10 +52,13 @@ import rocksdb.rocksdb_cancel_all_background_work
 import rocksdb.rocksdb_close
 import rocksdb.rocksdb_column_family_metadata_get_level_count
 import rocksdb.rocksdb_column_family_metadata_get_level_metadata
+import rocksdb.rocksdb_column_family_metadata_get_name_with_length as getColumnFamilyMetadataNameWithLength
 import rocksdb.rocksdb_compact_range
 import rocksdb.rocksdb_compact_range_cf
 import rocksdb.rocksdb_compact_range_cf_opt
-import rocksdb.rocksdb_create_column_family
+import rocksdb.maryk_rocksdb_create_column_family_with_import
+import rocksdb.maryk_rocksdb_create_column_family_with_import_list
+import rocksdb.maryk_rocksdb_create_column_family_with_length
 import rocksdb.rocksdb_create_iterator
 import rocksdb.rocksdb_create_iterator_cf
 import rocksdb.rocksdb_create_iterators
@@ -88,10 +91,10 @@ import rocksdb.rocksdb_level_metadata_get_file_count
 import rocksdb.rocksdb_level_metadata_get_level
 import rocksdb.rocksdb_level_metadata_get_size
 import rocksdb.rocksdb_level_metadata_get_sst_file_metadata
-import rocksdb.rocksdb_list_column_families
-import rocksdb.rocksdb_list_column_families_destroy
+import rocksdb.rocksdb_list_column_families_with_lengths
+import rocksdb.rocksdb_list_column_families_with_lengths_destroy
 import rocksdb.rocksdb_livefiles
-import rocksdb.rocksdb_livefiles_column_family_name
+import rocksdb.rocksdb_livefiles_column_family_name_with_length
 import rocksdb.rocksdb_livefiles_count
 import rocksdb.rocksdb_livefiles_destroy
 import rocksdb.rocksdb_livefiles_largestkey
@@ -424,10 +427,11 @@ internal constructor(
             columnFamilyDescriptor.getOptions().checkOwningHandle()
             val handle = createColumnFamilyHandle { error ->
                 memScoped {
-                    rocksdb_create_column_family(
+                    maryk_rocksdb_create_column_family_with_length(
                         native,
                         columnFamilyDescriptor.getOptions().native,
                         columnFamilyNameToCString(columnFamilyDescriptor.getName()),
+                        columnFamilyDescriptor.getName().size.toULong(),
                         error
                     )
                 }
@@ -455,10 +459,11 @@ internal constructor(
         metadata.checkOwningHandle()
         val handle = createColumnFamilyHandle { error ->
             memScoped {
-                rocksdb.maryk_rocksdb_create_column_family_with_import(
+                maryk_rocksdb_create_column_family_with_import(
                     native,
                     columnFamilyDescriptor.getOptions().native,
                     columnFamilyNameToCString(columnFamilyDescriptor.getName()),
+                    columnFamilyDescriptor.getName().size.toULong(),
                     importColumnFamilyOptions.native,
                     metadata.native,
                     error
@@ -493,13 +498,14 @@ internal constructor(
                 metadata.forEachIndexed { index, item ->
                     metadataArray[index] = item.native
                 }
-                rocksdb.maryk_rocksdb_create_column_family_with_import_list(
+                maryk_rocksdb_create_column_family_with_import_list(
                     native,
                     columnFamilyDescriptor.getOptions().native,
                     columnFamilyNameToCString(columnFamilyDescriptor.getName()),
+                    columnFamilyDescriptor.getName().size.toULong(),
                     importColumnFamilyOptions.native,
                     metadataArray,
-                    metadata.size.asSizeT(),
+                    metadata.size.toULong(),
                     error
                 )
             }
@@ -527,10 +533,11 @@ internal constructor(
             for (name in columnFamilyNames) {
                 createdHandles += registerColumnFamilyHandle(createColumnFamilyHandle { error ->
                     memScoped {
-                        rocksdb_create_column_family(
+                        maryk_rocksdb_create_column_family_with_length(
                             native,
                             columnFamilyOptions.native,
                             columnFamilyNameToCString(name),
+                            name.size.toULong(),
                             error
                         )
                     }
@@ -560,10 +567,11 @@ internal constructor(
             for (descriptor in columnFamilyDescriptors) {
                 createdHandles += registerColumnFamilyHandle(createColumnFamilyHandle { error ->
                     memScoped {
-                        rocksdb_create_column_family(
+                        maryk_rocksdb_create_column_family_with_length(
                             native,
                             descriptor.getOptions().native,
                             columnFamilyNameToCString(descriptor.getName()),
+                            descriptor.getName().size.toULong(),
                             error
                         )
                     }
@@ -2018,10 +2026,11 @@ internal constructor(
             val count = rocksdb_livefiles_count(liveFiles)
             buildList {
                 repeat(count) { index ->
-                    val cfNamePtr = requireNotNull(rocksdb_livefiles_column_family_name(liveFiles, index)) {
+                    val cfNameLength = alloc<size_tVar>()
+                    val cfNamePtr = requireNotNull(rocksdb_livefiles_column_family_name_with_length(liveFiles, index, cfNameLength.ptr)) {
                         "RocksDB returned null live-file column family name at index $index"
                     }
-                    val cfName = cfNamePtr.toKString().encodeToByteArray()
+                    val cfName = cfNamePtr.readBytes(sizeTToInt(cfNameLength.value, "live-file column family name length"))
 
                     val namePtr = requireNotNull(rocksdb_livefiles_name(liveFiles, index)) {
                         "RocksDB returned null live-file name at index $index"
@@ -2230,19 +2239,23 @@ internal constructor(
                 }
             }
 
-            val name = rocksdb.rocksdb_column_family_metadata_get_name(metaData)
-            try {
-                return ColumnFamilyMetaData(
-                    size = rocksdb.rocksdb_column_family_metadata_get_size(metaData),
-                    fileCount = rocksdb.rocksdb_column_family_metadata_get_file_count(metaData).convert(),
-                    name = requireNotNull(name) {
+            val name = memScoped {
+                val nameLength = alloc<size_tVar>()
+                val nativeName = getColumnFamilyMetadataNameWithLength(metaData, nameLength.ptr)
+                try {
+                    requireNotNull(nativeName) {
                         "RocksDB returned null column family metadata name"
-                    }.toKString(),
-                    levels = levels
-                )
-            } finally {
-                name?.let { rocksdb_free(it) }
+                    }.readBytes(sizeTToInt(nameLength.value, "column family metadata name length"))
+                } finally {
+                    nativeName?.let { rocksdb_free(it) }
+                }
             }
+            return ColumnFamilyMetaData(
+                size = rocksdb.rocksdb_column_family_metadata_get_size(metaData),
+                fileCount = rocksdb.rocksdb_column_family_metadata_get_file_count(metaData).convert(),
+                name = name,
+                levels = levels
+            )
         } finally {
             rocksdb.rocksdb_column_family_metadata_destroy(metaData)
         }
@@ -2413,7 +2426,10 @@ actual fun listColumnFamilies(
     return Unit.wrapWithErrorThrower { error ->
         memScoped {
             val cfCount = alloc<size_tVar>()
-            val values = rocksdb_list_column_families(options.native, path, cfCount.ptr, error)
+            val nameLengths = alloc<CPointerVar<size_tVar>>()
+            val values = rocksdb_list_column_families_with_lengths(
+                options.native, path.cstr.getPointer(this), cfCount.ptr, nameLengths.ptr, error
+            )
 
             try {
                 val count = sizeTToInt(cfCount.value, "column family count")
@@ -2423,14 +2439,14 @@ actual fun listColumnFamilies(
                 }
                 buildList {
                     for (i in 0 until count) {
-                        columnFamilies[i]?.toKString()?.let {
-                            add(it.encodeToByteArray())
-                        } ?: throw RocksDBException("Missing column family name for index $i")
+                        val name = columnFamilies[i]
+                            ?: throw RocksDBException("Missing column family name for index $i")
+                        add(name.readBytes(sizeTToInt(nameLengths.value!![i], "column family name length")))
                     }
                 }
             } finally {
                 values?.let {
-                    rocksdb_list_column_families_destroy(it, cfCount.value)
+                    rocksdb_list_column_families_with_lengths_destroy(it, nameLengths.value, cfCount.value)
                 }
             }
         }
