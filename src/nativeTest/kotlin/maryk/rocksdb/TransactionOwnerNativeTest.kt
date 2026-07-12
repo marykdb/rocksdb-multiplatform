@@ -9,6 +9,27 @@ import kotlin.test.assertNotNull
 
 class TransactionOwnerNativeTest {
     @Test
+    fun transactionWriteBatchBorrowedWrapperCanBeRepeatedlyClosed() {
+        val dbPath = createTestDBFolder("TransactionOwnerNativeTest_repeated_write_batch")
+
+        Options().setCreateIfMissing(true).use { options ->
+            TransactionDBOptions().use { transactionDbOptions ->
+                openTransactionDB(options, transactionDbOptions, dbPath).use { db ->
+                    WriteOptions().use { writeOptions ->
+                        db.beginTransaction(writeOptions).use { transaction ->
+                            repeat(32) {
+                                transaction.getWriteBatch().use { writeBatch ->
+                                    assertFalse(writeBatch.isOwningHandle())
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun transactionWriteBatchBorrowedWrapperRejectsNestedBatchAccess() {
         val dbPath = createTestDBFolder("TransactionOwnerNativeTest_write_batch")
 

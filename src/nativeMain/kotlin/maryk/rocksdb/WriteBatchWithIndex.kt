@@ -22,7 +22,6 @@ import maryk.toByteArray
 import maryk.usePointer
 import maryk.usePointers
 import maryk.wrapWithErrorThrower
-import platform.posix.free
 import platform.posix.size_t
 import platform.posix.size_tVar
 import rocksdb.rocksdb_free
@@ -472,7 +471,7 @@ actual class WriteBatchWithIndex(
             invalidateBorrowedIterators()
             invalidateBorrowedWBWIIterators()
             if (freeBorrowedWrapper) {
-                free(native)
+                rocksdb_free(native)
             }
             super.close()
         }
