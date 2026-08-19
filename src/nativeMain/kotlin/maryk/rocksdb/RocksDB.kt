@@ -121,7 +121,6 @@ import rocksdb.rocksdb_sst_file_metadata_get_smallestkey
 import rocksdb.rocksdb_set_perf_level
 import rocksdb.rocksdb_write
 import rocksdb.rocksdb_try_catch_up_with_primary
-import kotlin.concurrent.AtomicInt
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.math.min
 
@@ -282,7 +281,7 @@ internal constructor(
     private val borrowedIterators = mutableSetOf<RocksIterator>()
     private val borrowedTransactionLogIterators = mutableSetOf<TransactionLogIterator>()
     private val borrowedSnapshots = mutableSetOf<Snapshot>()
-    private val snapshotLifecycleLock = AtomicInt(0)
+    private val lifecycleGuard = NativeLifecycleGuard()
     private val columnFamilyHandles = mutableSetOf<ColumnFamilyHandle>()
     private var perfLevel: PerfLevel = PerfLevel.UNINITIALIZED
 
@@ -311,8 +310,8 @@ internal constructor(
     }
 
     actual override fun close() {
-        if (tryClose()) {
-            withSnapshotLifecycleLock {
+        withLifecycleLock {
+            if (tryClose()) {
                 invalidateBorrowedIterators()
                 invalidateBorrowedTransactionLogIterators()
                 releaseBorrowedSnapshotsLocked()
@@ -321,44 +320,37 @@ internal constructor(
                 rocksdb_close(native)
                 closeOwnedComparators()
                 clearRetainedReferences()
+                super.close()
             }
-            super.close()
         }
     }
 
-    protected fun <T> withSnapshotLifecycleLock(block: () -> T): T {
-        while (!snapshotLifecycleLock.compareAndSet(0, 1)) {}
-        try {
-            return block()
-        } finally {
-            snapshotLifecycleLock.value = 0
-        }
-    }
+    internal fun <T> withLifecycleLock(block: () -> T): T = lifecycleGuard.withLock(block)
 
     internal fun unregisterBorrowedIterator(iterator: RocksIterator) {
-        borrowedIterators.remove(iterator)
+        withLifecycleLock { borrowedIterators.remove(iterator) }
     }
 
     internal fun registerBorrowedIterator(iterator: RocksIterator) {
-        borrowedIterators.add(iterator)
+        withLifecycleLock { borrowedIterators.add(iterator) }
     }
 
     private fun borrowIterator(iterator: RocksIterator): RocksIterator =
         iterator.also(borrowedIterators::add)
 
     internal fun unregisterBorrowedTransactionLogIterator(iterator: TransactionLogIterator) {
-        borrowedTransactionLogIterators.remove(iterator)
+        withLifecycleLock { borrowedTransactionLogIterators.remove(iterator) }
     }
 
     internal fun registerBorrowedTransactionLogIterator(iterator: TransactionLogIterator) {
-        borrowedTransactionLogIterators.add(iterator)
+        withLifecycleLock { borrowedTransactionLogIterators.add(iterator) }
     }
 
     private fun borrowTransactionLogIterator(iterator: TransactionLogIterator): TransactionLogIterator =
         iterator.also(borrowedTransactionLogIterators::add)
 
     internal fun registerBorrowedSnapshot(snapshot: Snapshot) {
-        borrowedSnapshots.add(snapshot)
+        withLifecycleLock { borrowedSnapshots.add(snapshot) }
     }
 
     protected fun invalidateBorrowedIterators() {
@@ -376,7 +368,7 @@ internal constructor(
     }
 
     protected fun releaseBorrowedSnapshots() {
-        withSnapshotLifecycleLock {
+        withLifecycleLock {
             releaseBorrowedSnapshotsLocked()
         }
     }
@@ -389,12 +381,14 @@ internal constructor(
     }
 
     internal fun registerColumnFamilyHandle(handle: ColumnFamilyHandle): ColumnFamilyHandle {
-        columnFamilyHandles += handle
-        return handle.attachTo(this)
+        return withLifecycleLock {
+            columnFamilyHandles += handle
+            handle.attachTo(this)
+        }
     }
 
     internal fun unregisterColumnFamilyHandle(handle: ColumnFamilyHandle) {
-        columnFamilyHandles.remove(handle)
+        withLifecycleLock { columnFamilyHandles.remove(handle) }
     }
 
     protected fun invalidateColumnFamilyHandles() {
@@ -437,7 +431,7 @@ internal constructor(
     }
 
     actual fun createColumnFamily(columnFamilyDescriptor: ColumnFamilyDescriptor): ColumnFamilyHandle =
-        run {
+        withLifecycleLock {
             checkOwningHandle()
             columnFamilyDescriptor.getOptions().checkOwningHandle()
             val handle = createColumnFamilyHandle { error ->
@@ -468,33 +462,35 @@ internal constructor(
         importColumnFamilyOptions: ImportColumnFamilyOptions,
         metadata: ExportImportFilesMetaData
     ): ColumnFamilyHandle {
-        checkOwningHandle()
-        columnFamilyDescriptor.getOptions().checkOwningHandle()
-        importColumnFamilyOptions.checkOwningHandle()
-        metadata.checkOwningHandle()
-        val handle = createColumnFamilyHandle { error ->
-            memScoped {
-                maryk_rocksdb_create_column_family_with_import(
-                    native,
-                    columnFamilyDescriptor.getOptions().native,
-                    columnFamilyNameToCString(columnFamilyDescriptor.getName()),
-                    columnFamilyDescriptor.getName().size.toULong(),
-                    importColumnFamilyOptions.native,
-                    metadata.native,
-                    error
-                )
+        return withLifecycleLock {
+            checkOwningHandle()
+            columnFamilyDescriptor.getOptions().checkOwningHandle()
+            importColumnFamilyOptions.checkOwningHandle()
+            metadata.checkOwningHandle()
+            val handle = createColumnFamilyHandle { error ->
+                memScoped {
+                    maryk_rocksdb_create_column_family_with_import(
+                        native,
+                        columnFamilyDescriptor.getOptions().native,
+                        columnFamilyNameToCString(columnFamilyDescriptor.getName()),
+                        columnFamilyDescriptor.getName().size.toULong(),
+                        importColumnFamilyOptions.native,
+                        metadata.native,
+                        error
+                    )
+                }
             }
-        }
-        try {
-            columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
-                retainOwnedComparator(it)
+            try {
+                columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
+                    retainOwnedComparator(it)
+                }
+                retainNativeReferences(columnFamilyDescriptor.getOptions().retainedNativeReferences())
+            } catch (throwable: Throwable) {
+                handle.close()
+                throw throwable
             }
-            retainNativeReferences(columnFamilyDescriptor.getOptions().retainedNativeReferences())
-        } catch (throwable: Throwable) {
-            handle.close()
-            throw throwable
+            registerColumnFamilyHandle(handle)
         }
-        return registerColumnFamilyHandle(handle)
     }
 
     actual fun createColumnFamilyWithImport(
@@ -502,111 +498,117 @@ internal constructor(
         importColumnFamilyOptions: ImportColumnFamilyOptions,
         metadata: List<ExportImportFilesMetaData>
     ): ColumnFamilyHandle {
-        require(metadata.isNotEmpty()) { "metadata must not be empty" }
-        checkOwningHandle()
-        columnFamilyDescriptor.getOptions().checkOwningHandle()
-        importColumnFamilyOptions.checkOwningHandle()
-        metadata.forEach { it.checkOwningHandle() }
-        val handle = createColumnFamilyHandle { error ->
-            memScoped {
-                val metadataArray = allocArray<CPointerVar<rocksdb_export_import_files_metadata_t>>(metadata.size)
-                metadata.forEachIndexed { index, item ->
-                    metadataArray[index] = item.native
+        return withLifecycleLock {
+            require(metadata.isNotEmpty()) { "metadata must not be empty" }
+            checkOwningHandle()
+            columnFamilyDescriptor.getOptions().checkOwningHandle()
+            importColumnFamilyOptions.checkOwningHandle()
+            metadata.forEach { it.checkOwningHandle() }
+            val handle = createColumnFamilyHandle { error ->
+                memScoped {
+                    val metadataArray = allocArray<CPointerVar<rocksdb_export_import_files_metadata_t>>(metadata.size)
+                    metadata.forEachIndexed { index, item ->
+                        metadataArray[index] = item.native
+                    }
+                    maryk_rocksdb_create_column_family_with_import_list(
+                        native,
+                        columnFamilyDescriptor.getOptions().native,
+                        columnFamilyNameToCString(columnFamilyDescriptor.getName()),
+                        columnFamilyDescriptor.getName().size.toULong(),
+                        importColumnFamilyOptions.native,
+                        metadataArray,
+                        metadata.size.toULong(),
+                        error
+                    )
                 }
-                maryk_rocksdb_create_column_family_with_import_list(
-                    native,
-                    columnFamilyDescriptor.getOptions().native,
-                    columnFamilyNameToCString(columnFamilyDescriptor.getName()),
-                    columnFamilyDescriptor.getName().size.toULong(),
-                    importColumnFamilyOptions.native,
-                    metadataArray,
-                    metadata.size.toULong(),
-                    error
-                )
             }
-        }
-        try {
-            columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
-                retainOwnedComparator(it)
+            try {
+                columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
+                    retainOwnedComparator(it)
+                }
+                retainNativeReferences(columnFamilyDescriptor.getOptions().retainedNativeReferences())
+            } catch (throwable: Throwable) {
+                handle.close()
+                throw throwable
             }
-            retainNativeReferences(columnFamilyDescriptor.getOptions().retainedNativeReferences())
-        } catch (throwable: Throwable) {
-            handle.close()
-            throw throwable
+            registerColumnFamilyHandle(handle)
         }
-        return registerColumnFamilyHandle(handle)
     }
 
     actual fun createColumnFamilies(
         columnFamilyOptions: ColumnFamilyOptions,
         columnFamilyNames: List<ByteArray>
     ): List<ColumnFamilyHandle> {
-        checkOwningHandle()
-        columnFamilyOptions.checkOwningHandle()
-        val createdHandles = mutableListOf<ColumnFamilyHandle>()
-        try {
-            for (name in columnFamilyNames) {
-                createdHandles += registerColumnFamilyHandle(createColumnFamilyHandle { error ->
-                    memScoped {
-                        maryk_rocksdb_create_column_family_with_length(
-                            native,
-                            columnFamilyOptions.native,
-                            columnFamilyNameToCString(name),
-                            name.size.toULong(),
-                            error
-                        )
-                    }
-                })
-            }
-            columnFamilyOptions.releaseOwnedComparator()?.let {
-                retainOwnedComparator(it)
-            }
-            retainNativeReferences(columnFamilyOptions.retainedNativeReferences())
-            return createdHandles.toList()
-        } catch (throwable: Throwable) {
-            if (createdHandles.isNotEmpty()) {
+        return withLifecycleLock {
+            checkOwningHandle()
+            columnFamilyOptions.checkOwningHandle()
+            val createdHandles = mutableListOf<ColumnFamilyHandle>()
+            try {
+                for (name in columnFamilyNames) {
+                    createdHandles += registerColumnFamilyHandle(createColumnFamilyHandle { error ->
+                        memScoped {
+                            maryk_rocksdb_create_column_family_with_length(
+                                native,
+                                columnFamilyOptions.native,
+                                columnFamilyNameToCString(name),
+                                name.size.toULong(),
+                                error
+                            )
+                        }
+                    })
+                }
                 columnFamilyOptions.releaseOwnedComparator()?.let {
                     retainOwnedComparator(it)
                 }
+                retainNativeReferences(columnFamilyOptions.retainedNativeReferences())
+                createdHandles.toList()
+            } catch (throwable: Throwable) {
+                if (createdHandles.isNotEmpty()) {
+                    columnFamilyOptions.releaseOwnedComparator()?.let {
+                        retainOwnedComparator(it)
+                    }
+                }
+                createdHandles.forEach { it.close() }
+                throw throwable
             }
-            createdHandles.forEach { it.close() }
-            throw throwable
         }
     }
 
     actual fun createColumnFamilies(columnFamilyDescriptors: List<ColumnFamilyDescriptor>): List<ColumnFamilyHandle> {
-        checkOwningHandle()
-        columnFamilyDescriptors.forEach { it.getOptions().checkOwningHandle() }
-        val createdHandles = mutableListOf<ColumnFamilyHandle>()
-        try {
-            for (descriptor in columnFamilyDescriptors) {
-                createdHandles += registerColumnFamilyHandle(createColumnFamilyHandle { error ->
-                    memScoped {
-                        maryk_rocksdb_create_column_family_with_length(
-                            native,
-                            descriptor.getOptions().native,
-                            columnFamilyNameToCString(descriptor.getName()),
-                            descriptor.getName().size.toULong(),
-                            error
-                        )
+        return withLifecycleLock {
+            checkOwningHandle()
+            columnFamilyDescriptors.forEach { it.getOptions().checkOwningHandle() }
+            val createdHandles = mutableListOf<ColumnFamilyHandle>()
+            try {
+                for (descriptor in columnFamilyDescriptors) {
+                    createdHandles += registerColumnFamilyHandle(createColumnFamilyHandle { error ->
+                        memScoped {
+                            maryk_rocksdb_create_column_family_with_length(
+                                native,
+                                descriptor.getOptions().native,
+                                columnFamilyNameToCString(descriptor.getName()),
+                                descriptor.getName().size.toULong(),
+                                error
+                            )
+                        }
+                    })
+                }
+                for (descriptor in columnFamilyDescriptors) {
+                    descriptor.getOptions().releaseOwnedComparator()?.let {
+                        retainOwnedComparator(it)
                     }
-                })
-            }
-            for (descriptor in columnFamilyDescriptors) {
-                descriptor.getOptions().releaseOwnedComparator()?.let {
-                    retainOwnedComparator(it)
+                    retainNativeReferences(descriptor.getOptions().retainedNativeReferences())
                 }
-                retainNativeReferences(descriptor.getOptions().retainedNativeReferences())
-            }
-            return createdHandles.toList()
-        } catch (throwable: Throwable) {
-            for (index in createdHandles.indices) {
-                columnFamilyDescriptors[index].getOptions().releaseOwnedComparator()?.let {
-                    retainOwnedComparator(it)
+                createdHandles.toList()
+            } catch (throwable: Throwable) {
+                for (index in createdHandles.indices) {
+                    columnFamilyDescriptors[index].getOptions().releaseOwnedComparator()?.let {
+                        retainOwnedComparator(it)
+                    }
                 }
+                createdHandles.forEach { it.close() }
+                throw throwable
             }
-            createdHandles.forEach { it.close() }
-            throw throwable
         }
     }
 
@@ -1599,7 +1601,7 @@ internal constructor(
     actual fun newIterator(): RocksIterator = newIterator(defaultReadOptions)
 
     actual fun newIterator(readOptions: ReadOptions): RocksIterator =
-        run {
+        withLifecycleLock {
             checkOpenForRead(readOptions)
             borrowIterator(RocksIterator(
                 requireNotNull(rocksdb_create_iterator(native, readOptions.native)) {
@@ -1615,7 +1617,7 @@ internal constructor(
     actual fun newIterator(
         columnFamilyHandle: ColumnFamilyHandle,
         readOptions: ReadOptions
-    ): RocksIterator = run {
+    ): RocksIterator = withLifecycleLock {
         checkOpenForRead(readOptions)
         checkOpenColumnFamily(columnFamilyHandle)
         borrowIterator(RocksIterator(
@@ -1632,60 +1634,62 @@ internal constructor(
     actual fun newIterators(
         columnFamilyHandleList: List<ColumnFamilyHandle>,
         readOptions: ReadOptions
-    ): List<RocksIterator> = memScoped {
-        checkOpenForRead(readOptions)
-        if (columnFamilyHandleList.isEmpty()) return@memScoped emptyList()
+    ): List<RocksIterator> = withLifecycleLock {
+        memScoped {
+            checkOpenForRead(readOptions)
+            if (columnFamilyHandleList.isEmpty()) return@memScoped emptyList()
 
-        val columnFamilies = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyHandleList.size)
-        val nativeIterators = allocArray<CPointerVar<rocksdb_iterator_t>>(columnFamilyHandleList.size)
-        columnFamilyHandleList.forEachIndexed { index, handle ->
-            checkOpenColumnFamily(handle)
-            columnFamilies[index] = handle.native
-            nativeIterators[index] = null
-        }
+            val columnFamilies = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyHandleList.size)
+            val nativeIterators = allocArray<CPointerVar<rocksdb_iterator_t>>(columnFamilyHandleList.size)
+            columnFamilyHandleList.forEachIndexed { index, handle ->
+                checkOpenColumnFamily(handle)
+                columnFamilies[index] = handle.native
+                nativeIterators[index] = null
+            }
 
-        Unit.wrapWithErrorThrower { error ->
-            rocksdb_create_iterators(
-                db = native,
-                opts = readOptions.native,
-                column_families = columnFamilies,
-                iterators = nativeIterators,
-                size = columnFamilyHandleList.size.asSizeT(),
-                errptr = error,
-            )
-        }
+            Unit.wrapWithErrorThrower { error ->
+                rocksdb_create_iterators(
+                    db = native,
+                    opts = readOptions.native,
+                    column_families = columnFamilies,
+                    iterators = nativeIterators,
+                    size = columnFamilyHandleList.size.asSizeT(),
+                    errptr = error,
+                )
+            }
 
-        val nativePointers = ArrayList<CPointer<rocksdb_iterator_t>>(columnFamilyHandleList.size)
-        for (index in columnFamilyHandleList.indices) {
-            val nativeIterator = nativeIterators[index]
-            if (nativeIterator == null) {
-                for (cleanupIndex in columnFamilyHandleList.indices) {
-                    nativeIterators[cleanupIndex]?.let { rocksdb_iter_destroy(it) }
+            val nativePointers = ArrayList<CPointer<rocksdb_iterator_t>>(columnFamilyHandleList.size)
+            for (index in columnFamilyHandleList.indices) {
+                val nativeIterator = nativeIterators[index]
+                if (nativeIterator == null) {
+                    for (cleanupIndex in columnFamilyHandleList.indices) {
+                        nativeIterators[cleanupIndex]?.let { rocksdb_iter_destroy(it) }
+                    }
+                    error("RocksDB returned null iterator at index $index")
                 }
-                error("RocksDB returned null iterator at index $index")
+                nativePointers += nativeIterator
             }
-            nativePointers += nativeIterator
-        }
 
-        val wrappedIterators = ArrayList<RocksIterator>(nativePointers.size)
-        var nextToWrap = 0
-        try {
-            for (nativeIterator in nativePointers) {
-                nextToWrap++
-                wrappedIterators += borrowIterator(RocksIterator(nativeIterator, dbOwner = this@RocksDB))
+            val wrappedIterators = ArrayList<RocksIterator>(nativePointers.size)
+            var nextToWrap = 0
+            try {
+                for (nativeIterator in nativePointers) {
+                    nextToWrap++
+                    wrappedIterators += borrowIterator(RocksIterator(nativeIterator, dbOwner = this@RocksDB))
+                }
+                wrappedIterators
+            } catch (throwable: Throwable) {
+                wrappedIterators.forEach { it.close() }
+                for (index in nextToWrap until nativePointers.size) {
+                    rocksdb_iter_destroy(nativePointers[index])
+                }
+                throw throwable
             }
-            wrappedIterators
-        } catch (throwable: Throwable) {
-            wrappedIterators.forEach { it.close() }
-            for (index in nextToWrap until nativePointers.size) {
-                rocksdb_iter_destroy(nativePointers[index])
-            }
-            throw throwable
         }
     }
 
     actual fun getSnapshot(): Snapshot? {
-        return withSnapshotLifecycleLock {
+        return withLifecycleLock {
             checkOwningHandle()
             Snapshot(
                 requireNotNull(rocksdb.rocksdb_create_snapshot(native)) {
@@ -1701,7 +1705,7 @@ internal constructor(
     }
 
     internal fun releaseBorrowedSnapshot(snapshot: Snapshot) {
-        withSnapshotLifecycleLock {
+        withLifecycleLock {
             borrowedSnapshots.remove(snapshot)
             snapshot.releaseFromOwner(this)
         }
@@ -2103,14 +2107,16 @@ internal constructor(
     }
 
     actual fun getUpdatesSince(sequenceNumber: Long): TransactionLogIterator =
-        wrapWithErrorThrower { error ->
-            checkOwningHandle()
-            borrowTransactionLogIterator(TransactionLogIterator(
-                requireNotNull(rocksdb_get_updates_since(native, sequenceNumber.asUInt64(), null, error)) {
-                    "RocksDB returned null WAL iterator without an error"
-                },
-                this,
-            ))
+        withLifecycleLock {
+            wrapWithErrorThrower { error ->
+                checkOwningHandle()
+                borrowTransactionLogIterator(TransactionLogIterator(
+                    requireNotNull(rocksdb_get_updates_since(native, sequenceNumber.asUInt64(), null, error)) {
+                        "RocksDB returned null WAL iterator without an error"
+                    },
+                    this,
+                ))
+            }
         }
 
     actual fun flush(flushOptions: FlushOptions) {
@@ -2364,12 +2370,14 @@ internal constructor(
     }
 
     actual fun getDefaultColumnFamily(): ColumnFamilyHandle {
-        checkOwningHandle()
-        return registerColumnFamilyHandle(ColumnFamilyHandle(
-            requireNotNull(rocksdb_get_default_column_family_handle(native)) {
-                "RocksDB returned null default column family handle"
-            }
-        ))
+        return withLifecycleLock {
+            checkOwningHandle()
+            registerColumnFamilyHandle(ColumnFamilyHandle(
+                requireNotNull(rocksdb_get_default_column_family_handle(native)) {
+                    "RocksDB returned null default column family handle"
+                }
+            ))
+        }
     }
 
     actual fun promoteL0(columnFamilyHandle: ColumnFamilyHandle, targetLevel: Int) {

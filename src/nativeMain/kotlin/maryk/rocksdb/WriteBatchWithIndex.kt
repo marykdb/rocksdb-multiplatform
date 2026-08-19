@@ -209,23 +209,25 @@ actual class WriteBatchWithIndex(
     }
 
     actual fun newIteratorWithBase(columnFamilyHandle: ColumnFamilyHandle, baseIterator: RocksIterator): RocksIterator {
-        checkOpenHandle()
-        columnFamilyHandle.checkOwningHandle()
-        check(baseIterator.isOwningHandle()) { "Base iterator is already closed or transferred." }
-        val baseOwners = baseIterator.transferWrapperOwnershipToNativeAndDetachOwners()
-        val iterator = rocksdb.rocksdb_writebatch_wi_create_iterator_with_base_cf(
-            native,
-            baseIterator.native,
-            columnFamilyHandle.native
-        )
-        return borrowIterator(RocksIterator(
-            requireNotNull(iterator) {
-                "RocksDB returned null write-batch-with-index column-family iterator"
-            },
-            dbOwner = baseOwners.dbOwner,
-            transactionOwner = baseOwners.transactionOwner,
-            writeBatchWithIndexOwner = this,
-        ))
+        return baseIterator.withDatabaseLifecycleLock {
+            checkOpenHandle()
+            columnFamilyHandle.checkOwningHandle()
+            check(baseIterator.isOwningHandle()) { "Base iterator is already closed or transferred." }
+            val baseOwners = baseIterator.transferWrapperOwnershipToNativeAndDetachOwners()
+            val iterator = rocksdb.rocksdb_writebatch_wi_create_iterator_with_base_cf(
+                native,
+                baseIterator.native,
+                columnFamilyHandle.native
+            )
+            borrowIterator(RocksIterator(
+                requireNotNull(iterator) {
+                    "RocksDB returned null write-batch-with-index column-family iterator"
+                },
+                dbOwner = baseOwners.dbOwner,
+                transactionOwner = baseOwners.transactionOwner,
+                writeBatchWithIndexOwner = this,
+            ))
+        }
     }
 
     actual fun newIteratorWithBase(
@@ -234,61 +236,67 @@ actual class WriteBatchWithIndex(
         readOptions: ReadOptions?
     ): RocksIterator {
         if (readOptions == null) return newIteratorWithBase(columnFamilyHandle, baseIterator)
-        checkOpenHandle()
-        columnFamilyHandle.checkOwningHandle()
-        readOptions.checkOwningHandle()
-        check(baseIterator.isOwningHandle()) { "Base iterator is already closed or transferred." }
-        val baseOwners = baseIterator.transferWrapperOwnershipToNativeAndDetachOwners()
-        val iterator = rocksdb.rocksdb_writebatch_wi_create_iterator_with_base_cf_readopts(
-            native,
-            baseIterator.native,
-            columnFamilyHandle.native,
-            readOptions.native,
-        )
-        return borrowIterator(RocksIterator(
-            requireNotNull(iterator) {
-                "RocksDB returned null write-batch-with-index column-family iterator"
-            },
-            dbOwner = baseOwners.dbOwner,
-            transactionOwner = baseOwners.transactionOwner,
-            writeBatchWithIndexOwner = this,
-        ))
+        return baseIterator.withDatabaseLifecycleLock {
+            checkOpenHandle()
+            columnFamilyHandle.checkOwningHandle()
+            readOptions.checkOwningHandle()
+            check(baseIterator.isOwningHandle()) { "Base iterator is already closed or transferred." }
+            val baseOwners = baseIterator.transferWrapperOwnershipToNativeAndDetachOwners()
+            val iterator = rocksdb.rocksdb_writebatch_wi_create_iterator_with_base_cf_readopts(
+                native,
+                baseIterator.native,
+                columnFamilyHandle.native,
+                readOptions.native,
+            )
+            borrowIterator(RocksIterator(
+                requireNotNull(iterator) {
+                    "RocksDB returned null write-batch-with-index column-family iterator"
+                },
+                dbOwner = baseOwners.dbOwner,
+                transactionOwner = baseOwners.transactionOwner,
+                writeBatchWithIndexOwner = this,
+            ))
+        }
     }
 
     actual fun newIteratorWithBase(baseIterator: RocksIterator): RocksIterator {
-        checkOpenHandle()
-        check(baseIterator.isOwningHandle()) { "Base iterator is already closed or transferred." }
-        val baseOwners = baseIterator.transferWrapperOwnershipToNativeAndDetachOwners()
-        val iterator = rocksdb.rocksdb_writebatch_wi_create_iterator_with_base(native, baseIterator.native)
-        return borrowIterator(RocksIterator(
-            requireNotNull(iterator) {
-                "RocksDB returned null write-batch-with-index iterator"
-            },
-            dbOwner = baseOwners.dbOwner,
-            transactionOwner = baseOwners.transactionOwner,
-            writeBatchWithIndexOwner = this,
-        ))
+        return baseIterator.withDatabaseLifecycleLock {
+            checkOpenHandle()
+            check(baseIterator.isOwningHandle()) { "Base iterator is already closed or transferred." }
+            val baseOwners = baseIterator.transferWrapperOwnershipToNativeAndDetachOwners()
+            val iterator = rocksdb.rocksdb_writebatch_wi_create_iterator_with_base(native, baseIterator.native)
+            borrowIterator(RocksIterator(
+                requireNotNull(iterator) {
+                    "RocksDB returned null write-batch-with-index iterator"
+                },
+                dbOwner = baseOwners.dbOwner,
+                transactionOwner = baseOwners.transactionOwner,
+                writeBatchWithIndexOwner = this,
+            ))
+        }
     }
 
     actual fun newIteratorWithBase(baseIterator: RocksIterator, readOptions: ReadOptions?): RocksIterator {
         if (readOptions == null) return newIteratorWithBase(baseIterator)
-        checkOpenHandle()
-        readOptions.checkOwningHandle()
-        check(baseIterator.isOwningHandle()) { "Base iterator is already closed or transferred." }
-        val baseOwners = baseIterator.transferWrapperOwnershipToNativeAndDetachOwners()
-        val iterator = rocksdb.rocksdb_writebatch_wi_create_iterator_with_base_readopts(
-            native,
-            baseIterator.native,
-            readOptions.native,
-        )
-        return borrowIterator(RocksIterator(
-            requireNotNull(iterator) {
-                "RocksDB returned null write-batch-with-index iterator"
-            },
-            dbOwner = baseOwners.dbOwner,
-            transactionOwner = baseOwners.transactionOwner,
-            writeBatchWithIndexOwner = this,
-        ))
+        return baseIterator.withDatabaseLifecycleLock {
+            checkOpenHandle()
+            readOptions.checkOwningHandle()
+            check(baseIterator.isOwningHandle()) { "Base iterator is already closed or transferred." }
+            val baseOwners = baseIterator.transferWrapperOwnershipToNativeAndDetachOwners()
+            val iterator = rocksdb.rocksdb_writebatch_wi_create_iterator_with_base_readopts(
+                native,
+                baseIterator.native,
+                readOptions.native,
+            )
+            borrowIterator(RocksIterator(
+                requireNotNull(iterator) {
+                    "RocksDB returned null write-batch-with-index iterator"
+                },
+                dbOwner = baseOwners.dbOwner,
+                transactionOwner = baseOwners.transactionOwner,
+                writeBatchWithIndexOwner = this,
+            ))
+        }
     }
 
     actual fun getFromBatch(columnFamilyHandle: ColumnFamilyHandle, options: DBOptions, key: ByteArray): ByteArray? {

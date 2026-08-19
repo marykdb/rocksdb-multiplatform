@@ -57,6 +57,15 @@ actual class TransactionLogIterator internal constructor(
 
     override fun close() {
         val db = owner
+        if (db != null) {
+            db.withLifecycleLock { closeLocked() }
+        } else {
+            closeLocked()
+        }
+    }
+
+    private fun closeLocked() {
+        val db = owner
         owner = null
         db?.unregisterBorrowedTransactionLogIterator(this)
         if (tryClose()) {

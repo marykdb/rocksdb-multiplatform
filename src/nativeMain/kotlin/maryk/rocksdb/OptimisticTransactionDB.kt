@@ -22,8 +22,8 @@ internal constructor(
     private val borrowedBaseDbs = mutableSetOf<BorrowedOptimisticBaseDB>()
 
     override fun close() {
-        if (tryClose()) {
-            withSnapshotLifecycleLock {
+        withLifecycleLock {
+            if (tryClose()) {
                 invalidateBorrowedTransactions()
                 invalidateBorrowedBaseDbs()
                 invalidateBorrowedIterators()
@@ -36,17 +36,21 @@ internal constructor(
                 rocksdb.rocksdb_optimistictransactiondb_close(tnative)
                 closeOwnedComparators()
                 clearRetainedReferences()
+                super.close()
             }
-            super.close()
         }
     }
 
     override fun registerBorrowedTransaction(transaction: Transaction) {
-        borrowedTransactions += transaction
+        withLifecycleLock { borrowedTransactions += transaction }
     }
 
     override fun unregisterBorrowedTransaction(transaction: Transaction) {
-        borrowedTransactions -= transaction
+        withLifecycleLock { borrowedTransactions -= transaction }
+    }
+
+    override fun closeBorrowedTransaction(transaction: Transaction) {
+        withLifecycleLock { transaction.closeFromOwner(this) }
     }
 
     private fun invalidateBorrowedTransactions() {
@@ -64,49 +68,57 @@ internal constructor(
     }
 
     internal fun unregisterBorrowedBaseDb(db: BorrowedOptimisticBaseDB) {
-        borrowedBaseDbs -= db
+        withLifecycleLock { borrowedBaseDbs -= db }
     }
 
     actual fun getBaseDB(): RocksDB {
-        checkOwningHandle()
-        return BorrowedOptimisticBaseDB(
-            requireNotNull(rocksdb.rocksdb_optimistictransactiondb_get_base_db(tnative)) {
-                "RocksDB returned null optimistic transaction base DB"
-            },
-            this
-        ).also { borrowedBaseDbs += it }
+        return withLifecycleLock {
+            checkOwningHandle()
+            BorrowedOptimisticBaseDB(
+                requireNotNull(rocksdb.rocksdb_optimistictransactiondb_get_base_db(tnative)) {
+                    "RocksDB returned null optimistic transaction base DB"
+                },
+                this
+            ).also { borrowedBaseDbs += it }
+        }
     }
 
     actual fun beginTransaction(writeOptions: WriteOptions): Transaction {
-        checkOwningHandle()
-        writeOptions.checkOwningHandle()
-        return requireNotNull(
-            rocksdb.rocksdb_optimistictransaction_begin(tnative, writeOptions.native, defaultTransactionOptions.native, null)
-        ) {
-            "RocksDB returned null optimistic transaction"
-        }.let { Transaction(it).attachTo(this) }
+        return withLifecycleLock {
+            checkOwningHandle()
+            writeOptions.checkOwningHandle()
+            requireNotNull(
+                rocksdb.rocksdb_optimistictransaction_begin(tnative, writeOptions.native, defaultTransactionOptions.native, null)
+            ) {
+                "RocksDB returned null optimistic transaction"
+            }.let { Transaction(it).attachTo(this) }
+        }
     }
 
     actual fun beginTransaction(
         writeOptions: WriteOptions,
         transactionOptions: OptimisticTransactionOptions
     ): Transaction {
-        checkOwningHandle()
-        writeOptions.checkOwningHandle()
-        transactionOptions.checkOwningHandle()
-        return requireNotNull(
-            rocksdb.rocksdb_optimistictransaction_begin(tnative, writeOptions.native, transactionOptions.native, null)
-        ) {
-            "RocksDB returned null optimistic transaction"
-        }.let { Transaction(it).attachTo(this) }
+        return withLifecycleLock {
+            checkOwningHandle()
+            writeOptions.checkOwningHandle()
+            transactionOptions.checkOwningHandle()
+            requireNotNull(
+                rocksdb.rocksdb_optimistictransaction_begin(tnative, writeOptions.native, transactionOptions.native, null)
+            ) {
+                "RocksDB returned null optimistic transaction"
+            }.let { Transaction(it).attachTo(this) }
+        }
     }
 
     actual fun beginTransaction(writeOptions: WriteOptions, oldTransaction: Transaction): Transaction {
-        checkOwningHandle()
-        writeOptions.checkOwningHandle()
-        oldTransaction.prepareForReuse()
-        rocksdb.rocksdb_optimistictransaction_begin(tnative, writeOptions.native, defaultTransactionOptions.native, oldTransaction.native)
-        return oldTransaction.attachTo(this)
+        return withLifecycleLock {
+            checkOwningHandle()
+            writeOptions.checkOwningHandle()
+            oldTransaction.prepareForReuse()
+            rocksdb.rocksdb_optimistictransaction_begin(tnative, writeOptions.native, defaultTransactionOptions.native, oldTransaction.native)
+            oldTransaction.attachTo(this)
+        }
     }
 
     actual fun beginTransaction(
@@ -114,12 +126,14 @@ internal constructor(
         transactionOptions: OptimisticTransactionOptions,
         oldTransaction: Transaction
     ): Transaction {
-        checkOwningHandle()
-        writeOptions.checkOwningHandle()
-        transactionOptions.checkOwningHandle()
-        oldTransaction.prepareForReuse()
-        rocksdb.rocksdb_optimistictransaction_begin(tnative, writeOptions.native, transactionOptions.native, oldTransaction.native)
-        return oldTransaction.attachTo(this)
+        return withLifecycleLock {
+            checkOwningHandle()
+            writeOptions.checkOwningHandle()
+            transactionOptions.checkOwningHandle()
+            oldTransaction.prepareForReuse()
+            rocksdb.rocksdb_optimistictransaction_begin(tnative, writeOptions.native, transactionOptions.native, oldTransaction.native)
+            oldTransaction.attachTo(this)
+        }
     }
 }
 
@@ -129,9 +143,15 @@ internal class BorrowedOptimisticBaseDB(
 ) : RocksDB(native) {
     override fun close() {
         val dbOwner = owner
-        owner = null
-        dbOwner?.unregisterBorrowedBaseDb(this)
-        closeBorrowedBaseDb()
+        if (dbOwner != null) {
+            dbOwner.withLifecycleLock {
+                owner = null
+                dbOwner.unregisterBorrowedBaseDb(this)
+                closeBorrowedBaseDb()
+            }
+        } else {
+            closeBorrowedBaseDb()
+        }
     }
 
     internal fun invalidateFromOwner() {
@@ -140,8 +160,8 @@ internal class BorrowedOptimisticBaseDB(
     }
 
     private fun closeBorrowedBaseDb() {
-        if (tryClose()) {
-            withSnapshotLifecycleLock {
+        withLifecycleLock {
+            if (tryClose()) {
                 invalidateBorrowedIterators()
                 invalidateBorrowedTransactionLogIterators()
                 releaseBorrowedSnapshotsLocked()

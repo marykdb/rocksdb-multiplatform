@@ -32,33 +32,35 @@ actual class TtlDB internal constructor(
         columnFamilyDescriptor: ColumnFamilyDescriptor,
         ttl: Int,
     ): ColumnFamilyHandle =
-        memScoped {
-            checkOwningHandle()
-            columnFamilyDescriptor.getOptions().checkOwningHandle()
-            val handle = createColumnFamilyHandle { error ->
-                maryk_rocksdb_ttl_create_column_family(
-                    nativeTtl,
-                    columnFamilyDescriptor.getOptions().native,
-                    columnFamilyNameToCString(columnFamilyDescriptor.getName()),
-                    columnFamilyDescriptor.getName().size.toULong(),
-                    ttl,
-                    error,
-                )
-            }
-            try {
-                columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
-                    retainOwnedComparator(it)
+        withLifecycleLock {
+            memScoped {
+                checkOwningHandle()
+                columnFamilyDescriptor.getOptions().checkOwningHandle()
+                val handle = createColumnFamilyHandle { error ->
+                    maryk_rocksdb_ttl_create_column_family(
+                        nativeTtl,
+                        columnFamilyDescriptor.getOptions().native,
+                        columnFamilyNameToCString(columnFamilyDescriptor.getName()),
+                        columnFamilyDescriptor.getName().size.toULong(),
+                        ttl,
+                        error,
+                    )
                 }
-            } catch (throwable: Throwable) {
-                handle.close()
-                throw throwable
+                try {
+                    columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
+                        retainOwnedComparator(it)
+                    }
+                } catch (throwable: Throwable) {
+                    handle.close()
+                    throw throwable
+                }
+                registerColumnFamilyHandle(handle)
             }
-            registerColumnFamilyHandle(handle)
         }
 
     override fun close() {
-        if (tryClose()) {
-            withSnapshotLifecycleLock {
+        withLifecycleLock {
+            if (tryClose()) {
                 invalidateBorrowedIterators()
                 invalidateBorrowedTransactionLogIterators()
                 releaseBorrowedSnapshotsLocked()
@@ -69,8 +71,8 @@ actual class TtlDB internal constructor(
                 rocksdb_ttl_close(nativeTtl)
                 closeOwnedComparators()
                 clearRetainedReferences()
+                super.close()
             }
-            super.close()
         }
     }
 }

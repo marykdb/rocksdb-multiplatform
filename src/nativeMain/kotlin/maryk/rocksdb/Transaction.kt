@@ -151,6 +151,7 @@ private inline fun <T> usePinnedKeys(
 internal interface TransactionOwner {
     fun registerBorrowedTransaction(transaction: Transaction)
     fun unregisterBorrowedTransaction(transaction: Transaction)
+    fun closeBorrowedTransaction(transaction: Transaction)
 }
 
 actual class Transaction(
@@ -183,8 +184,22 @@ actual class Transaction(
 
     override fun close() {
         val transactionOwner = owner
-        owner = null
-        transactionOwner?.unregisterBorrowedTransaction(this)
+        if (transactionOwner != null) {
+            transactionOwner.closeBorrowedTransaction(this)
+        } else {
+            closeLocked()
+        }
+    }
+
+    internal fun closeFromOwner(owner: TransactionOwner) {
+        if (this.owner === owner) {
+            this.owner = null
+            owner.unregisterBorrowedTransaction(this)
+        }
+        closeLocked()
+    }
+
+    private fun closeLocked() {
         if (ownsNative && tryClose()) {
             disposePendingSnapshotNotifier()
             invalidateBorrowedSnapshots()

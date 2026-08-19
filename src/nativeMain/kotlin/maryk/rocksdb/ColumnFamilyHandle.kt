@@ -22,6 +22,15 @@ internal constructor(
     : RocksObject() {
     override fun close() {
         val owner = dbOwner
+        if (owner != null) {
+            owner.withLifecycleLock { closeLocked() }
+        } else {
+            closeLocked()
+        }
+    }
+
+    private fun closeLocked() {
+        val owner = dbOwner
         dbOwner = null
         if (tryClose()) {
             owner?.unregisterColumnFamilyHandle(this)

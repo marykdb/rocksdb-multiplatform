@@ -53,6 +53,7 @@ val rocksDBJVMVersion = "10.10.1.1"
 val rocksDBAndroidVersion = "10.10.1"
 
 val kotlinVersion = "2.4.10"
+val kotlinXAtomicfuVersion = "0.32.1"
 val kotlinXDateTimeVersion = "0.8.0"
 val kotlinXCoroutinesVersion = "1.11.0"
 val rocksdbPrebuiltBaseUrlValue = providers.gradleProperty("rocksdbPrebuiltBaseUrl").orElse("https://github.com/marykdb/build-rocksdb/releases/download").get()
@@ -465,6 +466,7 @@ extensions.configure<KotlinMultiplatformExtension> {
         }
         maybeCreate("nativeMain").apply {
             dependencies {
+                implementation("org.jetbrains.kotlinx:atomicfu:$kotlinXAtomicfuVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinXCoroutinesVersion")
             }
         }

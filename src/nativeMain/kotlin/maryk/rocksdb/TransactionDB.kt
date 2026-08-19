@@ -27,8 +27,8 @@ internal constructor(
     private val borrowedTransactions = mutableSetOf<Transaction>()
 
     override fun close() {
-        if (tryClose()) {
-            withSnapshotLifecycleLock {
+        withLifecycleLock {
+            if (tryClose()) {
                 invalidateBorrowedTransactions()
                 invalidateBorrowedIterators()
                 invalidateBorrowedTransactionLogIterators()
@@ -40,17 +40,21 @@ internal constructor(
                 rocksdb.rocksdb_transactiondb_close(tnative)
                 closeOwnedComparators()
                 clearRetainedReferences()
+                super.close()
             }
-            super.close()
         }
     }
 
     override fun registerBorrowedTransaction(transaction: Transaction) {
-        borrowedTransactions += transaction
+        withLifecycleLock { borrowedTransactions += transaction }
     }
 
     override fun unregisterBorrowedTransaction(transaction: Transaction) {
-        borrowedTransactions -= transaction
+        withLifecycleLock { borrowedTransactions -= transaction }
+    }
+
+    override fun closeBorrowedTransaction(transaction: Transaction) {
+        withLifecycleLock { transaction.closeFromOwner(this) }
     }
 
     private fun invalidateBorrowedTransactions() {
@@ -61,53 +65,61 @@ internal constructor(
     }
 
     actual fun getTransactionByName(transactionName: String): Transaction? {
-        checkOwningHandle()
-        val nameBytes = transactionName.encodeToByteArray()
-        return nameBytes.usePointer { namePointer ->
-            rocksdb.rocksdb_transactiondb_get_transaction_by_name(
-                tnative,
-                namePointer,
-                nameBytes.size.asSizeT(),
-            )?.let {
-                Transaction(
-                    it,
-                    ownsNative = false,
-                    freeBorrowedWrapper = true,
-                ).attachTo(this)
+        return withLifecycleLock {
+            checkOwningHandle()
+            val nameBytes = transactionName.encodeToByteArray()
+            nameBytes.usePointer { namePointer ->
+                rocksdb.rocksdb_transactiondb_get_transaction_by_name(
+                    tnative,
+                    namePointer,
+                    nameBytes.size.asSizeT(),
+                )?.let {
+                    Transaction(
+                        it,
+                        ownsNative = false,
+                        freeBorrowedWrapper = true,
+                    ).attachTo(this)
+                }
             }
         }
     }
 
     actual fun beginTransaction(writeOptions: WriteOptions): Transaction {
-        checkOwningHandle()
-        writeOptions.checkOwningHandle()
-        return requireNotNull(
-            rocksdb.rocksdb_transaction_begin(tnative, writeOptions.native, defaultTransactionOptions.native, null)
-        ) {
-            "RocksDB returned null transaction"
-        }.let { Transaction(it).attachTo(this) }
+        return withLifecycleLock {
+            checkOwningHandle()
+            writeOptions.checkOwningHandle()
+            requireNotNull(
+                rocksdb.rocksdb_transaction_begin(tnative, writeOptions.native, defaultTransactionOptions.native, null)
+            ) {
+                "RocksDB returned null transaction"
+            }.let { Transaction(it).attachTo(this) }
+        }
     }
 
     actual fun beginTransaction(
         writeOptions: WriteOptions,
         transactionOptions: TransactionOptions
     ): Transaction {
-        checkOwningHandle()
-        writeOptions.checkOwningHandle()
-        transactionOptions.checkOwningHandle()
-        return requireNotNull(
-            rocksdb.rocksdb_transaction_begin(tnative, writeOptions.native, transactionOptions.native, null)
-        ) {
-            "RocksDB returned null transaction"
-        }.let { Transaction(it).attachTo(this) }
+        return withLifecycleLock {
+            checkOwningHandle()
+            writeOptions.checkOwningHandle()
+            transactionOptions.checkOwningHandle()
+            requireNotNull(
+                rocksdb.rocksdb_transaction_begin(tnative, writeOptions.native, transactionOptions.native, null)
+            ) {
+                "RocksDB returned null transaction"
+            }.let { Transaction(it).attachTo(this) }
+        }
     }
 
     actual fun beginTransaction(writeOptions: WriteOptions, oldTransaction: Transaction): Transaction {
-        checkOwningHandle()
-        writeOptions.checkOwningHandle()
-        oldTransaction.prepareForReuse()
-        rocksdb.rocksdb_transaction_begin(tnative, writeOptions.native, defaultTransactionOptions.native, oldTransaction.native)
-        return oldTransaction.attachTo(this)
+        return withLifecycleLock {
+            checkOwningHandle()
+            writeOptions.checkOwningHandle()
+            oldTransaction.prepareForReuse()
+            rocksdb.rocksdb_transaction_begin(tnative, writeOptions.native, defaultTransactionOptions.native, oldTransaction.native)
+            oldTransaction.attachTo(this)
+        }
     }
 
     actual fun beginTransaction(
@@ -115,15 +127,20 @@ internal constructor(
         transactionOptions: TransactionOptions,
         oldTransaction: Transaction
     ): Transaction {
-        checkOwningHandle()
-        writeOptions.checkOwningHandle()
-        transactionOptions.checkOwningHandle()
-        oldTransaction.prepareForReuse()
-        rocksdb.rocksdb_transaction_begin(tnative, writeOptions.native, transactionOptions.native, oldTransaction.native)
-        return oldTransaction.attachTo(this)
+        return withLifecycleLock {
+            checkOwningHandle()
+            writeOptions.checkOwningHandle()
+            transactionOptions.checkOwningHandle()
+            oldTransaction.prepareForReuse()
+            rocksdb.rocksdb_transaction_begin(tnative, writeOptions.native, transactionOptions.native, oldTransaction.native)
+            oldTransaction.attachTo(this)
+        }
     }
 
-    actual fun getAllPreparedTransactions(): List<Transaction> {
+    actual fun getAllPreparedTransactions(): List<Transaction> =
+        withLifecycleLock { getAllPreparedTransactionsLocked() }
+
+    private fun getAllPreparedTransactionsLocked(): List<Transaction> {
         checkOwningHandle()
         memScoped {
             val count = alloc<size_tVar>()
