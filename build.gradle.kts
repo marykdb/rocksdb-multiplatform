@@ -36,9 +36,9 @@ import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 import org.jetbrains.kotlin.konan.target.Family
 
 plugins {
-    id("org.jetbrains.kotlin.multiplatform") version "2.4.0"
+    id("org.jetbrains.kotlin.multiplatform") version "2.4.10"
     id("com.android.kotlin.multiplatform.library") version "9.2.1"
-    id("com.vanniktech.maven.publish") version "0.36.0"
+    id("com.vanniktech.maven.publish") version "0.37.0"
 }
 
 repositories {
@@ -47,12 +47,12 @@ repositories {
 }
 
 group = "io.maryk.rocksdb"
-version = "10.10.1.2-SNAPSHOT"
+version = "10.10.1.2"
 
 val rocksDBJVMVersion = "10.10.1.1"
 val rocksDBAndroidVersion = "10.10.1"
 
-val kotlinVersion = "2.4.0"
+val kotlinVersion = "2.4.10"
 val kotlinXDateTimeVersion = "0.8.0"
 val kotlinXCoroutinesVersion = "1.11.0"
 val rocksdbPrebuiltBaseUrlValue = providers.gradleProperty("rocksdbPrebuiltBaseUrl").orElse("https://github.com/marykdb/build-rocksdb/releases/download").get()
