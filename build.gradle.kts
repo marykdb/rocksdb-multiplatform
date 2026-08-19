@@ -47,7 +47,7 @@ repositories {
 }
 
 group = "io.maryk.rocksdb"
-version = "10.10.1.2"
+version = "10.10.1.3-SNAPSHOT"
 
 val rocksDBJVMVersion = "10.10.1.1"
 val rocksDBAndroidVersion = "10.10.1"
