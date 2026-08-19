@@ -1,10 +1,35 @@
 package maryk.rocksdb
 
 import maryk.rocksdb.util.createTestDBFolder
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 
 class SnapshotNativeTest {
+    @Test
+    fun snapshotReleaseCanRaceWithDatabaseClose() = runBlocking {
+        val dbPath = createTestDBFolder("SnapshotNativeTest_concurrent_close")
+
+        Options().setCreateIfMissing(true).use { options ->
+            repeat(32) {
+                val db = openOptimisticTransactionDB(options, dbPath)
+                val snapshots = List(1_024) { requireNotNull(db.getSnapshot()) }
+                val start = CompletableDeferred<Unit>()
+                val release = launch(Dispatchers.Default) {
+                    start.await()
+                    snapshots.first().close()
+                }
+
+                start.complete(Unit)
+                db.close()
+                release.join()
+            }
+        }
+    }
+
     @Test
     fun databaseCloseInvalidatesSnapshot() {
         val dbPath = createTestDBFolder("SnapshotNativeTest_owner")

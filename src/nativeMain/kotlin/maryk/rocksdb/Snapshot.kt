@@ -33,10 +33,12 @@ actual class Snapshot internal constructor(
     }
 
     internal fun releaseFrom(db: RocksDB) {
-        db.checkOwningHandle()
+        db.releaseBorrowedSnapshot(this)
+    }
+
+    internal fun releaseFromOwner(db: RocksDB) {
         owner = null
         if (tryClose()) {
-            db.unregisterBorrowedSnapshot(this)
             rocksdb.rocksdb_release_snapshot(db.native, native)
             super.close()
         }

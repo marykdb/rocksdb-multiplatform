@@ -23,18 +23,20 @@ internal constructor(
 
     override fun close() {
         if (tryClose()) {
-            invalidateBorrowedTransactions()
-            invalidateBorrowedBaseDbs()
-            invalidateBorrowedIterators()
-            invalidateBorrowedTransactionLogIterators()
-            releaseBorrowedSnapshots()
-            invalidateColumnFamilyHandles()
-            defaultTransactionOptions.close()
-            closeDefaultReferences()
-            rocksdb.rocksdb_optimistictransactiondb_close_base_db(native)
-            rocksdb.rocksdb_optimistictransactiondb_close(tnative)
-            closeOwnedComparators()
-            clearRetainedReferences()
+            withSnapshotLifecycleLock {
+                invalidateBorrowedTransactions()
+                invalidateBorrowedBaseDbs()
+                invalidateBorrowedIterators()
+                invalidateBorrowedTransactionLogIterators()
+                releaseBorrowedSnapshotsLocked()
+                invalidateColumnFamilyHandles()
+                defaultTransactionOptions.close()
+                closeDefaultReferences()
+                rocksdb.rocksdb_optimistictransactiondb_close_base_db(native)
+                rocksdb.rocksdb_optimistictransactiondb_close(tnative)
+                closeOwnedComparators()
+                clearRetainedReferences()
+            }
             super.close()
         }
     }
@@ -139,14 +141,16 @@ internal class BorrowedOptimisticBaseDB(
 
     private fun closeBorrowedBaseDb() {
         if (tryClose()) {
-            invalidateBorrowedIterators()
-            invalidateBorrowedTransactionLogIterators()
-            releaseBorrowedSnapshots()
-            invalidateColumnFamilyHandles()
-            closeDefaultReferences()
-            rocksdb.rocksdb_optimistictransactiondb_close_base_db(native)
-            closeOwnedComparators()
-            clearRetainedReferences()
+            withSnapshotLifecycleLock {
+                invalidateBorrowedIterators()
+                invalidateBorrowedTransactionLogIterators()
+                releaseBorrowedSnapshotsLocked()
+                invalidateColumnFamilyHandles()
+                closeDefaultReferences()
+                rocksdb.rocksdb_optimistictransactiondb_close_base_db(native)
+                closeOwnedComparators()
+                clearRetainedReferences()
+            }
         }
     }
 }

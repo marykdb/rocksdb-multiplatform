@@ -58,16 +58,18 @@ actual class TtlDB internal constructor(
 
     override fun close() {
         if (tryClose()) {
-            invalidateBorrowedIterators()
-            invalidateBorrowedTransactionLogIterators()
-            releaseBorrowedSnapshots()
-            invalidateColumnFamilyHandles()
-            closeDefaultReferences()
-            // RocksDB exposes no TTL-specific close_base_db; this helper deletes only the rocksdb_t wrapper.
-            rocksdb_transactiondb_close_base_db(native)
-            rocksdb_ttl_close(nativeTtl)
-            closeOwnedComparators()
-            clearRetainedReferences()
+            withSnapshotLifecycleLock {
+                invalidateBorrowedIterators()
+                invalidateBorrowedTransactionLogIterators()
+                releaseBorrowedSnapshotsLocked()
+                invalidateColumnFamilyHandles()
+                closeDefaultReferences()
+                // RocksDB exposes no TTL-specific close_base_db; this helper deletes only the rocksdb_t wrapper.
+                rocksdb_transactiondb_close_base_db(native)
+                rocksdb_ttl_close(nativeTtl)
+                closeOwnedComparators()
+                clearRetainedReferences()
+            }
             super.close()
         }
     }

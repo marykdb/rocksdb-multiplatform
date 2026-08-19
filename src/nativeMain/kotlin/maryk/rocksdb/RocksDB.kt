@@ -121,6 +121,7 @@ import rocksdb.rocksdb_sst_file_metadata_get_smallestkey
 import rocksdb.rocksdb_set_perf_level
 import rocksdb.rocksdb_write
 import rocksdb.rocksdb_try_catch_up_with_primary
+import kotlin.concurrent.AtomicInt
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.math.min
 
@@ -281,6 +282,7 @@ internal constructor(
     private val borrowedIterators = mutableSetOf<RocksIterator>()
     private val borrowedTransactionLogIterators = mutableSetOf<TransactionLogIterator>()
     private val borrowedSnapshots = mutableSetOf<Snapshot>()
+    private val snapshotLifecycleLock = AtomicInt(0)
     private val columnFamilyHandles = mutableSetOf<ColumnFamilyHandle>()
     private var perfLevel: PerfLevel = PerfLevel.UNINITIALIZED
 
@@ -310,15 +312,26 @@ internal constructor(
 
     actual override fun close() {
         if (tryClose()) {
-            invalidateBorrowedIterators()
-            invalidateBorrowedTransactionLogIterators()
-            releaseBorrowedSnapshots()
-            invalidateColumnFamilyHandles()
-            closeDefaultReferences()
-            rocksdb_close(native)
-            closeOwnedComparators()
-            clearRetainedReferences()
+            withSnapshotLifecycleLock {
+                invalidateBorrowedIterators()
+                invalidateBorrowedTransactionLogIterators()
+                releaseBorrowedSnapshotsLocked()
+                invalidateColumnFamilyHandles()
+                closeDefaultReferences()
+                rocksdb_close(native)
+                closeOwnedComparators()
+                clearRetainedReferences()
+            }
             super.close()
+        }
+    }
+
+    protected fun <T> withSnapshotLifecycleLock(block: () -> T): T {
+        while (!snapshotLifecycleLock.compareAndSet(0, 1)) {}
+        try {
+            return block()
+        } finally {
+            snapshotLifecycleLock.value = 0
         }
     }
 
@@ -344,10 +357,6 @@ internal constructor(
     private fun borrowTransactionLogIterator(iterator: TransactionLogIterator): TransactionLogIterator =
         iterator.also(borrowedTransactionLogIterators::add)
 
-    internal fun unregisterBorrowedSnapshot(snapshot: Snapshot) {
-        borrowedSnapshots.remove(snapshot)
-    }
-
     internal fun registerBorrowedSnapshot(snapshot: Snapshot) {
         borrowedSnapshots.add(snapshot)
     }
@@ -367,6 +376,12 @@ internal constructor(
     }
 
     protected fun releaseBorrowedSnapshots() {
+        withSnapshotLifecycleLock {
+            releaseBorrowedSnapshotsLocked()
+        }
+    }
+
+    protected fun releaseBorrowedSnapshotsLocked() {
         if (borrowedSnapshots.isEmpty()) return
         val snapshots = borrowedSnapshots.toList()
         borrowedSnapshots.clear()
@@ -1670,18 +1685,26 @@ internal constructor(
     }
 
     actual fun getSnapshot(): Snapshot? {
-        checkOwningHandle()
-        return Snapshot(
-            requireNotNull(rocksdb.rocksdb_create_snapshot(native)) {
-                "RocksDB returned null snapshot"
-            },
-            this,
-        )
+        return withSnapshotLifecycleLock {
+            checkOwningHandle()
+            Snapshot(
+                requireNotNull(rocksdb.rocksdb_create_snapshot(native)) {
+                    "RocksDB returned null snapshot"
+                },
+                this,
+            )
+        }
     }
 
     actual fun releaseSnapshot(snapshot: Snapshot) {
-        checkOwningHandle()
         snapshot.releaseFrom(this)
+    }
+
+    internal fun releaseBorrowedSnapshot(snapshot: Snapshot) {
+        withSnapshotLifecycleLock {
+            borrowedSnapshots.remove(snapshot)
+            snapshot.releaseFromOwner(this)
+        }
     }
 
     actual fun getProperty(

@@ -28,17 +28,19 @@ internal constructor(
 
     override fun close() {
         if (tryClose()) {
-            invalidateBorrowedTransactions()
-            invalidateBorrowedIterators()
-            invalidateBorrowedTransactionLogIterators()
-            releaseBorrowedSnapshots()
-            invalidateColumnFamilyHandles()
-            defaultTransactionOptions.close()
-            closeDefaultReferences()
-            rocksdb.rocksdb_transactiondb_close_base_db(native)
-            rocksdb.rocksdb_transactiondb_close(tnative)
-            closeOwnedComparators()
-            clearRetainedReferences()
+            withSnapshotLifecycleLock {
+                invalidateBorrowedTransactions()
+                invalidateBorrowedIterators()
+                invalidateBorrowedTransactionLogIterators()
+                releaseBorrowedSnapshotsLocked()
+                invalidateColumnFamilyHandles()
+                defaultTransactionOptions.close()
+                closeDefaultReferences()
+                rocksdb.rocksdb_transactiondb_close_base_db(native)
+                rocksdb.rocksdb_transactiondb_close(tnative)
+                closeOwnedComparators()
+                clearRetainedReferences()
+            }
             super.close()
         }
     }
