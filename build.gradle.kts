@@ -47,7 +47,7 @@ repositories {
 }
 
 group = "io.maryk.rocksdb"
-version = "10.10.1.3-SNAPSHOT"
+version = "10.10.1.3"
 
 val rocksDBJVMVersion = "10.10.1.1"
 val rocksDBAndroidVersion = "10.10.1"
@@ -638,6 +638,9 @@ extensions.configure<MavenPublishBaseExtension> {
             developer {
                 id.set("jurmous")
                 name.set("Jurriaan Mous")
+                email.set("jurmous@jurmo.us")
+                organization.set("Maryk")
+                organizationUrl.set("https://github.com/marykdb")
             }
         }
 
