@@ -118,6 +118,38 @@ static inline rocksdb_column_family_handle_t* maryk_rocksdb_create_column_family
     return rocksdb_create_column_family_with_length(db, options, (const char*)name, (size_t)length, errptr);
 }
 
+static inline rocksdb_column_family_handle_t* maryk_rocksdb_transactiondb_create_column_family_with_length(
+    rocksdb_transactiondb_t* txn_db, const rocksdb_options_t* options, const void* name,
+    uint64_t length, char** errptr
+) {
+    if (length > (uint64_t)(size_t)-1) return NULL;
+    return rocksdb_transactiondb_create_column_family_with_length(
+        txn_db, options, (const char*)name, (size_t)length, errptr);
+}
+
+static inline rocksdb_column_family_handle_t* maryk_rocksdb_transactiondb_create_column_family_with_import(
+    rocksdb_transactiondb_t* txn_db, const rocksdb_options_t* options, const void* name,
+    uint64_t length, const rocksdb_import_column_family_options_t* import_options,
+    const rocksdb_export_import_files_metadata_t* metadata, char** errptr
+) {
+    if (length > (uint64_t)(size_t)-1) return NULL;
+    return rocksdb_transactiondb_create_column_family_with_import(
+        txn_db, options, (const char*)name, (size_t)length, import_options, metadata, errptr);
+}
+
+static inline rocksdb_column_family_handle_t* maryk_rocksdb_transactiondb_create_column_family_with_import_list(
+    rocksdb_transactiondb_t* txn_db, const rocksdb_options_t* options, const void* name,
+    uint64_t length, const rocksdb_import_column_family_options_t* import_options,
+    const rocksdb_export_import_files_metadata_t* const* metadata, uint64_t metadata_count,
+    char** errptr
+) {
+    if (length > (uint64_t)(size_t)-1) return NULL;
+    if (metadata_count > (uint64_t)(size_t)-1) return NULL;
+    return rocksdb_transactiondb_create_column_family_with_import_list(
+        txn_db, options, (const char*)name, (size_t)length, import_options, metadata,
+        (size_t)metadata_count, errptr);
+}
+
 static inline rocksdb_column_family_handle_t* maryk_rocksdb_ttl_create_column_family(
     rocksdb_ttl_t* db, rocksdb_options_t* options, const void* name,
     uint64_t length, int ttl, char** errptr

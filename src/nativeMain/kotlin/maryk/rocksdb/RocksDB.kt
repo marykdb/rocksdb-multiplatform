@@ -430,20 +430,101 @@ internal constructor(
         this.close()
     }
 
+    /**
+     * The raw column family calls, kept apart so that [TransactionDB] can route them through the
+     * transaction database instead of the base database it wraps.
+     *
+     * The distinction is not cosmetic. PessimisticTransactionDB overrides every one of these to
+     * register the column family with its lock manager, and going around it through the base
+     * database leaves the transaction layer unaware that the column family exists: each locking
+     * call on it then fails with "Column family id not found", while non-locking reads still
+     * work. Dropping through the base database leaks the lock map the same way. The JVM gets this
+     * for free — its handle is the transaction database and C++ dispatches virtually — so only
+     * the native side has to say which database it means.
+     */
+    internal open fun nativeCreateColumnFamily(
+        columnFamilyOptions: ColumnFamilyOptions,
+        name: ByteArray,
+        error: CValuesRef<CPointerVar<ByteVar>>
+    ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
+        maryk_rocksdb_create_column_family_with_length(
+            native,
+            columnFamilyOptions.native,
+            columnFamilyNameToCString(name),
+            name.size.toULong(),
+            error
+        )
+    }
+
+    internal open fun nativeCreateColumnFamilyWithImport(
+        columnFamilyOptions: ColumnFamilyOptions,
+        name: ByteArray,
+        importColumnFamilyOptions: ImportColumnFamilyOptions,
+        metadata: ExportImportFilesMetaData,
+        error: CValuesRef<CPointerVar<ByteVar>>
+    ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
+        maryk_rocksdb_create_column_family_with_import(
+            native,
+            columnFamilyOptions.native,
+            columnFamilyNameToCString(name),
+            name.size.toULong(),
+            importColumnFamilyOptions.native,
+            metadata.native,
+            error
+        )
+    }
+
+    internal open fun nativeCreateColumnFamilyWithImportList(
+        columnFamilyOptions: ColumnFamilyOptions,
+        name: ByteArray,
+        importColumnFamilyOptions: ImportColumnFamilyOptions,
+        metadata: List<ExportImportFilesMetaData>,
+        error: CValuesRef<CPointerVar<ByteVar>>
+    ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
+        val metadataArray = allocArray<CPointerVar<rocksdb_export_import_files_metadata_t>>(metadata.size)
+        metadata.forEachIndexed { index, item ->
+            metadataArray[index] = item.native
+        }
+        maryk_rocksdb_create_column_family_with_import_list(
+            native,
+            columnFamilyOptions.native,
+            columnFamilyNameToCString(name),
+            name.size.toULong(),
+            importColumnFamilyOptions.native,
+            metadataArray,
+            metadata.size.toULong(),
+            error
+        )
+    }
+
+    internal open fun nativeDropColumnFamily(
+        columnFamilyHandle: ColumnFamilyHandle,
+        error: CValuesRef<CPointerVar<ByteVar>>
+    ) {
+        rocksdb_drop_column_family(native, columnFamilyHandle.native, error)
+    }
+
+    internal open fun nativeDropColumnFamilies(
+        columnFamilies: List<ColumnFamilyHandle>,
+        error: CValuesRef<CPointerVar<ByteVar>>
+    ) = memScoped {
+        val cfHandles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilies.size)
+        columnFamilies.forEachIndexed { index, handle ->
+            cfHandles[index] = handle.native
+        }
+        rocksdb.rocksdb_drop_column_families(native, cfHandles, columnFamilies.size.asSizeT(), error)
+    }
+
     actual fun createColumnFamily(columnFamilyDescriptor: ColumnFamilyDescriptor): ColumnFamilyHandle =
         withLifecycleLock {
             checkOwningHandle()
             columnFamilyDescriptor.getOptions().checkOwningHandle()
             val handle = createColumnFamilyHandle { error ->
-                memScoped {
-                    maryk_rocksdb_create_column_family_with_length(
-                        native,
-                        columnFamilyDescriptor.getOptions().native,
-                        columnFamilyNameToCString(columnFamilyDescriptor.getName()),
-                        columnFamilyDescriptor.getName().size.toULong(),
-                        error
-                    )
-                }
+                nativeCreateColumnFamily(
+                    columnFamilyDescriptor.getOptions(),
+                    columnFamilyDescriptor.getName(),
+                    error
+                )
             }
             try {
                 columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
@@ -468,17 +549,13 @@ internal constructor(
             importColumnFamilyOptions.checkOwningHandle()
             metadata.checkOwningHandle()
             val handle = createColumnFamilyHandle { error ->
-                memScoped {
-                    maryk_rocksdb_create_column_family_with_import(
-                        native,
-                        columnFamilyDescriptor.getOptions().native,
-                        columnFamilyNameToCString(columnFamilyDescriptor.getName()),
-                        columnFamilyDescriptor.getName().size.toULong(),
-                        importColumnFamilyOptions.native,
-                        metadata.native,
-                        error
-                    )
-                }
+                nativeCreateColumnFamilyWithImport(
+                    columnFamilyDescriptor.getOptions(),
+                    columnFamilyDescriptor.getName(),
+                    importColumnFamilyOptions,
+                    metadata,
+                    error
+                )
             }
             try {
                 columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
@@ -505,22 +582,13 @@ internal constructor(
             importColumnFamilyOptions.checkOwningHandle()
             metadata.forEach { it.checkOwningHandle() }
             val handle = createColumnFamilyHandle { error ->
-                memScoped {
-                    val metadataArray = allocArray<CPointerVar<rocksdb_export_import_files_metadata_t>>(metadata.size)
-                    metadata.forEachIndexed { index, item ->
-                        metadataArray[index] = item.native
-                    }
-                    maryk_rocksdb_create_column_family_with_import_list(
-                        native,
-                        columnFamilyDescriptor.getOptions().native,
-                        columnFamilyNameToCString(columnFamilyDescriptor.getName()),
-                        columnFamilyDescriptor.getName().size.toULong(),
-                        importColumnFamilyOptions.native,
-                        metadataArray,
-                        metadata.size.toULong(),
-                        error
-                    )
-                }
+                nativeCreateColumnFamilyWithImportList(
+                    columnFamilyDescriptor.getOptions(),
+                    columnFamilyDescriptor.getName(),
+                    importColumnFamilyOptions,
+                    metadata,
+                    error
+                )
             }
             try {
                 columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
@@ -546,15 +614,7 @@ internal constructor(
             try {
                 for (name in columnFamilyNames) {
                     createdHandles += registerColumnFamilyHandle(createColumnFamilyHandle { error ->
-                        memScoped {
-                            maryk_rocksdb_create_column_family_with_length(
-                                native,
-                                columnFamilyOptions.native,
-                                columnFamilyNameToCString(name),
-                                name.size.toULong(),
-                                error
-                            )
-                        }
+                        nativeCreateColumnFamily(columnFamilyOptions, name, error)
                     })
                 }
                 columnFamilyOptions.releaseOwnedComparator()?.let {
@@ -582,15 +642,7 @@ internal constructor(
             try {
                 for (descriptor in columnFamilyDescriptors) {
                     createdHandles += registerColumnFamilyHandle(createColumnFamilyHandle { error ->
-                        memScoped {
-                            maryk_rocksdb_create_column_family_with_length(
-                                native,
-                                descriptor.getOptions().native,
-                                columnFamilyNameToCString(descriptor.getName()),
-                                descriptor.getName().size.toULong(),
-                                error
-                            )
-                        }
+                        nativeCreateColumnFamily(descriptor.getOptions(), descriptor.getName(), error)
                     })
                 }
                 for (descriptor in columnFamilyDescriptors) {
@@ -616,7 +668,7 @@ internal constructor(
         checkOwningHandle()
         checkOpenColumnFamily(columnFamilyHandle)
         wrapWithErrorThrower { error ->
-            rocksdb_drop_column_family(native, columnFamilyHandle.native, error)
+            nativeDropColumnFamily(columnFamilyHandle, error)
         }
     }
 
@@ -625,15 +677,7 @@ internal constructor(
         checkOwningHandle()
         columnFamilies.forEach(::checkOpenColumnFamily)
         wrapWithErrorThrower { error ->
-            memScoped {
-                val cfHandles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilies.size)
-
-                columnFamilies.forEachIndexed { index, handle ->
-                    cfHandles[index] = handle.native
-                }
-
-                rocksdb.rocksdb_drop_column_families(native, cfHandles, columnFamilies.size.asSizeT(), error)
-            }
+            nativeDropColumnFamilies(columnFamilies, error)
         }
     }
 

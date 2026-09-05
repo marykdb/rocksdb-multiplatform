@@ -2,8 +2,13 @@
 
 package maryk.rocksdb
 
+import cnames.structs.rocksdb_column_family_handle_t
+import cnames.structs.rocksdb_export_import_files_metadata_t
 import cnames.structs.rocksdb_transactiondb_t
 import kotlinx.cinterop.*
+import rocksdb.maryk_rocksdb_transactiondb_create_column_family_with_import
+import rocksdb.maryk_rocksdb_transactiondb_create_column_family_with_import_list
+import rocksdb.maryk_rocksdb_transactiondb_create_column_family_with_length
 import maryk.asSizeT
 import maryk.asUInt32
 import maryk.sizeTToInt
@@ -43,6 +48,95 @@ internal constructor(
                 super.close()
             }
         }
+    }
+
+    /**
+     * Column families are created and dropped through [tnative], not through the base database
+     * this class hands to [RocksDB].
+     *
+     * PessimisticTransactionDB overrides each of these to keep its lock manager in step: creation
+     * registers a lock map for the new column family, dropping releases it. Reached through the
+     * base database instead, the transaction layer never learns the column family exists, and
+     * every locking call on it — a transactional put, a get-for-update — fails with "Column family
+     * id not found", while plain reads keep working. The JVM never had to say this out loud: its
+     * handle is the transaction database itself, so C++ dispatches to the right override.
+     */
+    override fun nativeCreateColumnFamily(
+        columnFamilyOptions: ColumnFamilyOptions,
+        name: ByteArray,
+        error: CValuesRef<CPointerVar<ByteVar>>
+    ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
+        maryk_rocksdb_transactiondb_create_column_family_with_length(
+            tnative,
+            columnFamilyOptions.native,
+            columnFamilyNameToCString(name),
+            name.size.toULong(),
+            error
+        )
+    }
+
+    override fun nativeCreateColumnFamilyWithImport(
+        columnFamilyOptions: ColumnFamilyOptions,
+        name: ByteArray,
+        importColumnFamilyOptions: ImportColumnFamilyOptions,
+        metadata: ExportImportFilesMetaData,
+        error: CValuesRef<CPointerVar<ByteVar>>
+    ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
+        maryk_rocksdb_transactiondb_create_column_family_with_import(
+            tnative,
+            columnFamilyOptions.native,
+            columnFamilyNameToCString(name),
+            name.size.toULong(),
+            importColumnFamilyOptions.native,
+            metadata.native,
+            error
+        )
+    }
+
+    override fun nativeCreateColumnFamilyWithImportList(
+        columnFamilyOptions: ColumnFamilyOptions,
+        name: ByteArray,
+        importColumnFamilyOptions: ImportColumnFamilyOptions,
+        metadata: List<ExportImportFilesMetaData>,
+        error: CValuesRef<CPointerVar<ByteVar>>
+    ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
+        val metadataArray = allocArray<CPointerVar<rocksdb_export_import_files_metadata_t>>(metadata.size)
+        metadata.forEachIndexed { index, item ->
+            metadataArray[index] = item.native
+        }
+        maryk_rocksdb_transactiondb_create_column_family_with_import_list(
+            tnative,
+            columnFamilyOptions.native,
+            columnFamilyNameToCString(name),
+            name.size.toULong(),
+            importColumnFamilyOptions.native,
+            metadataArray,
+            metadata.size.toULong(),
+            error
+        )
+    }
+
+    override fun nativeDropColumnFamily(
+        columnFamilyHandle: ColumnFamilyHandle,
+        error: CValuesRef<CPointerVar<ByteVar>>
+    ) {
+        rocksdb.rocksdb_transactiondb_drop_column_family(tnative, columnFamilyHandle.native, error)
+    }
+
+    override fun nativeDropColumnFamilies(
+        columnFamilies: List<ColumnFamilyHandle>,
+        error: CValuesRef<CPointerVar<ByteVar>>
+    ) = memScoped {
+        val cfHandles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilies.size)
+        columnFamilies.forEachIndexed { index, handle ->
+            cfHandles[index] = handle.native
+        }
+        rocksdb.rocksdb_transactiondb_drop_column_families(
+            tnative,
+            cfHandles,
+            columnFamilies.size.asSizeT(),
+            error
+        )
     }
 
     override fun registerBorrowedTransaction(transaction: Transaction) {

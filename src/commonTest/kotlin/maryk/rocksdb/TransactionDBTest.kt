@@ -228,4 +228,54 @@ class TransactionDBTest {
             }
         }
     }
+
+    /**
+     * A column family created after the database was opened has to be usable from a transaction.
+     *
+     * Creating one is what registers it with the lock manager, so a transaction database must
+     * create it itself rather than hand the request to the base database it wraps: reached the
+     * other way, the transaction layer never learns the column family exists and every locking
+     * call on it fails with "Column family id not found", while plain reads keep working. The name
+     * carries an embedded NUL so the length-aware path is covered at the same time.
+     */
+    @Test
+    fun columnFamilyCreatedAfterOpenServesATransaction() {
+        val tempFolder = createTestFolder()
+        val name = byteArrayOf('t'.code.toByte(), 0, 'c'.code.toByte(), 'f'.code.toByte())
+        val key = "runtimeKey".encodeToByteArray()
+        val value = "runtimeValue".encodeToByteArray()
+
+        Options().setCreateIfMissing(true).use { options ->
+            TransactionDBOptions().use { txnDbOptions ->
+                openTransactionDB(options, txnDbOptions, tempFolder).use { tdb ->
+                    ColumnFamilyOptions().use { cfOptions ->
+                        val handle = tdb.createColumnFamily(ColumnFamilyDescriptor(name, cfOptions))
+
+                        WriteOptions().use { writeOptions ->
+                            tdb.beginTransaction(writeOptions).use { transaction ->
+                                transaction.put(handle, key, value)
+                                ReadOptions().use { readOptions ->
+                                    assertContentEquals(
+                                        value,
+                                        transaction.getForUpdate(readOptions, handle, key, true),
+                                        "A locking read of a column family made after the open should see the write"
+                                    )
+                                }
+                                transaction.commit()
+                            }
+                        }
+
+                        assertContentEquals(
+                            value,
+                            tdb.get(handle, key),
+                            "The committed value should be readable from the column family"
+                        )
+
+                        tdb.dropColumnFamily(handle)
+                        handle.close()
+                    }
+                }
+            }
+        }
+    }
 }
