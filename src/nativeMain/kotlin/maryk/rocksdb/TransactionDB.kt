@@ -32,7 +32,7 @@ internal constructor(
         options: ColumnFamilyOptions, name: ByteArray, error: CValuesRef<CPointerVar<ByteVar>>
     ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
         rocksdb.rocksdb_transactiondb_create_column_family_with_length(
-            tnative, options.native, columnFamilyNameToCString(name), name.size.toULong(), error
+            tnative, options.native, columnFamilyNameToCString(name), name.size.asSizeT(), error
         )
     }
 
@@ -41,7 +41,7 @@ internal constructor(
         metadata: ExportImportFilesMetaData, error: CValuesRef<CPointerVar<ByteVar>>
     ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
         rocksdb.rocksdb_transactiondb_create_column_family_with_import(
-            tnative, options.native, columnFamilyNameToCString(name), name.size.toULong(),
+            tnative, options.native, columnFamilyNameToCString(name), name.size.asSizeT(),
             importOptions.native, metadata.native, error
         )
     }
@@ -53,8 +53,8 @@ internal constructor(
         val metadataArray = allocArray<CPointerVar<rocksdb_export_import_files_metadata_t>>(metadata.size)
         metadata.forEachIndexed { index, item -> metadataArray[index] = item.native }
         rocksdb.rocksdb_transactiondb_create_column_family_with_import_list(
-            tnative, options.native, columnFamilyNameToCString(name), name.size.toULong(),
-            importOptions.native, metadataArray, metadata.size.toULong(), error
+            tnative, options.native, columnFamilyNameToCString(name), name.size.asSizeT(),
+            importOptions.native, metadataArray, metadata.size.asSizeT(), error
         )
     }
 
