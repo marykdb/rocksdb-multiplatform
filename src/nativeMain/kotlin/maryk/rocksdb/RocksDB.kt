@@ -430,20 +430,92 @@ internal constructor(
         this.close()
     }
 
+    /** Raw calls that a transaction database redirects through its own handle. */
+    internal open fun nativeCreateColumnFamily(
+        options: ColumnFamilyOptions, name: ByteArray, error: CValuesRef<CPointerVar<ByteVar>>
+    ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
+        maryk_rocksdb_create_column_family_with_length(
+            native, options.native, columnFamilyNameToCString(name), name.size.toULong(), error
+        )
+    }
+
+    internal open fun nativeCreateColumnFamilyWithImport(
+        options: ColumnFamilyOptions, name: ByteArray, importOptions: ImportColumnFamilyOptions,
+        metadata: ExportImportFilesMetaData, error: CValuesRef<CPointerVar<ByteVar>>
+    ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
+        maryk_rocksdb_create_column_family_with_import(
+            native, options.native, columnFamilyNameToCString(name), name.size.toULong(),
+            importOptions.native, metadata.native, error
+        )
+    }
+
+    internal open fun nativeCreateColumnFamilyWithImportList(
+        options: ColumnFamilyOptions, name: ByteArray, importOptions: ImportColumnFamilyOptions,
+        metadata: List<ExportImportFilesMetaData>, error: CValuesRef<CPointerVar<ByteVar>>
+    ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
+        val metadataArray = allocArray<CPointerVar<rocksdb_export_import_files_metadata_t>>(metadata.size)
+        metadata.forEachIndexed { index, item -> metadataArray[index] = item.native }
+        maryk_rocksdb_create_column_family_with_import_list(
+            native, options.native, columnFamilyNameToCString(name), name.size.toULong(),
+            importOptions.native, metadataArray, metadata.size.toULong(), error
+        )
+    }
+
+    internal open fun nativeDropColumnFamily(
+        handle: ColumnFamilyHandle, error: CValuesRef<CPointerVar<ByteVar>>
+    ) = rocksdb_drop_column_family(native, handle.native, error)
+
+    internal open fun nativeDropColumnFamilies(
+        handles: List<ColumnFamilyHandle>, error: CValuesRef<CPointerVar<ByteVar>>
+    ) = memScoped {
+        val nativeHandles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(handles.size)
+        handles.forEachIndexed { index, handle -> nativeHandles[index] = handle.native }
+        rocksdb.rocksdb_drop_column_families(native, nativeHandles, handles.size.asSizeT(), error)
+    }
+
+    internal open fun nativePut(
+        options: WriteOptions, columnFamily: ColumnFamilyHandle?, key: CPointer<ByteVar>, keyLength: Int,
+        value: CPointer<ByteVar>, valueLength: Int, error: CValuesRef<CPointerVar<ByteVar>>
+    ) {
+        if (columnFamily == null) {
+            rocksdb_put(native, options.native, key, keyLength.asSizeT(), value, valueLength.asSizeT(), error)
+        } else {
+            rocksdb_put_cf(native, options.native, columnFamily.native, key, keyLength.asSizeT(), value, valueLength.asSizeT(), error)
+        }
+    }
+
+    internal open fun nativeDelete(
+        options: WriteOptions, columnFamily: ColumnFamilyHandle?, key: CPointer<ByteVar>, keyLength: Int,
+        error: CValuesRef<CPointerVar<ByteVar>>
+    ) {
+        if (columnFamily == null) {
+            rocksdb_delete(native, options.native, key, keyLength.asSizeT(), error)
+        } else {
+            rocksdb_delete_cf(native, options.native, columnFamily.native, key, keyLength.asSizeT(), error)
+        }
+    }
+
+    internal open fun nativeMerge(
+        options: WriteOptions, columnFamily: ColumnFamilyHandle?, key: CPointer<ByteVar>, keyLength: Int,
+        value: CPointer<ByteVar>, valueLength: Int, error: CValuesRef<CPointerVar<ByteVar>>
+    ) {
+        if (columnFamily == null) {
+            rocksdb_merge(native, options.native, key, keyLength.asSizeT(), value, valueLength.asSizeT(), error)
+        } else {
+            rocksdb_merge_cf(native, options.native, columnFamily.native, key, keyLength.asSizeT(), value, valueLength.asSizeT(), error)
+        }
+    }
+
+    internal open fun nativeWrite(
+        options: WriteOptions, updates: WriteBatch, error: CValuesRef<CPointerVar<ByteVar>>
+    ) = rocksdb_write(native, options.native, updates.native, error)
+
     actual fun createColumnFamily(columnFamilyDescriptor: ColumnFamilyDescriptor): ColumnFamilyHandle =
         withLifecycleLock {
             checkOwningHandle()
             columnFamilyDescriptor.getOptions().checkOwningHandle()
             val handle = createColumnFamilyHandle { error ->
-                memScoped {
-                    maryk_rocksdb_create_column_family_with_length(
-                        native,
-                        columnFamilyDescriptor.getOptions().native,
-                        columnFamilyNameToCString(columnFamilyDescriptor.getName()),
-                        columnFamilyDescriptor.getName().size.toULong(),
-                        error
-                    )
-                }
+                nativeCreateColumnFamily(columnFamilyDescriptor.getOptions(), columnFamilyDescriptor.getName(), error)
             }
             try {
                 columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
@@ -468,17 +540,9 @@ internal constructor(
             importColumnFamilyOptions.checkOwningHandle()
             metadata.checkOwningHandle()
             val handle = createColumnFamilyHandle { error ->
-                memScoped {
-                    maryk_rocksdb_create_column_family_with_import(
-                        native,
-                        columnFamilyDescriptor.getOptions().native,
-                        columnFamilyNameToCString(columnFamilyDescriptor.getName()),
-                        columnFamilyDescriptor.getName().size.toULong(),
-                        importColumnFamilyOptions.native,
-                        metadata.native,
-                        error
-                    )
-                }
+                nativeCreateColumnFamilyWithImport(
+                    columnFamilyDescriptor.getOptions(), columnFamilyDescriptor.getName(), importColumnFamilyOptions, metadata, error
+                )
             }
             try {
                 columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
@@ -505,22 +569,9 @@ internal constructor(
             importColumnFamilyOptions.checkOwningHandle()
             metadata.forEach { it.checkOwningHandle() }
             val handle = createColumnFamilyHandle { error ->
-                memScoped {
-                    val metadataArray = allocArray<CPointerVar<rocksdb_export_import_files_metadata_t>>(metadata.size)
-                    metadata.forEachIndexed { index, item ->
-                        metadataArray[index] = item.native
-                    }
-                    maryk_rocksdb_create_column_family_with_import_list(
-                        native,
-                        columnFamilyDescriptor.getOptions().native,
-                        columnFamilyNameToCString(columnFamilyDescriptor.getName()),
-                        columnFamilyDescriptor.getName().size.toULong(),
-                        importColumnFamilyOptions.native,
-                        metadataArray,
-                        metadata.size.toULong(),
-                        error
-                    )
-                }
+                nativeCreateColumnFamilyWithImportList(
+                    columnFamilyDescriptor.getOptions(), columnFamilyDescriptor.getName(), importColumnFamilyOptions, metadata, error
+                )
             }
             try {
                 columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
@@ -546,15 +597,7 @@ internal constructor(
             try {
                 for (name in columnFamilyNames) {
                     createdHandles += registerColumnFamilyHandle(createColumnFamilyHandle { error ->
-                        memScoped {
-                            maryk_rocksdb_create_column_family_with_length(
-                                native,
-                                columnFamilyOptions.native,
-                                columnFamilyNameToCString(name),
-                                name.size.toULong(),
-                                error
-                            )
-                        }
+                        nativeCreateColumnFamily(columnFamilyOptions, name, error)
                     })
                 }
                 columnFamilyOptions.releaseOwnedComparator()?.let {
@@ -582,15 +625,7 @@ internal constructor(
             try {
                 for (descriptor in columnFamilyDescriptors) {
                     createdHandles += registerColumnFamilyHandle(createColumnFamilyHandle { error ->
-                        memScoped {
-                            maryk_rocksdb_create_column_family_with_length(
-                                native,
-                                descriptor.getOptions().native,
-                                columnFamilyNameToCString(descriptor.getName()),
-                                descriptor.getName().size.toULong(),
-                                error
-                            )
-                        }
+                        nativeCreateColumnFamily(descriptor.getOptions(), descriptor.getName(), error)
                     })
                 }
                 for (descriptor in columnFamilyDescriptors) {
@@ -616,7 +651,7 @@ internal constructor(
         checkOwningHandle()
         checkOpenColumnFamily(columnFamilyHandle)
         wrapWithErrorThrower { error ->
-            rocksdb_drop_column_family(native, columnFamilyHandle.native, error)
+            nativeDropColumnFamily(columnFamilyHandle, error)
         }
     }
 
@@ -625,15 +660,7 @@ internal constructor(
         checkOwningHandle()
         columnFamilies.forEach(::checkOpenColumnFamily)
         wrapWithErrorThrower { error ->
-            memScoped {
-                val cfHandles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilies.size)
-
-                columnFamilies.forEachIndexed { index, handle ->
-                    cfHandles[index] = handle.native
-                }
-
-                rocksdb.rocksdb_drop_column_families(native, cfHandles, columnFamilies.size.asSizeT(), error)
-            }
+            nativeDropColumnFamilies(columnFamilies, error)
         }
     }
 
@@ -641,15 +668,7 @@ internal constructor(
         checkOpenForWrite()
         wrapWithErrorThrower { error ->
             usePointers(key, value) { keyPointer, valuePointer ->
-                rocksdb_put(
-                    native,
-                    defaultWriteOptions.native,
-                    keyPointer,
-                    key.size.asSizeT(),
-                    valuePointer,
-                    value.size.asSizeT(),
-                    error
-                )
+                nativePut(defaultWriteOptions, null, keyPointer, key.size, valuePointer, value.size, error)
             }
         }
     }
@@ -665,15 +684,7 @@ internal constructor(
         checkOpenForWrite()
         wrapWithErrorThrower { error ->
             memScoped {
-                rocksdb_put(
-                    native,
-                    defaultWriteOptions.native,
-                    byteArrayToCPointer(key, offset, len),
-                    len.asSizeT(),
-                    byteArrayToCPointer(value, vOffset, vLen),
-                    vLen.asSizeT(),
-                    error
-                )
+                nativePut(defaultWriteOptions, null, byteArrayToCPointer(key, offset, len), len, byteArrayToCPointer(value, vOffset, vLen), vLen, error)
             }
         }
     }
@@ -687,16 +698,7 @@ internal constructor(
         checkOpenColumnFamily(columnFamilyHandle)
         wrapWithErrorThrower { error ->
             usePointers(key, value) { keyPointer, valuePointer ->
-                rocksdb_put_cf(
-                    native,
-                    defaultWriteOptions.native,
-                    columnFamilyHandle.native,
-                    keyPointer,
-                    key.size.asSizeT(),
-                    valuePointer,
-                    value.size.asSizeT(),
-                    error
-                )
+                nativePut(defaultWriteOptions, columnFamilyHandle, keyPointer, key.size, valuePointer, value.size, error)
             }
         }
     }
@@ -717,15 +719,7 @@ internal constructor(
         checkOpenForWrite(writeOpts)
         wrapWithErrorThrower { error ->
             usePointers(key, value) { keyPointer, valuePointer ->
-                rocksdb_put(
-                    native,
-                    writeOpts.native,
-                    keyPointer,
-                    key.size.asSizeT(),
-                    valuePointer,
-                    value.size.asSizeT(),
-                    error
-                )
+                nativePut(writeOpts, null, keyPointer, key.size, valuePointer, value.size, error)
             }
         }
     }
@@ -742,15 +736,7 @@ internal constructor(
         checkOpenForWrite(writeOpts)
         wrapWithErrorThrower { error ->
             memScoped {
-                rocksdb_put(
-                    native,
-                    writeOpts.native,
-                    byteArrayToCPointer(key, offset, len),
-                    len.asSizeT(),
-                    byteArrayToCPointer(value, vOffset, vLen),
-                    vLen.asSizeT(),
-                    error
-                )
+                nativePut(writeOpts, null, byteArrayToCPointer(key, offset, len), len, byteArrayToCPointer(value, vOffset, vLen), vLen, error)
             }
         }
     }
@@ -765,16 +751,7 @@ internal constructor(
         checkOpenColumnFamily(columnFamilyHandle)
         wrapWithErrorThrower { error ->
             usePointers(key, value) { keyPointer, valuePointer ->
-                rocksdb_put_cf(
-                    native,
-                    writeOpts.native,
-                    columnFamilyHandle.native,
-                    keyPointer,
-                    key.size.asSizeT(),
-                    valuePointer,
-                    value.size.asSizeT(),
-                    error
-                )
+                nativePut(writeOpts, columnFamilyHandle, keyPointer, key.size, valuePointer, value.size, error)
             }
         }
     }
@@ -793,16 +770,7 @@ internal constructor(
         checkOpenColumnFamily(columnFamilyHandle)
         wrapWithErrorThrower { error ->
             memScoped {
-                rocksdb_put_cf(
-                    native,
-                    writeOpts.native,
-                    columnFamilyHandle.native,
-                    byteArrayToCPointer(key, offset, len),
-                    len.asSizeT(),
-                    byteArrayToCPointer(value, vOffset, vLen),
-                    vLen.asSizeT(),
-                    error
-                )
+                nativePut(writeOpts, columnFamilyHandle, byteArrayToCPointer(key, offset, len), len, byteArrayToCPointer(value, vOffset, vLen), vLen, error)
             }
         }
     }
@@ -832,13 +800,7 @@ internal constructor(
         checkOpenForWrite(writeOpt)
         wrapWithErrorThrower { error ->
             key.usePointer { keyPointer ->
-                rocksdb_delete(
-                    native,
-                    writeOpt.native,
-                    keyPointer,
-                    key.size.asSizeT(),
-                    error
-                )
+                nativeDelete(writeOpt, null, keyPointer, key.size, error)
             }
         }
     }
@@ -852,13 +814,7 @@ internal constructor(
         checkOpenForWrite(writeOpt)
         wrapWithErrorThrower { error ->
             memScoped {
-                rocksdb_delete(
-                    native,
-                    writeOpt.native,
-                    byteArrayToCPointer(key, offset, len),
-                    len.asSizeT(),
-                    error
-                )
+                nativeDelete(writeOpt, null, byteArrayToCPointer(key, offset, len), len, error)
             }
         }
     }
@@ -872,14 +828,7 @@ internal constructor(
         checkOpenColumnFamily(columnFamilyHandle)
         wrapWithErrorThrower { error ->
             key.usePointer { keyPointer ->
-                rocksdb_delete_cf(
-                    native,
-                    writeOpt.native,
-                    columnFamilyHandle.native,
-                    keyPointer,
-                    key.size.asSizeT(),
-                    error
-                )
+                nativeDelete(writeOpt, columnFamilyHandle, keyPointer, key.size, error)
             }
         }
     }
@@ -895,14 +844,7 @@ internal constructor(
         checkOpenColumnFamily(columnFamilyHandle)
         wrapWithErrorThrower { error ->
             memScoped {
-                rocksdb_delete_cf(
-                    native,
-                    writeOpt.native,
-                    columnFamilyHandle.native,
-                    byteArrayToCPointer(key, offset, len),
-                    len.asSizeT(),
-                    error
-                )
+                nativeDelete(writeOpt, columnFamilyHandle, byteArrayToCPointer(key, offset, len), len, error)
             }
         }
     }
@@ -1005,15 +947,7 @@ internal constructor(
         checkOpenForWrite(writeOpts)
         wrapWithErrorThrower { error ->
             usePointers(key, value) { keyPointer, valuePointer ->
-                rocksdb_merge(
-                    native,
-                    writeOpts.native,
-                    keyPointer,
-                    key.size.asSizeT(),
-                    valuePointer,
-                    value.size.asSizeT(),
-                    error,
-                )
+                nativeMerge(writeOpts, null, keyPointer, key.size, valuePointer, value.size, error)
             }
         }
     }
@@ -1030,15 +964,7 @@ internal constructor(
         checkOpenForWrite(writeOpts)
         memScoped {
             wrapWithErrorThrower { error ->
-                rocksdb_merge(
-                    native,
-                    writeOpts.native,
-                    byteArrayToCPointer(key, offset, len),
-                    len.asSizeT(),
-                    byteArrayToCPointer(value, vOffset, vLen),
-                    vLen.asSizeT(),
-                    error,
-                )
+                nativeMerge(writeOpts, null, byteArrayToCPointer(key, offset, len), len, byteArrayToCPointer(value, vOffset, vLen), vLen, error)
             }
         }
     }
@@ -1053,16 +979,7 @@ internal constructor(
         checkOpenColumnFamily(columnFamilyHandle)
         wrapWithErrorThrower { error ->
             usePointers(key, value) { keyPointer, valuePointer ->
-                rocksdb_merge_cf(
-                    native,
-                    writeOpts.native,
-                    columnFamilyHandle.native,
-                    keyPointer,
-                    key.size.asSizeT(),
-                    valuePointer,
-                    value.size.asSizeT(),
-                    error,
-                )
+                nativeMerge(writeOpts, columnFamilyHandle, keyPointer, key.size, valuePointer, value.size, error)
             }
         }
     }
@@ -1081,16 +998,7 @@ internal constructor(
         checkOpenColumnFamily(columnFamilyHandle)
         memScoped {
             wrapWithErrorThrower { error ->
-                rocksdb_merge_cf(
-                    native,
-                    writeOpts.native,
-                    columnFamilyHandle.native,
-                    byteArrayToCPointer(key, offset, len),
-                    len.asSizeT(),
-                    byteArrayToCPointer(value, vOffset, vLen),
-                    vLen.asSizeT(),
-                    error,
-                )
+                nativeMerge(writeOpts, columnFamilyHandle, byteArrayToCPointer(key, offset, len), len, byteArrayToCPointer(value, vOffset, vLen), vLen, error)
             }
         }
     }
@@ -1099,7 +1007,7 @@ internal constructor(
         checkOpenForWrite(writeOpts)
         updates.checkOpenHandle()
         wrapWithErrorThrower { error ->
-            rocksdb_write(native, writeOpts.native, updates.native, error)
+            nativeWrite(writeOpts, updates, error)
         }
     }
 

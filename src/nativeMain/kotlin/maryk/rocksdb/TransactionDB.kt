@@ -2,6 +2,8 @@
 
 package maryk.rocksdb
 
+import cnames.structs.rocksdb_column_family_handle_t
+import cnames.structs.rocksdb_export_import_files_metadata_t
 import cnames.structs.rocksdb_transactiondb_t
 import kotlinx.cinterop.*
 import maryk.asSizeT
@@ -25,6 +27,85 @@ internal constructor(
 ) : RocksDB(transactionBaseDb(tnative), ownedComparators, retainedReferences), TransactionOwner {
     val defaultTransactionOptions: TransactionOptions = TransactionOptions()
     private val borrowedTransactions = mutableSetOf<Transaction>()
+
+    override fun nativeCreateColumnFamily(
+        options: ColumnFamilyOptions, name: ByteArray, error: CValuesRef<CPointerVar<ByteVar>>
+    ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
+        rocksdb.rocksdb_transactiondb_create_column_family_with_length(
+            tnative, options.native, columnFamilyNameToCString(name), name.size.toULong(), error
+        )
+    }
+
+    override fun nativeCreateColumnFamilyWithImport(
+        options: ColumnFamilyOptions, name: ByteArray, importOptions: ImportColumnFamilyOptions,
+        metadata: ExportImportFilesMetaData, error: CValuesRef<CPointerVar<ByteVar>>
+    ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
+        rocksdb.rocksdb_transactiondb_create_column_family_with_import(
+            tnative, options.native, columnFamilyNameToCString(name), name.size.toULong(),
+            importOptions.native, metadata.native, error
+        )
+    }
+
+    override fun nativeCreateColumnFamilyWithImportList(
+        options: ColumnFamilyOptions, name: ByteArray, importOptions: ImportColumnFamilyOptions,
+        metadata: List<ExportImportFilesMetaData>, error: CValuesRef<CPointerVar<ByteVar>>
+    ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
+        val metadataArray = allocArray<CPointerVar<rocksdb_export_import_files_metadata_t>>(metadata.size)
+        metadata.forEachIndexed { index, item -> metadataArray[index] = item.native }
+        rocksdb.rocksdb_transactiondb_create_column_family_with_import_list(
+            tnative, options.native, columnFamilyNameToCString(name), name.size.toULong(),
+            importOptions.native, metadataArray, metadata.size.toULong(), error
+        )
+    }
+
+    override fun nativeDropColumnFamily(
+        handle: ColumnFamilyHandle, error: CValuesRef<CPointerVar<ByteVar>>
+    ) = rocksdb.rocksdb_transactiondb_drop_column_family(tnative, handle.native, error)
+
+    override fun nativeDropColumnFamilies(
+        handles: List<ColumnFamilyHandle>, error: CValuesRef<CPointerVar<ByteVar>>
+    ) = memScoped {
+        val nativeHandles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(handles.size)
+        handles.forEachIndexed { index, handle -> nativeHandles[index] = handle.native }
+        rocksdb.rocksdb_transactiondb_drop_column_families(tnative, nativeHandles, handles.size.asSizeT(), error)
+    }
+
+    override fun nativePut(
+        options: WriteOptions, columnFamily: ColumnFamilyHandle?, key: CPointer<ByteVar>, keyLength: Int,
+        value: CPointer<ByteVar>, valueLength: Int, error: CValuesRef<CPointerVar<ByteVar>>
+    ) {
+        if (columnFamily == null) {
+            rocksdb.rocksdb_transactiondb_put(tnative, options.native, key, keyLength.asSizeT(), value, valueLength.asSizeT(), error)
+        } else {
+            rocksdb.rocksdb_transactiondb_put_cf(tnative, options.native, columnFamily.native, key, keyLength.asSizeT(), value, valueLength.asSizeT(), error)
+        }
+    }
+
+    override fun nativeDelete(
+        options: WriteOptions, columnFamily: ColumnFamilyHandle?, key: CPointer<ByteVar>, keyLength: Int,
+        error: CValuesRef<CPointerVar<ByteVar>>
+    ) {
+        if (columnFamily == null) {
+            rocksdb.rocksdb_transactiondb_delete(tnative, options.native, key, keyLength.asSizeT(), error)
+        } else {
+            rocksdb.rocksdb_transactiondb_delete_cf(tnative, options.native, columnFamily.native, key, keyLength.asSizeT(), error)
+        }
+    }
+
+    override fun nativeMerge(
+        options: WriteOptions, columnFamily: ColumnFamilyHandle?, key: CPointer<ByteVar>, keyLength: Int,
+        value: CPointer<ByteVar>, valueLength: Int, error: CValuesRef<CPointerVar<ByteVar>>
+    ) {
+        if (columnFamily == null) {
+            rocksdb.rocksdb_transactiondb_merge(tnative, options.native, key, keyLength.asSizeT(), value, valueLength.asSizeT(), error)
+        } else {
+            rocksdb.rocksdb_transactiondb_merge_cf(tnative, options.native, columnFamily.native, key, keyLength.asSizeT(), value, valueLength.asSizeT(), error)
+        }
+    }
+
+    override fun nativeWrite(
+        options: WriteOptions, updates: WriteBatch, error: CValuesRef<CPointerVar<ByteVar>>
+    ) = rocksdb.rocksdb_transactiondb_write(tnative, options.native, updates.native, error)
 
     override fun close() {
         withLifecycleLock {

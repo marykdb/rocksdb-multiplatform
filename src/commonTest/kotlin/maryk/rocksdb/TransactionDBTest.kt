@@ -228,4 +228,69 @@ class TransactionDBTest {
             }
         }
     }
+
+    @Test
+    fun directWritesRespectTransactionLocks() {
+        val tempFolder = createTestFolder()
+        val key = "locked-key".encodeToByteArray()
+
+        DBOptions().setCreateIfMissing(true).setCreateMissingColumnFamilies(true).use { dbOptions ->
+            ColumnFamilyOptions().setMergeOperator(StringAppendOperator(",")).use { columnFamilyOptions ->
+                val handles = mutableListOf<ColumnFamilyHandle>()
+                val descriptors = listOf(ColumnFamilyDescriptor(defaultColumnFamily, columnFamilyOptions))
+                TransactionDBOptions().setDefaultLockTimeout(0).use { transactionDbOptions ->
+                    openTransactionDB(dbOptions, transactionDbOptions, tempFolder, descriptors, handles).use { transactionDb ->
+                        WriteOptions().use { writeOptions ->
+                            fun assertTimesOut(action: () -> Unit) {
+                                transactionDb.beginTransaction(writeOptions).use { transaction ->
+                                    transaction.put(key, "held".encodeToByteArray())
+                                    val exception = assertFailsWith<RocksDBException> { action() }
+                                    assertEquals(StatusCode.TimedOut, exception.getStatus()?.getCode())
+                                }
+                            }
+
+                            assertTimesOut { transactionDb.put(key, "put".encodeToByteArray()) }
+                            assertTimesOut { transactionDb.delete(key) }
+                            assertTimesOut { transactionDb.merge(key, "merge".encodeToByteArray()) }
+                            WriteBatch().use { batch ->
+                                batch.put(key, "batch".encodeToByteArray())
+                                assertTimesOut { transactionDb.write(writeOptions, batch) }
+                            }
+                        }
+                        handles.forEach { it.close() }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun columnFamilyCreatedAfterOpenServesATransaction() {
+        val tempFolder = createTestFolder()
+        val name = byteArrayOf('t'.code.toByte(), 0, 'c'.code.toByte(), 'f'.code.toByte())
+        val key = "runtimeKey".encodeToByteArray()
+        val value = "runtimeValue".encodeToByteArray()
+
+        Options().setCreateIfMissing(true).use { options ->
+            TransactionDBOptions().use { transactionDbOptions ->
+                openTransactionDB(options, transactionDbOptions, tempFolder).use { transactionDb ->
+                    ColumnFamilyOptions().use { columnFamilyOptions ->
+                        val handle = transactionDb.createColumnFamily(ColumnFamilyDescriptor(name, columnFamilyOptions))
+                        WriteOptions().use { writeOptions ->
+                            transactionDb.beginTransaction(writeOptions).use { transaction ->
+                                transaction.put(handle, key, value)
+                                ReadOptions().use { readOptions ->
+                                    assertContentEquals(value, transaction.getForUpdate(readOptions, handle, key, true))
+                                }
+                                transaction.commit()
+                            }
+                        }
+                        assertContentEquals(value, transactionDb.get(handle, key))
+                        transactionDb.dropColumnFamily(handle)
+                        handle.close()
+                    }
+                }
+            }
+        }
+    }
 }
