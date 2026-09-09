@@ -36,8 +36,8 @@ import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 import org.jetbrains.kotlin.konan.target.Family
 
 plugins {
-    id("org.jetbrains.kotlin.multiplatform") version "2.4.10"
-    id("com.android.kotlin.multiplatform.library") version "9.3.1"
+    id("org.jetbrains.kotlin.multiplatform") version "2.4.20"
+    id("com.android.kotlin.multiplatform.library") version "9.3.2"
     id("com.vanniktech.maven.publish") version "0.37.0"
 }
 
@@ -52,7 +52,7 @@ version = "10.10.1.4"
 val rocksDBJVMVersion = "10.10.1.1"
 val rocksDBAndroidVersion = "10.10.1"
 
-val kotlinVersion = "2.4.10"
+val kotlinVersion = "2.4.20"
 val kotlinXAtomicfuVersion = "0.33.0"
 val kotlinXDateTimeVersion = "0.8.0"
 val kotlinXCoroutinesVersion = "1.11.0"
