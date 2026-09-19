@@ -1,0 +1,82 @@
+description: Kotlin Multiplatform bindings for the native RocksDB library
+product:
+  type: kmp/lib
+  platforms: [jvm, android, androidNativeArm32, androidNativeArm64, androidNativeX64, androidNativeX86, iosArm64, iosSimulatorArm64, macosArm64, macosX64, linuxArm64, linuxX64, mingwX64, tvosArm64, tvosSimulatorArm64, watchosArm64, watchosDeviceArm64, watchosSimulatorArm64]
+apply:
+  - .toolchain/local.module-template.yaml
+
+aliases:
+  - jvmAndAndroid: [jvm, android]
+settings:
+  publishing:
+    enabled: true
+    group: io.maryk.rocksdb
+    version: 10.10.1.5-SNAPSHOT
+    artifactId: rocksdb-multiplatform
+    publishSources: true
+    # Keep the Central-compatible checksum set explicit if Toolchain defaults change.
+    checksums: [md5, sha1]
+    pom:
+      name: rocksdb-multiplatform
+      description: Kotlin Multiplatform bindings for the native RocksDB library
+      url: https://github.com/marykdb/rocksdb-multiplatform
+      licenses:
+        - name: The Apache License, Version 2.0
+          url: https://www.apache.org/licenses/LICENSE-2.0.txt
+      developers:
+        - id: jurmous
+          name: Jurriaan Mous
+          email: jurmous@jurmo.us
+          organization: Maryk
+          organizationUrl: https://github.com/marykdb
+      scm:
+        url: https://github.com/marykdb/rocksdb-multiplatform
+        connection: scm:git:git://github.com/marykdb/rocksdb-multiplatform.git
+        developerConnection: scm:git:ssh://git@github.com/marykdb/rocksdb-multiplatform.git
+  kotlin:
+    version: 2.4.20
+    languageVersion: 2.4
+    apiVersion: 2.4
+    progressiveMode: true
+    freeCompilerArgs: [-Xexpect-actual-classes]
+  jvm:
+    jdk:
+      version: 21
+    release: 11
+  android:
+    namespace: io.maryk.rocksdb
+    compileSdk:
+      apiLevel: 36
+      minorApiLevel: 1
+    minSdk: 21
+settings@native:
+  kotlin:
+    optIns: [kotlinx.cinterop.ExperimentalForeignApi, kotlinx.cinterop.BetaInteropApi]
+settings@mingw:
+  kotlin:
+    linkerOptions: [-lrpcrt4]
+dependencies@native:
+  - org.jetbrains.kotlinx:atomicfu:0.33.0
+  - org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0
+dependencies@jvm:
+  - org.rocksdb:rocksdbjni:10.10.1.1: exported
+dependencies@android:
+  - io.maryk.rocksdb:rocksdb-android:10.10.1: exported
+test-dependencies:
+  - org.jetbrains.kotlinx:kotlinx-datetime:0.8.0
+test-dependencies@android:
+  - org.rocksdb:rocksdbjni:10.10.1.1: runtime-only
+plugins:
+  rocksdb-prebuilts: enabled
+
+repositories:
+  - url: mavenLocal
+    publish: true
+  - id: centralSnapshots
+    url: https://central.sonatype.com/repository/maven-snapshots/
+    publish: true
+    resolve: false
+    credentials:
+      file: local.properties
+      usernameKey: mavenCentralUsername
+      passwordKey: mavenCentralPassword

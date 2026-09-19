@@ -38,7 +38,7 @@ Kotlin Native:
 
 ## Reference
 
-You can refer to the [API reference](src/commonMain/kotlin/maryk/rocksdb) or the official [RocksDB website](https://rocksdb.org) for more information.
+You can refer to the [API reference](src/maryk/rocksdb) or the official [RocksDB website](https://rocksdb.org) for more information.
 
 ## Gradle Dependency
 
@@ -62,7 +62,60 @@ openRocksDB("path_to_store_on_disk").use { db ->
 }
 ```
 
-Check out the [tests](src/commonTest/kotlin/maryk/rocksdb) for more examples on how to use this library.
+Check out the [tests](test/maryk/rocksdb) for more examples on how to use this library.
+
+## Building from source
+
+The project uses Kotlin Toolchain 0.12.2 with Kotlin 2.4.20. Install Python 3.9+
+and use the project launcher (on Windows, `kotlin.bat`). It provisions the pinned
+Toolchain and JDK; Apple targets also require Xcode and the appropriate simulator
+runtimes. Android uses compile SDK 36.1 and keeps minimum SDK 21.
+
+```sh
+./kotlin show tasks
+./kotlin check jvm android
+./kotlin check macosArm64 iosSimulatorArm64 tvosSimulatorArm64 watchosSimulatorArm64
+./kotlin link-tests iosArm64 tvosArm64 watchosArm64 watchosDeviceArm64
+```
+
+Use `check` for test runs: it cleans the test databases between targets and runs
+Apple binaries in their simulators. Other commands are forwarded to the official
+Toolchain. Run the launcher once before opening the project in an IDE to generate
+the local native test configuration.
+
+Native archive versions and SHA-256 pins live in `rocksdb-prebuilts.properties`.
+After changing the prebuilt release, `./kotlin do updateRocksdbShas` refreshes all
+checksums. Review the updated pins before committing them.
+
+`./kotlin publish mavenLocal` creates an unsigned local publication. For a release,
+`./kotlin publish mavenCentral` enables signing and uploads for manual approval in
+the Central Portal. Configure the Toolchain's `KOTLIN_TOOLCHAIN_MAVEN_CENTRAL_USERNAME`,
+`KOTLIN_TOOLCHAIN_MAVEN_CENTRAL_PASSWORD`, `KOTLIN_TOOLCHAIN_SIGNING_KEY`, and optional
+`KOTLIN_TOOLCHAIN_SIGNING_KEY_PASSPHRASE` environment variables for that command,
+or keep using the Git-ignored `local.properties`:
+
+```properties
+mavenCentralUsername=your-central-token-username
+mavenCentralPassword=your-central-token-password
+signing.keyId=your-key-id-or-fingerprint
+signing.password=your-key-passphrase
+signing.secretKeyRingFile=.toolchain/release-keyring.gpg
+```
+
+The existing keyring format requires GnuPG (`gpg` and `gpgconf`). The launcher
+exports the selected key using a temporary, isolated GPG home and passes its
+contents to Toolchain through the child process environment. It does not alter
+your original keyring or save credentials in generated YAML files.
+
+Alternatively, use `signing.keyFile=.toolchain/release-key.asc` for an already
+ASCII-armored private key; this needs no GnuPG or `signing.keyId`. Key paths may be
+absolute or relative to the project root. Both `local.properties` and `.toolchain/`
+are ignored by Git. Explicit environment variables take precedence, including an
+explicit signing key, which skips reading/exporting the local key file. Local
+credentials are loaded only for remote publishing, not builds, tests, or Maven Local.
+
+See the [migration notes](docs/kotlin-toolchain-migration.md) for workarounds and
+validation coverage.
 
 ## Contributing
 

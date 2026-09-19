@@ -5,3 +5,5 @@ xcodeBuild
 local.properties
 /.kotlin/
 /lib/
+/.toolchain/
+__pycache__/

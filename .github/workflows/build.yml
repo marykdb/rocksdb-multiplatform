@@ -18,25 +18,27 @@ jobs:
         include:
           - os: macos-latest
             display-name: macOS Arm & Simulators
-            gradle-tasks: macosArm64Test iosSimulatorArm64Test tvosSimulatorArm64Test watchosSimulatorArm64Test
+            commands: ./kotlin check macosArm64 iosSimulatorArm64 tvosSimulatorArm64 watchosSimulatorArm64
           - os: macos-latest
             display-name: Apple Device Link Checks
-            gradle-tasks: linkDebugTestIosArm64 linkDebugTestTvosArm64 linkDebugTestWatchosArm64 linkDebugTestWatchosDeviceArm64
+            commands: ./kotlin link-tests iosArm64 tvosArm64 watchosArm64 watchosDeviceArm64
           - os: macos-26-intel
             display-name: macOS Intel
-            gradle-tasks: macosX64Test
+            commands: ./kotlin check macosX64
           - os: ubuntu-latest
             display-name: Linux targets
-            gradle-tasks: linuxX64Test jvmTest
+            commands: ./kotlin check linuxX64 jvm
           - os: ubuntu-latest
             display-name: Linux Arm64 Link Checks
-            gradle-tasks: linkDebugTestLinuxArm64
+            commands: ./kotlin link-tests linuxArm64
           - os: ubuntu-latest
             display-name: Android Host & Native Link Checks
-            gradle-tasks: linkDebugTestAndroidNativeArm32 linkDebugTestAndroidNativeArm64 linkDebugTestAndroidNativeX64 linkDebugTestAndroidNativeX86
+            commands: |
+              ./kotlin check android
+              ./kotlin link-tests androidNativeArm32 androidNativeArm64 androidNativeX64 androidNativeX86
           - os: windows-latest
             display-name: Windows targets
-            gradle-tasks: mingwX64Test
+            commands: python scripts/kotlin_toolchain.py check mingwX64
     name: ${{ matrix.display-name }}
     runs-on: ${{ matrix.os }}
     defaults:
@@ -52,8 +54,13 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Verify project launcher
+        run: python -m unittest discover -s scripts -p 'test_*.py'
 
       - name: Run ${{ matrix.display-name }} tests
-        run: ./gradlew --stacktrace --info ${{ matrix.gradle-tasks }}
+        run: ${{ matrix.commands }}

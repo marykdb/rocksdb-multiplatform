@@ -1,0 +1,4 @@
+modules:
+  - build-plugins/rocksdb-prebuilts
+plugins:
+  - ./build-plugins/rocksdb-prebuilts

@@ -1,0 +1,6 @@
+#!/bin/sh
+# Also read by the Toolchain project model; keep in sync with scripts/toolchain/kotlin.
+kotlin_cli_version=0.12.2
+kotlin_cli_sha256=9fec42de4f378a27240b78c1b66ffef0c2aca66a4a6390ca67fe51aacb75677e
+# Project launcher; the unmodified, checksum-pinned JetBrains wrapper is in scripts/toolchain.
+exec python3 "$(dirname "$0")/scripts/kotlin_toolchain.py" "$@"

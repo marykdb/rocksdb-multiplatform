@@ -1,0 +1,188 @@
+tasks:
+  updateRocksdbShas:
+    action: !updateRocksdbShas
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      downloadDir: ${taskOutputDir}/downloads
+      archives:
+        androidNativeArm32: rocksdb-android-arm32.zip
+        androidNativeArm64: rocksdb-android-arm64.zip
+        androidNativeX64: rocksdb-android-x64.zip
+        androidNativeX86: rocksdb-android-x86.zip
+        iosArm64: rocksdb-ios-arm64.zip
+        iosSimulatorArm64: rocksdb-ios-simulator-arm64.zip
+        macosArm64: rocksdb-macos-arm64.zip
+        macosX64: rocksdb-macos-x86_64.zip
+        linuxArm64: rocksdb-linux-arm64.zip
+        linuxX64: rocksdb-linux-x86_64.zip
+        mingwX64: rocksdb-mingw-x86_64.zip
+        tvosArm64: rocksdb-tvos-arm64.zip
+        tvosSimulatorArm64: rocksdb-tvos-simulator-arm64.zip
+        watchosArm64: rocksdb-watchos-arm64.zip
+        watchosDeviceArm64: rocksdb-watchos-device-arm64.zip
+        watchosSimulatorArm64: rocksdb-watchos-simulator-arm64.zip
+  androidNativeArm32:
+    action: !provisionRocksdb
+      target: androidNativeArm32
+      archiveName: rocksdb-android-arm32.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+  androidNativeArm64:
+    action: !provisionRocksdb
+      target: androidNativeArm64
+      archiveName: rocksdb-android-arm64.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+  androidNativeX64:
+    action: !provisionRocksdb
+      target: androidNativeX64
+      archiveName: rocksdb-android-x64.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+  androidNativeX86:
+    action: !provisionRocksdb
+      target: androidNativeX86
+      archiveName: rocksdb-android-x86.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+  iosArm64:
+    action: !provisionRocksdb
+      target: iosArm64
+      archiveName: rocksdb-ios-arm64.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+  iosSimulatorArm64:
+    action: !provisionRocksdb
+      target: iosSimulatorArm64
+      archiveName: rocksdb-ios-simulator-arm64.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+  macosArm64:
+    action: !provisionRocksdb
+      target: macosArm64
+      archiveName: rocksdb-macos-arm64.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+  macosX64:
+    action: !provisionRocksdb
+      target: macosX64
+      archiveName: rocksdb-macos-x86_64.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+  linuxArm64:
+    action: !provisionRocksdb
+      target: linuxArm64
+      archiveName: rocksdb-linux-arm64.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+  linuxX64:
+    action: !provisionRocksdb
+      target: linuxX64
+      archiveName: rocksdb-linux-x86_64.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+  mingwX64:
+    action: !provisionRocksdb
+      target: mingwX64
+      archiveName: rocksdb-mingw-x86_64.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+  tvosArm64:
+    action: !provisionRocksdb
+      target: tvosArm64
+      archiveName: rocksdb-tvos-arm64.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+  tvosSimulatorArm64:
+    action: !provisionRocksdb
+      target: tvosSimulatorArm64
+      archiveName: rocksdb-tvos-simulator-arm64.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+  watchosArm64:
+    action: !provisionRocksdb
+      target: watchosArm64
+      archiveName: rocksdb-watchos-arm64.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+  watchosDeviceArm64:
+    action: !provisionRocksdb
+      target: watchosDeviceArm64
+      archiveName: rocksdb-watchos-device-arm64.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+  watchosSimulatorArm64:
+    action: !provisionRocksdb
+      target: watchosSimulatorArm64
+      archiveName: rocksdb-watchos-simulator-arm64.zip
+      propertiesFile: ${module.rootDir}/rocksdb-prebuilts.properties
+      interopDir: ${module.rootDir}/native-interop
+      outputDir: ${taskOutputDir}/bundle
+      defFile: ${taskOutputDir}/rocksdb.def
+
+generated:
+  cinteropDefinitions:
+    - defFile: ${tasks.androidNativeArm32.action.defFile}
+      fragment: "@androidNativeArm32"
+    - defFile: ${tasks.androidNativeArm64.action.defFile}
+      fragment: "@androidNativeArm64"
+    - defFile: ${tasks.androidNativeX64.action.defFile}
+      fragment: "@androidNativeX64"
+    - defFile: ${tasks.androidNativeX86.action.defFile}
+      fragment: "@androidNativeX86"
+    - defFile: ${tasks.iosArm64.action.defFile}
+      fragment: "@iosArm64"
+    - defFile: ${tasks.iosSimulatorArm64.action.defFile}
+      fragment: "@iosSimulatorArm64"
+    - defFile: ${tasks.macosArm64.action.defFile}
+      fragment: "@macosArm64"
+    - defFile: ${tasks.macosX64.action.defFile}
+      fragment: "@macosX64"
+    - defFile: ${tasks.linuxArm64.action.defFile}
+      fragment: "@linuxArm64"
+    - defFile: ${tasks.linuxX64.action.defFile}
+      fragment: "@linuxX64"
+    - defFile: ${tasks.mingwX64.action.defFile}
+      fragment: "@mingwX64"
+    - defFile: ${tasks.tvosArm64.action.defFile}
+      fragment: "@tvosArm64"
+    - defFile: ${tasks.tvosSimulatorArm64.action.defFile}
+      fragment: "@tvosSimulatorArm64"
+    - defFile: ${tasks.watchosArm64.action.defFile}
+      fragment: "@watchosArm64"
+    - defFile: ${tasks.watchosDeviceArm64.action.defFile}
+      fragment: "@watchosDeviceArm64"
+    - defFile: ${tasks.watchosSimulatorArm64.action.defFile}
+      fragment: "@watchosSimulatorArm64"
+
+commands:
+  - updateRocksdbShas
