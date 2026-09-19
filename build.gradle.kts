@@ -11,6 +11,7 @@ import java.util.Locale
 import java.util.Properties
 import java.util.zip.ZipFile
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
+import com.vanniktech.maven.publish.Checksum
 import kotlin.text.Charsets
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -613,6 +614,8 @@ extensions.configure<KotlinMultiplatformExtension> {
 
 extensions.configure<MavenPublishBaseExtension> {
     publishToMavenCentral()
+    checksums(Checksum.MD5, Checksum.SHA1)
+    excludeSignatureChecksums()
     val isPublishingToMavenLocal = gradle.startParameter.taskNames.any { taskName ->
         taskName.substringAfterLast(':').equals("publishToMavenLocal", ignoreCase = true)
     }
