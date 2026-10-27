@@ -657,6 +657,6 @@ extensions.configure<MavenPublishBaseExtension> {
 
 tasks {
     "wrapper"(Wrapper::class) {
-        distributionType = Wrapper.DistributionType.ALL
+        distributionType = Wrapper.DistributionType.BIN
     }
 }
