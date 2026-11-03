@@ -20,13 +20,13 @@ class DatabasePathsTest {
                 openRocksDB(options, database).use { db ->
                     db.put(byteArrayOf(1), byteArrayOf(2))
                     FlushOptions().setWaitForFlush(true).use { db.flush(it) }
-                    assertEquals(defaultFiles.trimEnd('/'), db.getLiveFilesMetaData().single().path().trimEnd('/'))
+                    assertEquals(directoryPath(defaultFiles), directoryPath(db.getLiveFilesMetaData().single().path()))
                     ColumnFamilyOptions().configureCfPaths(listOf(DatabasePath(otherFiles, 1024 * 1024L))).use { cf ->
                         db.createColumnFamily(ColumnFamilyDescriptor("other".encodeToByteArray(), cf)).use { handle ->
                             db.put(handle, byteArrayOf(3), byteArrayOf(4))
                             FlushOptions().setWaitForFlush(true).use { db.flush(it, handle) }
                             val metadata = db.getLiveFilesMetaData().single { it.columnFamilyName().decodeToString() == "other" }
-                            assertEquals(otherFiles.trimEnd('/'), metadata.path().trimEnd('/'))
+                            assertEquals(directoryPath(otherFiles), directoryPath(metadata.path()))
                             assertContentEquals(byteArrayOf(4), db.get(handle, byteArrayOf(3)))
                         }
                     }
@@ -44,3 +44,6 @@ class DatabasePathsTest {
         assertFailsWith<IllegalArgumentException> { DatabasePath("data", -1) }
     }
 }
+
+// Java Path normalizes separators on Windows; both forms identify the same directory.
+private fun directoryPath(path: String): String = path.replace('\\', '/').trimEnd('/')

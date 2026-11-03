@@ -71,10 +71,10 @@ expect interface MutableColumnFamilyOptionsInterface<T : MutableColumnFamilyOpti
     fun softPendingCompactionBytesLimit(): Long
     fun setHardPendingCompactionBytesLimit(value: Long): T
     fun hardPendingCompactionBytesLimit(): Long
-    /** SST compaction age in seconds; -2 selects the engine default, 0 disables the trigger. */
+    /** SST compaction age in seconds; use a concrete nonnegative duration for live updates. Zero disables the trigger. */
     fun setTtl(value: Long): T
     fun ttl(): Long
-    /** Periodic-compaction age in seconds; -2 selects the engine default, 0 disables the trigger. */
+    /** Periodic-compaction age in seconds; use a concrete nonnegative duration for live updates. Zero disables the trigger. */
     fun setPeriodicCompactionSeconds(value: Long): T
     fun periodicCompactionSeconds(): Long
     fun setReportBgIoStats(value: Boolean): T
