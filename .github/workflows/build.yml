@@ -18,7 +18,7 @@ jobs:
         include:
           - os: macos-latest
             display-name: macOS Arm & Simulators
-            gradle-tasks: macosArm64Test iosSimulatorArm64Test tvosSimulatorArm64Test watchosSimulatorArm64Test
+            gradle-tasks: allMetadataJar macosArm64Test iosSimulatorArm64Test tvosSimulatorArm64Test watchosSimulatorArm64Test
           - os: macos-latest
             display-name: Apple Device Link Checks
             gradle-tasks: linkDebugTestIosArm64 linkDebugTestTvosArm64 linkDebugTestWatchosArm64 linkDebugTestWatchosDeviceArm64
