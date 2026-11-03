@@ -283,6 +283,13 @@ internal constructor(
     private val borrowedSnapshots = mutableSetOf<Snapshot>()
     private val lifecycleGuard = NativeLifecycleGuard()
     private val columnFamilyHandles = mutableSetOf<ColumnFamilyHandle>()
+    actual fun setDBOptions(options: MutableDBOptions) = applyMutableDBOptions(options)
+
+    actual fun setOptions(options: MutableColumnFamilyOptions) = applyMutableColumnFamilyOptions(null, options)
+
+    actual fun setOptions(columnFamilyHandle: ColumnFamilyHandle?, options: MutableColumnFamilyOptions) =
+        applyMutableColumnFamilyOptions(columnFamilyHandle, options)
+
     private var perfLevel: PerfLevel = PerfLevel.UNINITIALIZED
     internal var fileTraceSession: TraceSession? = null
 

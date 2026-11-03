@@ -10,6 +10,25 @@ expect val rocksDBNotFound: Int
  * indicates something wrong at the RocksDB library side and the call failed.
  */
 expect open class RocksDB : RocksObject {
+    /** Apply only the explicitly configured mutable DB options without reopening this DB.
+     * An empty update or an unsupported value is rejected by RocksDB. The caller retains [options].
+     */
+    fun setDBOptions(options: MutableDBOptions)
+
+    /**
+     * Apply explicitly configured mutable options to the default column family.
+     * Runtime compression changes are not supported by RocksDB 11.8.1 JNI's
+     * mutable-enum serialization; configure compression when opening the DB.
+     */
+    fun setOptions(options: MutableColumnFamilyOptions)
+
+    /** Apply explicitly configured mutable options to [columnFamilyHandle], or the default CF when null.
+     * Unspecified options retain their current values. The caller retains [options].
+     * Runtime compression changes are not supported by RocksDB 11.8.1 JNI's
+     * mutable-enum serialization; configure compression when opening the DB.
+     */
+    fun setOptions(columnFamilyHandle: ColumnFamilyHandle?, options: MutableColumnFamilyOptions)
+
     /**
      * This is similar to {@link #close()} except that it
      * throws an exception if any error occurs.

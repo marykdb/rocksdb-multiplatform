@@ -26,7 +26,13 @@ import rocksdb.rocksdb_mutable_cf_options_set_write_buffer_size
 
 actual class MutableColumnFamilyOptions internal constructor(
     internal val native: CPointer<rocksdb_mutable_cf_options_t>,
+    private val explicitValues: Map<String, String>,
 ) : AbstractMutableOptions() {
+    internal fun valuesForApply(): Map<String, String> {
+        checkOpen()
+        return explicitValues
+    }
+
     protected override fun dispose() {
         rocksdb_mutable_cf_options_destroy(native)
     }
@@ -41,14 +47,27 @@ actual fun parseMutableColumnFamilyOptions(
     str: String,
     ignoreUnknown: Boolean,
 ): MutableColumnFamilyOptionsBuilder {
+    require('\u0000' !in str) { "Option strings must not contain NUL" }
     val native = Unit.wrapWithNullErrorThrower { error ->
         rocksdb_mutable_cf_options_create_from_string(str, ignoreUnknown.toUByte(), error)
     } ?: error("Unable to parse mutable column family options")
-    return MutableColumnFamilyOptionsBuilder(native)
+    return try {
+        val values = parsedLiveOptionValues(str, ignoreUnknown) { entry ->
+            val parsed = Unit.wrapWithNullErrorThrower { error ->
+                rocksdb_mutable_cf_options_create_from_string(entry, 0u, error)
+            } ?: error("Unable to parse mutable options entry")
+            rocksdb_mutable_cf_options_destroy(parsed)
+        }
+        MutableColumnFamilyOptionsBuilder(native, values.toMutableMap())
+    } catch (error: Throwable) {
+        rocksdb_mutable_cf_options_destroy(native)
+        throw error
+    }
 }
 
 actual class MutableColumnFamilyOptionsBuilder internal constructor(
     internal val native: CPointer<rocksdb_mutable_cf_options_t>,
+    private val explicitValues: MutableMap<String, String> = linkedMapOf(),
 ) : AbstractMutableOptions(),
     MutableColumnFamilyOptionsInterface<MutableColumnFamilyOptionsBuilder> {
 
@@ -59,6 +78,7 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
     actual override fun setWriteBufferSize(writeBufferSize: Long): MutableColumnFamilyOptionsBuilder {
         checkOpen()
         rocksdb_mutable_cf_options_set_write_buffer_size(native, writeBufferSize.asUInt64())
+        explicitValues["write_buffer_size"] = writeBufferSize.toString()
         return this
     }
 
@@ -73,6 +93,7 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
     ): MutableColumnFamilyOptionsBuilder {
         checkOpen()
         rocksdb_mutable_cf_options_set_disable_auto_compactions(native, disableAutoCompactions.toUByte())
+        explicitValues["disable_auto_compactions"] = disableAutoCompactions.toString()
         return this
     }
 
@@ -86,6 +107,7 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
     ): MutableColumnFamilyOptionsBuilder {
         checkOpen()
         rocksdb_mutable_cf_options_set_level0_file_num_compaction_trigger(native, level0FileNumCompactionTrigger)
+        explicitValues["level0_file_num_compaction_trigger"] = level0FileNumCompactionTrigger.toString()
         return this
     }
 
@@ -97,6 +119,7 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
     actual override fun setMaxCompactionBytes(maxCompactionBytes: Long): MutableColumnFamilyOptionsBuilder {
         checkOpen()
         rocksdb_mutable_cf_options_set_max_compaction_bytes(native, maxCompactionBytes.asUInt64())
+        explicitValues["max_compaction_bytes"] = maxCompactionBytes.toString()
         return this
     }
 
@@ -109,6 +132,7 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
     actual override fun setMaxBytesForLevelBase(maxBytesForLevelBase: Long): MutableColumnFamilyOptionsBuilder {
         checkOpen()
         rocksdb_mutable_cf_options_set_max_bytes_for_level_base(native, maxBytesForLevelBase.asUInt64())
+        explicitValues["max_bytes_for_level_base"] = maxBytesForLevelBase.toString()
         return this
     }
 
@@ -123,6 +147,7 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
     ): MutableColumnFamilyOptionsBuilder {
         checkOpen()
         rocksdb_mutable_cf_options_set_compression(native, compressionType.value.toInt())
+        explicitValues["compression"] = compressionOptionValue(compressionType)
         return this
     }
 
@@ -135,6 +160,6 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
         checkOpen()
         val copy = rocksdb_mutable_cf_options_clone(native)
             ?: error("Unable to clone mutable column family options")
-        return MutableColumnFamilyOptions(copy)
+        return MutableColumnFamilyOptions(copy, explicitValues.toMap())
     }
 }
