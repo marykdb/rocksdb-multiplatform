@@ -488,6 +488,8 @@ extensions.configure<KotlinMultiplatformExtension> {
             }
         }
         maybeCreate("androidMain").apply {
+            // JVM and Android share the Java/JNI implementation.
+            kotlin.srcDir("src/jvmMain/kotlin")
             dependencies {
                 api("io.maryk.rocksdb:rocksdb-android:$rocksDBAndroidVersion")
             }
