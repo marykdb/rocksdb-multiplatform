@@ -33,7 +33,7 @@ jobs:
             gradle-tasks: linkDebugTestLinuxArm64
           - os: ubuntu-latest
             display-name: Android Host & Native Link Checks
-            gradle-tasks: linkDebugTestAndroidNativeArm32 linkDebugTestAndroidNativeArm64 linkDebugTestAndroidNativeX64 linkDebugTestAndroidNativeX86
+            gradle-tasks: testAndroidHostTest assembleAndroidMain linkDebugTestAndroidNativeArm32 linkDebugTestAndroidNativeArm64 linkDebugTestAndroidNativeX64 linkDebugTestAndroidNativeX86
           - os: windows-latest
             display-name: Windows targets
             gradle-tasks: mingwX64Test
@@ -47,7 +47,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21

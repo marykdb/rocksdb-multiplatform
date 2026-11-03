@@ -37,8 +37,8 @@ import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 import org.jetbrains.kotlin.konan.target.Family
 
 plugins {
-    id("org.jetbrains.kotlin.multiplatform") version "2.4.20"
-    id("com.android.kotlin.multiplatform.library") version "9.3.2"
+    id("org.jetbrains.kotlin.multiplatform") version "2.4.21"
+    id("com.android.kotlin.multiplatform.library") version "9.5.0"
     id("com.vanniktech.maven.publish") version "0.37.0"
 }
 
@@ -48,12 +48,12 @@ repositories {
 }
 
 group = "io.maryk.rocksdb"
-version = "10.10.1.5-SNAPSHOT"
+version = "11.8.1-SNAPSHOT"
 
-val rocksDBJVMVersion = "10.10.1.1"
-val rocksDBAndroidVersion = "10.10.1"
+val rocksDBJVMVersion = "11.8.1"
+val rocksDBAndroidVersion = "11.8.1"
 
-val kotlinVersion = "2.4.20"
+val kotlinVersion = "2.4.21"
 val kotlinXAtomicfuVersion = "0.33.0"
 val kotlinXDateTimeVersion = "0.8.0"
 val kotlinXCoroutinesVersion = "1.11.0"

@@ -49,6 +49,11 @@ class StatisticsTest {
                         db.get(key)
                     }
 
+                    // C++ statistics IDs can shift between RocksDB releases.
+                    assertEquals(1L, statistics.getTickerCount(TickerType.NUMBER_KEYS_WRITTEN))
+                    assertEquals(10L, statistics.getTickerCount(TickerType.NUMBER_KEYS_READ))
+                    assertEquals(10L * value.size, statistics.getTickerCount(TickerType.BYTES_READ))
+
                     assertTrue(
                         statistics.getTickerCount(TickerType.BYTES_READ) > 0,
                         "Ticker count should increase after reads"

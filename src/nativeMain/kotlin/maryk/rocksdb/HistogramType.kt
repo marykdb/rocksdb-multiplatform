@@ -2,6 +2,7 @@
 
 package maryk.rocksdb
 
+// Values match the C++ Histograms enum in RocksDB 11.8.1 statistics.h.
 actual enum class HistogramType(
     internal val value: UInt
 ) {
@@ -64,8 +65,8 @@ actual enum class HistogramType(
     ERROR_HANDLER_AUTORESUME_RETRY_COUNT(0x38u),
     ASYNC_READ_BYTES(0x39u),
     POLL_WAIT_MICROS(0x3Au),
-    PREFETCHED_BYTES_DISCARDED(0x3Bu),
-    ASYNC_PREFETCH_ABORT_MICROS(0x3Cu),
-    TABLE_OPEN_PREFETCH_TAIL_READ_BYTES(0x3Du),
-    HISTOGRAM_ENUM_MAX(0x3Eu);
+    PREFETCHED_BYTES_DISCARDED(0x3Cu),
+    ASYNC_PREFETCH_ABORT_MICROS(0x3Du),
+    TABLE_OPEN_PREFETCH_TAIL_READ_BYTES(0x3Eu),
+    HISTOGRAM_ENUM_MAX(0x50u);
 }
