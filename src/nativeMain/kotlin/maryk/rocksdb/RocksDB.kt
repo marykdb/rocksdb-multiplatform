@@ -290,6 +290,73 @@ internal constructor(
     actual fun setOptions(columnFamilyHandle: ColumnFamilyHandle?, options: MutableColumnFamilyOptions) =
         applyMutableColumnFamilyOptions(columnFamilyHandle, options)
 
+    actual fun keyExists(key: ByteArray): Boolean = exactKeyExists(null, defaultReadOptions, key, 0, key.size)
+    actual fun keyExists(key: ByteArray, offset: Int, len: Int): Boolean = exactKeyExists(null, defaultReadOptions, key, offset, len)
+    actual fun keyExists(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray): Boolean =
+        exactKeyExists(columnFamilyHandle, defaultReadOptions, key, 0, key.size)
+    actual fun keyExists(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, offset: Int, len: Int): Boolean =
+        exactKeyExists(columnFamilyHandle, defaultReadOptions, key, offset, len)
+    actual fun keyExists(readOptions: ReadOptions, key: ByteArray): Boolean = exactKeyExists(null, readOptions, key, 0, key.size)
+    actual fun keyExists(readOptions: ReadOptions, key: ByteArray, offset: Int, len: Int): Boolean =
+        exactKeyExists(null, readOptions, key, offset, len)
+    actual fun keyExists(columnFamilyHandle: ColumnFamilyHandle, readOptions: ReadOptions, key: ByteArray): Boolean =
+        exactKeyExists(columnFamilyHandle, readOptions, key, 0, key.size)
+    actual fun keyExists(columnFamilyHandle: ColumnFamilyHandle, readOptions: ReadOptions, key: ByteArray, offset: Int, len: Int): Boolean =
+        exactKeyExists(columnFamilyHandle, readOptions, key, offset, len)
+
+    private fun exactKeyExists(
+        columnFamilyHandle: ColumnFamilyHandle?, readOptions: ReadOptions,
+        key: ByteArray, offset: Int, len: Int,
+    ): Boolean = withLifecycleLock {
+        checkOpenForRead(readOptions)
+        columnFamilyHandle?.checkOwningHandle()
+        memScoped {
+            // Read into a native pinnable slice to avoid copying a potentially large value to Kotlin.
+            val bytes = byteArrayToCPointer(key, offset, len)
+            wrapWithNullErrorThrower { error ->
+                val pinned = if (columnFamilyHandle == null) {
+                    rocksdb_get_pinned(native, readOptions.native, bytes, len.asSizeT(), error)
+                } else {
+                    rocksdb_get_pinned_cf(native, readOptions.native, columnFamilyHandle.native, bytes, len.asSizeT(), error)
+                }
+                pinned?.let {
+                    rocksdb_pinnableslice_destroy(it)
+                    true
+                }
+            } ?: false
+        }
+    }
+
+    actual fun singleDelete(key: ByteArray) = singleDelete(defaultWriteOptions, key)
+    actual fun singleDelete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray) =
+        singleDelete(columnFamilyHandle, defaultWriteOptions, key)
+    actual fun singleDelete(writeOpt: WriteOptions, key: ByteArray) = withLifecycleLock {
+        checkOpenForWrite(writeOpt)
+        wrapWithErrorThrower { error ->
+            key.usePointer { pointer ->
+                rocksdb.rocksdb_singledelete(native, writeOpt.native, pointer, key.size.asSizeT(), error)
+            }
+        }
+    }
+    actual fun singleDelete(columnFamilyHandle: ColumnFamilyHandle, writeOpt: WriteOptions, key: ByteArray) = withLifecycleLock {
+        checkOpenForWrite(writeOpt)
+        checkOpenColumnFamily(columnFamilyHandle)
+        wrapWithErrorThrower { error ->
+            key.usePointer { pointer ->
+                rocksdb.rocksdb_singledelete_cf(native, writeOpt.native, columnFamilyHandle.native, pointer, key.size.asSizeT(), error)
+            }
+        }
+    }
+
+    actual fun abortAllCompactions() = withLifecycleLock {
+        checkOwningHandle()
+        rocksdb.rocksdb_abort_all_compactions(native)
+    }
+    actual fun resumeAllCompactions() = withLifecycleLock {
+        checkOwningHandle()
+        rocksdb.rocksdb_resume_all_compactions(native)
+    }
+
     private var perfLevel: PerfLevel = PerfLevel.UNINITIALIZED
     internal var fileTraceSession: TraceSession? = null
 
@@ -2020,6 +2087,13 @@ internal constructor(
                             size = rocksdb_livefiles_size(liveFiles, index).convert(),
                             smallestKey = smallestKey,
                             largestKey = largestKey,
+                            smallestSeqno = rocksdb.rocksdb_livefiles_smallest_seqno(liveFiles, index),
+                            largestSeqno = rocksdb.rocksdb_livefiles_largest_seqno(liveFiles, index),
+                            numReadsSampled = rocksdb.rocksdb_livefiles_num_reads_sampled(liveFiles, index),
+                            beingCompacted = rocksdb.rocksdb_livefiles_being_compacted(liveFiles, index).toBoolean(),
+                            numEntries = rocksdb.rocksdb_livefiles_entries(liveFiles, index),
+                            numDeletions = rocksdb.rocksdb_livefiles_deletions(liveFiles, index),
+                            fileChecksum = copiedChecksum { length -> rocksdb.rocksdb_livefiles_file_checksum(liveFiles, index, length) },
                         )
                     )
                 }
@@ -2166,6 +2240,13 @@ internal constructor(
                                                     size = rocksdb_sst_file_metadata_get_size(sstMetaData),
                                                     smallestKey = smallestKeyBytes,
                                                     largestKey = largestKeyBytes,
+                                                    smallestSeqno = rocksdb.rocksdb_sst_file_metadata_get_smallest_seqno(sstMetaData),
+                                                    largestSeqno = rocksdb.rocksdb_sst_file_metadata_get_largest_seqno(sstMetaData),
+                                                    numReadsSampled = rocksdb.rocksdb_sst_file_metadata_get_num_reads_sampled(sstMetaData),
+                                                    beingCompacted = rocksdb.rocksdb_sst_file_metadata_get_being_compacted(sstMetaData).toBoolean(),
+                                                    numEntries = rocksdb.rocksdb_sst_file_metadata_get_num_entries(sstMetaData),
+                                                    numDeletions = rocksdb.rocksdb_sst_file_metadata_get_num_deletions(sstMetaData),
+                                                    fileChecksum = copiedChecksum { length -> rocksdb.rocksdb_sst_file_metadata_get_file_checksum(sstMetaData, length) },
                                                 )
                                             )
                                         } finally {
@@ -2405,4 +2486,12 @@ actual fun listColumnFamilies(
             }
         }
     }
+}
+
+private inline fun copiedChecksum(read: (CPointer<size_tVar>) -> CPointer<ByteVar>?): ByteArray = memScoped {
+    val length = alloc<size_tVar>()
+    length.value = 0.asSizeT()
+    val bytes = read(length.ptr)
+    if (length.value == 0.asSizeT()) byteArrayOf()
+    else requireNotNull(bytes) { "RocksDB returned a null checksum" }.toByteArray(length.value)
 }

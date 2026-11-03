@@ -12,6 +12,9 @@ expect class SstFileManager(env: Env): AutoCloseable {
 
     fun isMaxAllowedSpaceReachedIncludingCompactions(): Boolean
 
+    /** Independent snapshot of tracked absolute file paths and sizes in bytes. */
+    fun getTrackedFiles(): Map<String, Long>
+
     fun getTotalSize(): Long
 
     fun getDeleteRateBytesPerSecond(): Long

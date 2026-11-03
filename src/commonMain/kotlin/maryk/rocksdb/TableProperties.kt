@@ -6,6 +6,10 @@ package maryk.rocksdb
 expect class TableProperties {
     fun dataSize(): Long
     fun indexSize(): Long
+    fun indexPartitions(): Long
+    fun topLevelIndexSize(): Long
+    fun indexKeyIsUserKey(): Long
+    fun indexValueIsDeltaEncoded(): Long
     fun filterSize(): Long
     fun rawKeySize(): Long
     fun rawValueSize(): Long
@@ -29,4 +33,7 @@ expect class TableProperties {
     fun prefixExtractorName(): String?
     fun propertyCollectorsNames(): String?
     fun compressionName(): String?
+    /** Copied Java-compatible string properties; binary values are not a lossless byte API. */
+    fun userCollectedProperties(): Map<String, String>
+    fun readableProperties(): Map<String, String>
 }

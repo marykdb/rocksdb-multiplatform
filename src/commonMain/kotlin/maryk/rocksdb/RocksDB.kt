@@ -29,6 +29,31 @@ expect open class RocksDB : RocksObject {
      */
     fun setOptions(columnFamilyHandle: ColumnFamilyHandle?, options: MutableColumnFamilyOptions)
 
+    /** Exact existence check. Read failures propagate; unlike [keyMayExist], true is definitive. */
+    fun keyExists(key: ByteArray): Boolean
+    fun keyExists(key: ByteArray, offset: Int, len: Int): Boolean
+    fun keyExists(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray): Boolean
+    fun keyExists(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray, offset: Int, len: Int): Boolean
+    fun keyExists(readOptions: ReadOptions, key: ByteArray): Boolean
+    fun keyExists(readOptions: ReadOptions, key: ByteArray, offset: Int, len: Int): Boolean
+    fun keyExists(columnFamilyHandle: ColumnFamilyHandle, readOptions: ReadOptions, key: ByteArray): Boolean
+    fun keyExists(columnFamilyHandle: ColumnFamilyHandle, readOptions: ReadOptions, key: ByteArray, offset: Int, len: Int): Boolean
+
+    /**
+     * Remove a key which has been written exactly once since its previous deletion.
+     * Do not mix with Merge or overwrite the key before SingleDelete; violating this
+     * RocksDB contract can leave incorrect data after compaction. Use delete otherwise.
+     */
+    fun singleDelete(key: ByteArray)
+    fun singleDelete(columnFamilyHandle: ColumnFamilyHandle, key: ByteArray)
+    fun singleDelete(writeOpt: WriteOptions, key: ByteArray)
+    fun singleDelete(columnFamilyHandle: ColumnFamilyHandle, writeOpt: WriteOptions, key: ByteArray)
+
+    /** Abort running/pending compactions and suspend new scheduling until [resumeAllCompactions].
+     * Calls nest; resume must be called the same number of times. */
+    fun abortAllCompactions()
+    fun resumeAllCompactions()
+
     /**
      * This is similar to {@link #close()} except that it
      * throws an exception if any error occurs.

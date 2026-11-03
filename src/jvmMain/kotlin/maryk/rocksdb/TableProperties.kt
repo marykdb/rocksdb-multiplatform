@@ -3,8 +3,18 @@ package maryk.rocksdb
 actual class TableProperties internal constructor(
     internal val delegate: org.rocksdb.TableProperties
 ) {
+    private val userProperties = delegate.userCollectedProperties.toMap()
+    private val readablePropertiesValue = delegate.readableProperties.toMap()
+
+    actual fun userCollectedProperties(): Map<String, String> = userProperties.toMap()
+    actual fun readableProperties(): Map<String, String> = readablePropertiesValue.toMap()
+
     actual fun dataSize(): Long = delegate.dataSize
     actual fun indexSize(): Long = delegate.indexSize
+    actual fun indexPartitions(): Long = delegate.indexPartitions
+    actual fun topLevelIndexSize(): Long = delegate.topLevelIndexSize
+    actual fun indexKeyIsUserKey(): Long = delegate.indexKeyIsUserKey
+    actual fun indexValueIsDeltaEncoded(): Long = delegate.indexValueIsDeltaEncoded
     actual fun filterSize(): Long = delegate.filterSize
     actual fun rawKeySize(): Long = delegate.rawKeySize
     actual fun rawValueSize(): Long = delegate.rawValueSize

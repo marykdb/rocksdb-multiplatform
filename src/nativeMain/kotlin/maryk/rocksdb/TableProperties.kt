@@ -11,6 +11,7 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
 import maryk.asSizeT
+import maryk.sizeTToLong
 import maryk.toByteArray
 import maryk.toCheckedLong
 import platform.posix.size_t
@@ -43,6 +44,10 @@ import rocksdb.rocksdb_tableproperties_slow_compression_estimated_data_size
 actual class TableProperties internal constructor(
     private val dataSizeValue: Long,
     private val indexSizeValue: Long,
+    private val indexPartitionsValue: Long,
+    private val topLevelIndexSizeValue: Long,
+    private val indexKeyIsUserKeyValue: Long,
+    private val indexValueIsDeltaEncodedValue: Long,
     private val filterSizeValue: Long,
     private val rawKeySizeValue: Long,
     private val rawValueSizeValue: Long,
@@ -65,8 +70,16 @@ actual class TableProperties internal constructor(
     private val prefixExtractorNameValue: String?,
     private val propertyCollectorsNamesValue: String?,
     private val compressionNameValue: String?,
+    private val userPropertiesValue: Map<String, String>,
+    private val readablePropertiesValue: Map<String, String>,
 ) {
     internal constructor(native: CPointer<rocksdb_tableproperties_t>) : this(
+        indexPartitionsValue = rocksdb.rocksdb_tableproperties_get_index_partitions(native).toCheckedLong("table properties indexPartitions"),
+        topLevelIndexSizeValue = rocksdb.rocksdb_tableproperties_get_top_level_index_size(native).toCheckedLong("table properties topLevelIndexSize"),
+        indexKeyIsUserKeyValue = rocksdb.rocksdb_tableproperties_get_index_key_is_user_key(native).toLong(),
+        indexValueIsDeltaEncodedValue = rocksdb.rocksdb_tableproperties_get_index_value_is_delta_encoded(native).toLong(),
+        userPropertiesValue = copyTablePropertyMap(native, false),
+        readablePropertiesValue = copyTablePropertyMap(native, true),
         dataSizeValue = rocksdb_tableproperties_data_size(native).toCheckedLong("table properties data size"),
         indexSizeValue = rocksdb_tableproperties_index_size(native).toCheckedLong("table properties index size"),
         filterSizeValue = rocksdb_tableproperties_filter_size(native).toCheckedLong("table properties filter size"),
@@ -146,6 +159,10 @@ actual class TableProperties internal constructor(
 
     actual fun dataSize(): Long = dataSizeValue
     actual fun indexSize(): Long = indexSizeValue
+    actual fun indexPartitions(): Long = indexPartitionsValue
+    actual fun topLevelIndexSize(): Long = topLevelIndexSizeValue
+    actual fun indexKeyIsUserKey(): Long = indexKeyIsUserKeyValue
+    actual fun indexValueIsDeltaEncoded(): Long = indexValueIsDeltaEncodedValue
     actual fun filterSize(): Long = filterSizeValue
     actual fun rawKeySize(): Long = rawKeySizeValue
     actual fun rawValueSize(): Long = rawValueSizeValue
@@ -171,6 +188,8 @@ actual class TableProperties internal constructor(
     actual fun prefixExtractorName(): String? = prefixExtractorNameValue
     actual fun propertyCollectorsNames(): String? = propertyCollectorsNamesValue
     actual fun compressionName(): String? = compressionNameValue
+    actual fun userCollectedProperties(): Map<String, String> = userPropertiesValue.toMap()
+    actual fun readableProperties(): Map<String, String> = readablePropertiesValue.toMap()
 }
 
 private fun decodeOptionalTablePropertyString(
@@ -185,4 +204,27 @@ private fun decodeOptionalTablePropertyString(
         return null
     }
     return value.toByteArray(length).decodeToString()
+}
+
+private fun copyTablePropertyMap(native: CPointer<rocksdb_tableproperties_t>, readable: Boolean): Map<String, String> {
+    val kind: UByte = if (readable) 1u else 0u
+    val count = sizeTToLong(rocksdb.rocksdb_tableproperties_property_count(native, kind), "table property count")
+    require(count <= Int.MAX_VALUE) { "Too many table properties: $count" }
+    return memScoped {
+        val length = alloc<size_tVar>()
+        buildMap {
+            repeat(count.toInt()) { index ->
+                val key = decodeOptionalTablePropertyString(
+                    rocksdb.rocksdb_tableproperties_property_key(native, kind, index.asSizeT(), length.ptr),
+                    length.value, "property key",
+                ) ?: error("RocksDB returned a null property key")
+                val value = decodeOptionalTablePropertyString(
+                    rocksdb.rocksdb_tableproperties_property_value(native, kind, index.asSizeT(), length.ptr),
+                    length.value, "property value",
+                ) ?: ""
+                // JNI exposes these as NewStringUTF views, which terminate at a raw NUL.
+                put(key.substringBefore('\u0000'), value.substringBefore('\u0000'))
+            }
+        }
+    }
 }

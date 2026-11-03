@@ -1,6 +1,7 @@
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_compactionjobinfo_t
+import cnames.structs.rocksdb_event_info_t
 import cnames.structs.rocksdb_eventlistener_t
 import cnames.structs.rocksdb_externalfileingestioninfo_t
 import cnames.structs.rocksdb_flushjobinfo_t
@@ -11,11 +12,19 @@ import cnames.structs.rocksdb_writestallinfo_t
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.value
 import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.asStableRef
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toKString
 import maryk.convertToStatus
+import maryk.toByteArray
+import maryk.toCheckedLong
+import platform.posix.size_t
+import platform.posix.size_tVar
 import rocksdb.rocksdb_eventlistener_create
 import rocksdb.rocksdb_eventlistener_destroy
 
@@ -39,6 +48,11 @@ actual abstract class EventListener : RocksCallbackObject() {
                 staticCFunction(::eventListenerOnStallConditionsChanged),
                 staticCFunction(::eventListenerOnMemTableSealed)
             ) ?: error("Failed to allocate RocksDB event listener")
+            rocksdb.rocksdb_eventlistener_set_extended_callbacks(
+                native, staticCFunction(::eventListenerOnExtendedEvent),
+                staticCFunction(::eventListenerShouldNotifyFileIO),
+                staticCFunction(::eventListenerOnRecoveryBegin),
+            )
         } catch (throwable: Throwable) {
             stableRef.dispose()
             throw throwable
@@ -60,6 +74,24 @@ actual abstract class EventListener : RocksCallbackObject() {
     actual open fun onStallConditionsChanged(info: WriteStallInfo) {}
 
     actual open fun onMemTableSealed(info: MemTableInfo) {}
+
+    actual open fun onTableFileCreationStartedEvent(info: TableFileCreationBriefInfo) {}
+    actual open fun onTableFileCreatedEvent(info: TableFileCreationInfo) {}
+    actual open fun onTableFileDeletedEvent(info: TableFileDeletionInfo) {}
+    actual open fun onColumnFamilyHandleDeletionStartedEvent() {}
+    actual open fun onFileReadFinishEvent(info: FileOperationInfo) {}
+    actual open fun onFileWriteFinishEvent(info: FileOperationInfo) {}
+    actual open fun onFileFlushFinishEvent(info: FileOperationInfo) {}
+    actual open fun onFileSyncFinishEvent(info: FileOperationInfo) {}
+    actual open fun onFileRangeSyncFinishEvent(info: FileOperationInfo) {}
+    actual open fun onFileTruncateFinishEvent(info: FileOperationInfo) {}
+    actual open fun onFileCloseFinishEvent(info: FileOperationInfo) {}
+    actual open fun onErrorRecoveryCompletedEvent(oldBackgroundError: Status) {}
+
+    actual open fun shouldBeNotifiedOnFileIO(): Boolean = false
+
+    actual open fun onErrorRecoveryBeginEvent(reason: BackgroundErrorReason, backgroundError: Status): Boolean = true
+
 
     override fun close() {
         if (tryClose()) {
@@ -219,4 +251,84 @@ private fun wrapDb(native: CPointer<rocksdb_t>): RocksDB {
     val db = RocksDB(native)
     db.disownHandle()
     return db
+}
+
+private fun eventListenerShouldNotifyFileIO(state: COpaquePointer?): UByte = try {
+    if (state?.asStableRef<EventListener>()?.get()?.shouldBeNotifiedOnFileIO() == true) 1u else 0u
+} catch (_: Throwable) { 0u }
+
+private fun eventListenerOnRecoveryBegin(
+    state: COpaquePointer?, reason: UInt, status: CPointer<ByteVar>?, length: size_t,
+): UByte = try {
+    // Java 11.8.1 has only the first four reasons. Do not relabel newer engine reasons.
+    if (reason > 3u) {
+        1u
+    } else {
+        val listener = state?.asStableRef<EventListener>()?.get()
+        val error = copyEventStatus(status?.toByteArray(length)?.decodeToString() ?: "")
+        if (listener == null || listener.onErrorRecoveryBeginEvent(backgroundErrorReasonFromValue(reason), error)) 1u else 0u
+    }
+} catch (_: Throwable) { 1u }
+
+private fun copyEventStatus(text: String): Status =
+    convertToStatus(text) ?: Status(StatusCode.Undefined, StatusSubCode.None, text)
+
+private fun eventInfoBytes(info: CPointer<rocksdb_event_info_t>, field: UInt): ByteArray = memScoped {
+    val length = alloc<size_tVar>()
+    rocksdb.rocksdb_event_info_string(info, field, length.ptr)?.toByteArray(length.value) ?: ByteArray(0)
+}
+
+private fun eventInfoString(info: CPointer<rocksdb_event_info_t>, field: UInt): String =
+    eventInfoBytes(info, field).decodeToString()
+
+private fun eventInfoNumber(info: CPointer<rocksdb_event_info_t>, field: UInt): Long =
+    rocksdb.rocksdb_event_info_number(info, field).toCheckedLong("event metadata number")
+
+private fun eventCreationReason(info: CPointer<rocksdb_event_info_t>): TableFileCreationReason =
+    TableFileCreationReason.entries.getOrElse(eventInfoNumber(info, 1u).toInt()) { TableFileCreationReason.MISC }
+
+private fun eventListenerOnExtendedEvent(
+    state: COpaquePointer?, kind: UByte, info: CPointer<rocksdb_event_info_t>?,
+) {
+    try {
+        val listener = state?.asStableRef<EventListener>()?.get() ?: return
+        if (info == null) return
+        when (kind.toInt()) {
+            0 -> listener.onTableFileCreationStartedEvent(TableFileCreationBriefInfo(
+                eventInfoString(info, 0u), eventInfoString(info, 1u), eventInfoString(info, 2u),
+                rocksdb.rocksdb_event_info_number(info, 0u).toInt(), eventCreationReason(info),
+            ))
+            1 -> listener.onTableFileCreatedEvent(TableFileCreationInfo(
+                eventInfoString(info, 0u), eventInfoString(info, 1u), eventInfoString(info, 2u),
+                rocksdb.rocksdb_event_info_number(info, 0u).toInt(), eventCreationReason(info), eventInfoNumber(info, 2u),
+                TableProperties(requireNotNull(rocksdb.rocksdb_event_info_table_properties(info))),
+                copyEventStatus(eventInfoString(info, 3u)),
+            ))
+            2 -> listener.onTableFileDeletedEvent(TableFileDeletionInfo(
+                eventInfoString(info, 0u), eventInfoString(info, 2u),
+                rocksdb.rocksdb_event_info_number(info, 0u).toInt(), copyEventStatus(eventInfoString(info, 3u)),
+            ))
+            3 -> listener.onColumnFamilyHandleDeletionStartedEvent()
+            in 4..10 -> {
+                val hasRange = kind.toInt() in listOf(4, 5, 8)
+                val operation = FileOperationInfo(
+                    eventInfoString(info, 2u), if (hasRange) eventInfoNumber(info, 3u) else 0,
+                    if (hasRange) eventInfoNumber(info, 4u) else 0,
+                    eventInfoNumber(info, 5u), eventInfoNumber(info, 6u), copyEventStatus(eventInfoString(info, 3u)),
+                )
+                when (kind.toInt()) {
+                    4 -> listener.onFileReadFinishEvent(operation)
+                    5 -> listener.onFileWriteFinishEvent(operation)
+                    6 -> listener.onFileFlushFinishEvent(operation)
+                    7 -> listener.onFileSyncFinishEvent(operation)
+                    8 -> listener.onFileRangeSyncFinishEvent(operation)
+                    9 -> listener.onFileTruncateFinishEvent(operation)
+                    10 -> listener.onFileCloseFinishEvent(operation)
+                }
+            }
+            11 -> listener.onErrorRecoveryCompletedEvent(copyEventStatus(eventInfoString(info, 3u)))
+        }
+    } catch (_: Throwable) {
+        // C++ callbacks cannot propagate Kotlin exceptions across the ABI boundary.
+    }
 }

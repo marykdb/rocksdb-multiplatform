@@ -25,4 +25,27 @@ expect abstract class EventListener : RocksCallbackObject {
 
     /** Invoked when a memtable has been sealed. */
     open fun onMemTableSealed(info: MemTableInfo)
+    /** Additional callbacks receive copied metadata. Background callbacks must not throw. */
+    open fun onTableFileCreationStartedEvent(info: TableFileCreationBriefInfo)
+    open fun onTableFileCreatedEvent(info: TableFileCreationInfo)
+    open fun onTableFileDeletedEvent(info: TableFileDeletionInfo)
+    /** Notification only: Java 11.8.1 cannot safely query the borrowed handle in this callback. */
+    open fun onColumnFamilyHandleDeletionStartedEvent()
+    open fun onFileReadFinishEvent(info: FileOperationInfo)
+    open fun onFileWriteFinishEvent(info: FileOperationInfo)
+    open fun onFileFlushFinishEvent(info: FileOperationInfo)
+    open fun onFileSyncFinishEvent(info: FileOperationInfo)
+    open fun onFileRangeSyncFinishEvent(info: FileOperationInfo)
+    open fun onFileTruncateFinishEvent(info: FileOperationInfo)
+    open fun onFileCloseFinishEvent(info: FileOperationInfo)
+    open fun onErrorRecoveryCompletedEvent(oldBackgroundError: Status)
+
+    /** File-I/O callbacks are opt-in; false avoids their instrumentation overhead. */
+    open fun shouldBeNotifiedOnFileIO(): Boolean
+
+    /**
+     * Return false to prevent this automatic recovery attempt. Defaults to true.
+     * Only the four reasons represented by Java/JNI 11.8.1 are forwarded.
+     */
+    open fun onErrorRecoveryBeginEvent(reason: BackgroundErrorReason, backgroundError: Status): Boolean
 }

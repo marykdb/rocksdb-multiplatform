@@ -15,4 +15,12 @@ expect open class SstFileMetaData {
 
     /** Get the largest user defined key in the file. */
     fun largestKey(): ByteArray
+    fun smallestSeqno(): Long
+    fun largestSeqno(): Long
+    fun numReadsSampled(): Long
+    fun beingCompacted(): Boolean
+    fun numEntries(): Long
+    fun numDeletions(): Long
+    /** Copied checksum bytes. An empty array means no checksum is available. */
+    fun fileChecksum(): ByteArray
 }

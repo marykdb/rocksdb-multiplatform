@@ -8,7 +8,15 @@ actual class LiveFileMetaData internal constructor(
     size: ULong,
     smallestKey: ByteArray,
     largestKey: ByteArray,
-) : SstFileMetaData(fileName, path, size, smallestKey, largestKey) {
+    smallestSeqno: ULong,
+    largestSeqno: ULong,
+    numReadsSampled: ULong,
+    beingCompacted: Boolean,
+    numEntries: ULong,
+    numDeletions: ULong,
+    fileChecksum: ByteArray,
+) : SstFileMetaData(fileName, path, size, smallestKey, largestKey,
+    smallestSeqno, largestSeqno, numReadsSampled, beingCompacted, numEntries, numDeletions, fileChecksum) {
     actual fun columnFamilyName(): ByteArray = columnFamilyNameValue
 
     actual fun level(): Int = levelValue
