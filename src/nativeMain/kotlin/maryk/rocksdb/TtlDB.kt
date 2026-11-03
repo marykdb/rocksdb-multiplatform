@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.cinterop.UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_column_family_handle_t
@@ -7,19 +9,20 @@ import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.CPointerVar
 import kotlinx.cinterop.IntVar
-import kotlinx.cinterop.ULongVar
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.cstr
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.set
+import maryk.asSizeT
 import maryk.toUByte
 import maryk.wrapWithNullErrorThrower
+import platform.posix.size_tVar
 import rocksdb.rocksdb_transactiondb_close_base_db
 import rocksdb.rocksdb_ttl_close
-import rocksdb.maryk_rocksdb_ttl_create_column_family
+import rocksdb.rocksdb_ttl_create_column_family
 import rocksdb.rocksdb_ttl_get_base_db
 import rocksdb.rocksdb_ttl_open
-import rocksdb.maryk_rocksdb_ttl_open_column_families
+import rocksdb.rocksdb_ttl_open_column_families
 
 actual class TtlDB internal constructor(
     internal val nativeTtl: CPointer<rocksdb_ttl_t>,
@@ -37,11 +40,11 @@ actual class TtlDB internal constructor(
                 checkOwningHandle()
                 columnFamilyDescriptor.getOptions().checkOwningHandle()
                 val handle = createColumnFamilyHandle { error ->
-                    maryk_rocksdb_ttl_create_column_family(
+                    rocksdb_ttl_create_column_family(
                         nativeTtl,
                         columnFamilyDescriptor.getOptions().native,
                         columnFamilyNameToCString(columnFamilyDescriptor.getName()),
-                        columnFamilyDescriptor.getName().size.toULong(),
+                        columnFamilyDescriptor.getName().size.asSizeT(),
                         ttl,
                         error,
                     )
@@ -114,17 +117,17 @@ actual fun openTtlDB(
         val count = columnFamilyDescriptors.size
         val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(count)
         val namesArray = allocArray<CPointerVar<ByteVar>>(count)
-        val nameLengths = allocArray<ULongVar>(count)
+        val nameLengths = allocArray<size_tVar>(count)
         val ttlArray = allocArray<IntVar>(count)
         columnFamilyDescriptors.forEachIndexed { index, descriptor ->
             val name = descriptor.getName()
             namesArray[index] = columnFamilyNameToCString(name)
-            nameLengths[index] = name.size.toULong()
+            nameLengths[index] = name.size.asSizeT()
             optionsArray[index] = descriptor.getOptions().native
             ttlArray[index] = ttlValues[index]
         }
         val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(count)
-        val native = maryk_rocksdb_ttl_open_column_families(
+        val native = rocksdb_ttl_open_column_families(
             options.native,
             dbPath.cstr.getPointer(this),
             count,

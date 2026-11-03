@@ -1,18 +1,21 @@
+@file:OptIn(kotlinx.cinterop.UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_column_family_handle_t
 import cnames.structs.rocksdb_options_t
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointerVar
-import kotlinx.cinterop.ULongVar
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.cstr
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.set
+import maryk.asSizeT
 import maryk.wrapWithNullErrorThrower
-import rocksdb.maryk_rocksdb_open_as_secondary_column_families_with_lengths
-import rocksdb.maryk_rocksdb_open_column_families_with_lengths
-import rocksdb.maryk_rocksdb_open_for_read_only_column_families_with_lengths
+import platform.posix.size_tVar
+import rocksdb.rocksdb_open_as_secondary_column_families_with_lengths
+import rocksdb.rocksdb_open_column_families_with_lengths
+import rocksdb.rocksdb_open_for_read_only_column_families_with_lengths
 import rocksdb.rocksdb_close
 import rocksdb.rocksdb_open
 import rocksdb.rocksdb_open_as_secondary
@@ -65,17 +68,17 @@ actual fun openRocksDB(
                 columnFamilyDescriptors.flatMap { it.getOptions().retainedNativeReferences() }
             val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
             val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
-            val nameLengths = allocArray<ULongVar>(columnFamilyDescriptors.size)
+            val nameLengths = allocArray<size_tVar>(columnFamilyDescriptors.size)
 
             columnFamilyDescriptors.forEachIndexed { index, cfDesc ->
                 val name = cfDesc.getName()
                 namesArray[index] = columnFamilyNameToCString(name)
-                nameLengths[index] = name.size.toULong()
+                nameLengths[index] = name.size.asSizeT()
                 optionsArray[index] = cfDesc.getOptions().native
             }
 
             val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyDescriptors.size)
-            val native = maryk_rocksdb_open_column_families_with_lengths(
+            val native = rocksdb_open_column_families_with_lengths(
                 options.native,
                 path.cstr.getPointer(this),
                 columnFamilyDescriptors.size,
@@ -131,17 +134,17 @@ actual fun openAsSecondaryRocksDB(
                 columnFamilyDescriptors.flatMap { it.getOptions().retainedNativeReferences() }
             val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
             val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
-            val nameLengths = allocArray<ULongVar>(columnFamilyDescriptors.size)
+            val nameLengths = allocArray<size_tVar>(columnFamilyDescriptors.size)
 
             columnFamilyDescriptors.forEachIndexed { index, cfDesc ->
                 val name = cfDesc.getName()
                 namesArray[index] = columnFamilyNameToCString(name)
-                nameLengths[index] = name.size.toULong()
+                nameLengths[index] = name.size.asSizeT()
                 optionsArray[index] = cfDesc.getOptions().native
             }
 
             val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyDescriptors.size)
-            val native = maryk_rocksdb_open_as_secondary_column_families_with_lengths(
+            val native = rocksdb_open_as_secondary_column_families_with_lengths(
                 options.native,
                 path.cstr.getPointer(this),
                 secondaryPath.cstr.getPointer(this),
@@ -207,17 +210,17 @@ actual fun openReadOnlyRocksDB(
                 columnFamilyDescriptors.flatMap { it.getOptions().retainedNativeReferences() }
             val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
             val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
-            val nameLengths = allocArray<ULongVar>(columnFamilyDescriptors.size)
+            val nameLengths = allocArray<size_tVar>(columnFamilyDescriptors.size)
 
             columnFamilyDescriptors.forEachIndexed { index, cfDesc ->
                 val name = cfDesc.getName()
                 namesArray[index] = columnFamilyNameToCString(name)
-                nameLengths[index] = name.size.toULong()
+                nameLengths[index] = name.size.asSizeT()
                 optionsArray[index] = cfDesc.getOptions().native
             }
 
             val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyDescriptors.size)
-            val native = maryk_rocksdb_open_for_read_only_column_families_with_lengths(
+            val native = rocksdb_open_for_read_only_column_families_with_lengths(
                 options.native,
                 path.cstr.getPointer(this),
                 columnFamilyDescriptors.size,

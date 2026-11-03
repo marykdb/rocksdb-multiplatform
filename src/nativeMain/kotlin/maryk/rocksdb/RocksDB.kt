@@ -56,9 +56,9 @@ import rocksdb.rocksdb_column_family_metadata_get_name_with_length as getColumnF
 import rocksdb.rocksdb_compact_range
 import rocksdb.rocksdb_compact_range_cf
 import rocksdb.rocksdb_compact_range_cf_opt
-import rocksdb.maryk_rocksdb_create_column_family_with_import
-import rocksdb.maryk_rocksdb_create_column_family_with_import_list
-import rocksdb.maryk_rocksdb_create_column_family_with_length
+import rocksdb.rocksdb_create_column_family_with_import
+import rocksdb.rocksdb_create_column_family_with_import_list
+import rocksdb.rocksdb_create_column_family_with_length
 import rocksdb.rocksdb_create_iterator
 import rocksdb.rocksdb_create_iterator_cf
 import rocksdb.rocksdb_create_iterators
@@ -516,8 +516,8 @@ internal constructor(
     internal open fun nativeCreateColumnFamily(
         options: ColumnFamilyOptions, name: ByteArray, error: CValuesRef<CPointerVar<ByteVar>>
     ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
-        maryk_rocksdb_create_column_family_with_length(
-            native, options.native, columnFamilyNameToCString(name), name.size.toULong(), error
+        rocksdb_create_column_family_with_length(
+            native, options.native, columnFamilyNameToCString(name), name.size.asSizeT(), error
         )
     }
 
@@ -525,8 +525,8 @@ internal constructor(
         options: ColumnFamilyOptions, name: ByteArray, importOptions: ImportColumnFamilyOptions,
         metadata: ExportImportFilesMetaData, error: CValuesRef<CPointerVar<ByteVar>>
     ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
-        maryk_rocksdb_create_column_family_with_import(
-            native, options.native, columnFamilyNameToCString(name), name.size.toULong(),
+        rocksdb_create_column_family_with_import(
+            native, options.native, columnFamilyNameToCString(name), name.size.asSizeT(),
             importOptions.native, metadata.native, error
         )
     }
@@ -537,9 +537,9 @@ internal constructor(
     ): CPointer<rocksdb_column_family_handle_t>? = memScoped {
         val metadataArray = allocArray<CPointerVar<rocksdb_export_import_files_metadata_t>>(metadata.size)
         metadata.forEachIndexed { index, item -> metadataArray[index] = item.native }
-        maryk_rocksdb_create_column_family_with_import_list(
-            native, options.native, columnFamilyNameToCString(name), name.size.toULong(),
-            importOptions.native, metadataArray, metadata.size.toULong(), error
+        rocksdb_create_column_family_with_import_list(
+            native, options.native, columnFamilyNameToCString(name), name.size.asSizeT(),
+            importOptions.native, metadataArray, metadata.size.asSizeT(), error
         )
     }
 

@@ -1098,7 +1098,7 @@ actual class Transaction(
         checkOpenColumnFamily(columnFamilyHandle)
         wrapWithErrorThrower { error ->
             key.usePointer { keyPointer ->
-                rocksdb.maryk_rocksdb_transaction_singledelete_cf_assume_tracked(
+                rocksdb.rocksdb_transaction_singledelete_cf_assume_tracked(
                     native,
                     columnFamilyHandle.native,
                     keyPointer,
@@ -1114,7 +1114,7 @@ actual class Transaction(
         checkOwningHandle()
         wrapWithErrorThrower { error ->
             key.usePointer { keyPointer ->
-                rocksdb.maryk_rocksdb_transaction_singledelete(
+                rocksdb.rocksdb_transaction_singledelete(
                     native,
                     keyPointer,
                     key.size.asSizeT(),

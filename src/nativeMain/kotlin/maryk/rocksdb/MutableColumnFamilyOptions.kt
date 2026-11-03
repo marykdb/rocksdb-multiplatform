@@ -63,9 +63,12 @@ import rocksdb.rocksdb_mutable_cf_options_set_ttl
 
 import cnames.structs.rocksdb_mutable_cf_options_t
 import kotlinx.cinterop.CPointer
-import maryk.asUInt64
 import maryk.asSizeT
+import maryk.asUInt32
+import maryk.asUInt64
+import maryk.sizeTToLong
 import maryk.toBoolean
+import maryk.toCheckedInt
 import maryk.toCheckedLong
 import maryk.toUByte
 import maryk.wrapWithNullErrorThrower
@@ -241,8 +244,7 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
 
     actual override fun setArenaBlockSize(value: Long): MutableColumnFamilyOptionsBuilder {
         checkOpen()
-        value.asSizeT()
-        rocksdb_mutable_cf_options_set_arena_block_size(native, value.asUInt64())
+        rocksdb_mutable_cf_options_set_arena_block_size(native, value.asSizeT())
         explicitValues["arena_block_size"] = value.toString()
         return this
     }
@@ -250,7 +252,7 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
     actual override fun arenaBlockSize(): Long {
         checkOpen()
         if ("arena_block_size" !in explicitValues) throw NoSuchElementException("arena_block_size has not been set")
-        return rocksdb_mutable_cf_options_get_arena_block_size(native).toCheckedLong("arena_block_size")
+        return sizeTToLong(rocksdb_mutable_cf_options_get_arena_block_size(native), "arena_block_size")
     }
 
     actual override fun setMemtablePrefixBloomSizeRatio(value: Double): MutableColumnFamilyOptionsBuilder {
@@ -281,8 +283,7 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
 
     actual override fun setMemtableHugePageSize(value: Long): MutableColumnFamilyOptionsBuilder {
         checkOpen()
-        value.asSizeT()
-        rocksdb_mutable_cf_options_set_memtable_huge_page_size(native, value.asUInt64())
+        rocksdb_mutable_cf_options_set_memtable_huge_page_size(native, value.asSizeT())
         explicitValues["memtable_huge_page_size"] = value.toString()
         return this
     }
@@ -290,13 +291,12 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
     actual override fun memtableHugePageSize(): Long {
         checkOpen()
         if ("memtable_huge_page_size" !in explicitValues) throw NoSuchElementException("memtable_huge_page_size has not been set")
-        return rocksdb_mutable_cf_options_get_memtable_huge_page_size(native).toCheckedLong("memtable_huge_page_size")
+        return sizeTToLong(rocksdb_mutable_cf_options_get_memtable_huge_page_size(native), "memtable_huge_page_size")
     }
 
     actual override fun setMaxSuccessiveMerges(value: Long): MutableColumnFamilyOptionsBuilder {
         checkOpen()
-        value.asSizeT()
-        rocksdb_mutable_cf_options_set_max_successive_merges(native, value.asUInt64())
+        rocksdb_mutable_cf_options_set_max_successive_merges(native, value.asSizeT())
         explicitValues["max_successive_merges"] = value.toString()
         return this
     }
@@ -304,7 +304,7 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
     actual override fun maxSuccessiveMerges(): Long {
         checkOpen()
         if ("max_successive_merges" !in explicitValues) throw NoSuchElementException("max_successive_merges has not been set")
-        return rocksdb_mutable_cf_options_get_max_successive_merges(native).toCheckedLong("max_successive_merges")
+        return sizeTToLong(rocksdb_mutable_cf_options_get_max_successive_merges(native), "max_successive_merges")
     }
 
     actual override fun setMaxSequentialSkipInIterations(value: Long): MutableColumnFamilyOptionsBuilder {
@@ -322,8 +322,7 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
 
     actual override fun setInplaceUpdateNumLocks(value: Long): MutableColumnFamilyOptionsBuilder {
         checkOpen()
-        value.asSizeT()
-        rocksdb_mutable_cf_options_set_inplace_update_num_locks(native, value.asUInt64())
+        rocksdb_mutable_cf_options_set_inplace_update_num_locks(native, value.asSizeT())
         explicitValues["inplace_update_num_locks"] = value.toString()
         return this
     }
@@ -331,7 +330,7 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
     actual override fun inplaceUpdateNumLocks(): Long {
         checkOpen()
         if ("inplace_update_num_locks" !in explicitValues) throw NoSuchElementException("inplace_update_num_locks has not been set")
-        return rocksdb_mutable_cf_options_get_inplace_update_num_locks(native).toCheckedLong("inplace_update_num_locks")
+        return sizeTToLong(rocksdb_mutable_cf_options_get_inplace_update_num_locks(native), "inplace_update_num_locks")
     }
 
     actual override fun setLevel0SlowdownWritesTrigger(value: Int): MutableColumnFamilyOptionsBuilder {
@@ -584,7 +583,7 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
 
     actual override fun setMinTombstonesForRangeConversion(value: Int): MutableColumnFamilyOptionsBuilder {
         checkOpen()
-        rocksdb_mutable_cf_options_set_min_tombstones_for_range_conversion(native, value)
+        rocksdb_mutable_cf_options_set_min_tombstones_for_range_conversion(native, value.asUInt32())
         explicitValues["min_tombstones_for_range_conversion"] = value.toString()
         return this
     }
@@ -592,7 +591,7 @@ actual class MutableColumnFamilyOptionsBuilder internal constructor(
     actual override fun minTombstonesForRangeConversion(): Int {
         checkOpen()
         if ("min_tombstones_for_range_conversion" !in explicitValues) throw NoSuchElementException("min_tombstones_for_range_conversion has not been set")
-        return rocksdb_mutable_cf_options_get_min_tombstones_for_range_conversion(native)
+        return rocksdb_mutable_cf_options_get_min_tombstones_for_range_conversion(native).toCheckedInt("min_tombstones_for_range_conversion")
     }
 
     actual override fun setReadTriggeredCompactionThreshold(value: Double): MutableColumnFamilyOptionsBuilder {

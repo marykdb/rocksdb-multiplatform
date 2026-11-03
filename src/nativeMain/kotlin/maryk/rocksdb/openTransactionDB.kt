@@ -1,17 +1,20 @@
+@file:OptIn(kotlinx.cinterop.UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_column_family_handle_t
 import cnames.structs.rocksdb_options_t
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointerVar
-import kotlinx.cinterop.ULongVar
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.cstr
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.set
+import maryk.asSizeT
 import maryk.wrapWithNullErrorThrower
-import rocksdb.maryk_rocksdb_transactiondb_open_column_families_with_lengths as openTransactionColumnFamiliesWithLengths
+import platform.posix.size_tVar
+import rocksdb.rocksdb_transactiondb_open_column_families_with_lengths as openTransactionColumnFamiliesWithLengths
 import kotlin.collections.plusAssign
 
 @Throws(RocksDBException::class)
@@ -36,12 +39,12 @@ actual fun openTransactionDB(
                 columnFamilyDescriptors.flatMap { it.getOptions().retainedNativeReferences() }
             val optionsArray = allocArray<CPointerVar<rocksdb_options_t>>(columnFamilyDescriptors.size)
             val namesArray = allocArray<CPointerVar<ByteVar>>(columnFamilyDescriptors.size)
-            val nameLengths = allocArray<ULongVar>(columnFamilyDescriptors.size)
+            val nameLengths = allocArray<size_tVar>(columnFamilyDescriptors.size)
 
             columnFamilyDescriptors.forEachIndexed { index, cfDesc ->
                 val name = cfDesc.getName()
                 namesArray[index] = columnFamilyNameToCString(name)
-                nameLengths[index] = name.size.toULong()
+                nameLengths[index] = name.size.asSizeT()
                 optionsArray[index] = cfDesc.getOptions().native
             }
 
