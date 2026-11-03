@@ -46,6 +46,15 @@ expect class CompactionJobInfo {
     /** Count of input files already residing at the output level. */
     fun numInputFilesAtOutputLevel(): Long
 
+    /** Identifier of the thread that performed the compaction. */
+    fun threadId(): Long
+
+    /** Job identifier within the thread. */
+    fun jobId(): Int
+
+    /** Compression used for the output files. */
+    fun compression(): CompressionType
+
     /** Aggregated statistics describing the compaction run. */
     fun compactionStats(): CompactionJobStats
 }

@@ -25,6 +25,7 @@ import rocksdb.rocksdb_tableproperties_fast_compression_estimated_data_size
 import rocksdb.rocksdb_tableproperties_filter_policy_name
 import rocksdb.rocksdb_tableproperties_filter_size
 import rocksdb.rocksdb_tableproperties_format_version
+import rocksdb.rocksdb_tableproperties_get_fixed_key_len
 import rocksdb.rocksdb_tableproperties_index_size
 import rocksdb.rocksdb_tableproperties_merge_operator_name
 import rocksdb.rocksdb_tableproperties_num_data_blocks
@@ -51,6 +52,7 @@ actual class TableProperties internal constructor(
     private val numMergeOperandsValue: Long,
     private val numRangeDeletionsValue: Long,
     private val formatVersionValue: Long,
+    private val fixedKeyLenValue: Long,
     private val columnFamilyIdValue: Long,
     private val columnFamilyNameValue: String?,
     private val creationTimeValue: Long,
@@ -76,6 +78,7 @@ actual class TableProperties internal constructor(
         numMergeOperandsValue = rocksdb_tableproperties_num_merge_operands(native).toCheckedLong("table properties merge operand count"),
         numRangeDeletionsValue = rocksdb_tableproperties_num_range_deletions(native).toCheckedLong("table properties range deletion count"),
         formatVersionValue = rocksdb_tableproperties_format_version(native).toCheckedLong("table properties format version"),
+        fixedKeyLenValue = rocksdb_tableproperties_get_fixed_key_len(native).toCheckedLong("table properties fixed key length"),
         columnFamilyIdValue = rocksdb_tableproperties_column_family_id(native).toCheckedLong("table properties column family id"),
         columnFamilyNameValue = memScoped {
             val length = alloc<size_tVar>()
@@ -151,6 +154,8 @@ actual class TableProperties internal constructor(
     actual fun numDeletions(): Long = numDeletionsValue
     actual fun numMergeOperands(): Long = numMergeOperandsValue
     actual fun numRangeDeletions(): Long = numRangeDeletionsValue
+    actual fun fixedKeyLen(): Long = fixedKeyLenValue
+
     actual fun formatVersion(): Long = formatVersionValue
     actual fun columnFamilyId(): Long = columnFamilyIdValue
     actual fun columnFamilyName(): String? = columnFamilyNameValue

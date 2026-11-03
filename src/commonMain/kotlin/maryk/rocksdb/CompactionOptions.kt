@@ -14,6 +14,11 @@ expect class CompactionOptionsFIFO() : RocksObject {
     fun maxTableFilesSize(): Long
     fun setAllowCompaction(allow: Boolean): CompactionOptionsFIFO
     fun allowCompaction(): Boolean
+    /** Combined SST and blob-file limit; zero retains the SST-only limit. */
+    fun setMaxDataFilesSize(size: Long): CompactionOptionsFIFO
+    fun maxDataFilesSize(): Long
+    fun setUseKvRatioCompaction(useKvRatioCompaction: Boolean): CompactionOptionsFIFO
+    fun useKvRatioCompaction(): Boolean
 }
 
 expect class CompactionOptionsUniversal() : RocksObject {
@@ -29,4 +34,6 @@ expect class CompactionOptionsUniversal() : RocksObject {
     fun compressionSizePercent(): Int
     fun setStopStyle(stopStyle: CompactionStopStyle): CompactionOptionsUniversal
     fun stopStyle(): CompactionStopStyle
+    fun setAllowTrivialMove(allowTrivialMove: Boolean): CompactionOptionsUniversal
+    fun allowTrivialMove(): Boolean
 }

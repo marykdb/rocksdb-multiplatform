@@ -7,6 +7,31 @@ import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
+import maryk.asUInt64
+import maryk.sizeTToLong
+import maryk.toCheckedLong
+import rocksdb.rocksdb_readoptions_get_readahead_size
+import rocksdb.rocksdb_readoptions_set_readahead_size
+import rocksdb.rocksdb_readoptions_get_auto_prefix_mode
+import rocksdb.rocksdb_readoptions_set_auto_prefix_mode
+import rocksdb.rocksdb_readoptions_get_total_order_seek
+import rocksdb.rocksdb_readoptions_set_total_order_seek
+import rocksdb.rocksdb_readoptions_get_async_io
+import rocksdb.rocksdb_readoptions_set_async_io
+import rocksdb.rocksdb_readoptions_get_deadline
+import rocksdb.rocksdb_readoptions_set_deadline
+import rocksdb.rocksdb_readoptions_get_io_timeout
+import rocksdb.rocksdb_readoptions_set_io_timeout
+import rocksdb.rocksdb_readoptions_get_background_purge_on_iterator_cleanup
+import rocksdb.rocksdb_readoptions_set_background_purge_on_iterator_cleanup
+import rocksdb.rocksdb_readoptions_get_ignore_range_deletions
+import rocksdb.rocksdb_readoptions_set_ignore_range_deletions
+import rocksdb.rocksdb_readoptions_get_max_skippable_internal_keys
+import rocksdb.rocksdb_readoptions_set_max_skippable_internal_keys
+import rocksdb.rocksdb_readoptions_get_pin_data
+import rocksdb.rocksdb_readoptions_set_pin_data
+import rocksdb.rocksdb_readoptions_get_value_size_soft_limit
+import rocksdb.rocksdb_readoptions_set_value_size_soft_limit
 import maryk.ByteBuffer
 import maryk.toBoolean
 import maryk.toUByte
@@ -90,6 +115,129 @@ actual class ReadOptions private constructor(val native: CPointer<rocksdb_readop
     actual fun setPrefixSameAsStart(prefixSameAsStart: Boolean): ReadOptions {
         checkOwningHandle()
         rocksdb_readoptions_set_prefix_same_as_start(native, prefixSameAsStart.toUByte())
+        return this
+    }
+
+    actual fun readaheadSize(): Long {
+        checkOwningHandle()
+        return sizeTToLong(rocksdb_readoptions_get_readahead_size(native), "read options readahead size")
+    }
+
+    actual fun setReadaheadSize(readaheadSize: Long): ReadOptions {
+        checkOwningHandle()
+        rocksdb_readoptions_set_readahead_size(native, readaheadSize.asSizeT())
+        return this
+    }
+
+    actual fun autoPrefixMode(): Boolean {
+        checkOwningHandle()
+        return rocksdb_readoptions_get_auto_prefix_mode(native).toBoolean()
+    }
+
+    actual fun setAutoPrefixMode(mode: Boolean): ReadOptions {
+        checkOwningHandle()
+        rocksdb_readoptions_set_auto_prefix_mode(native, mode.toUByte())
+        return this
+    }
+
+    actual fun totalOrderSeek(): Boolean {
+        checkOwningHandle()
+        return rocksdb_readoptions_get_total_order_seek(native).toBoolean()
+    }
+
+    actual fun setTotalOrderSeek(totalOrderSeek: Boolean): ReadOptions {
+        checkOwningHandle()
+        rocksdb_readoptions_set_total_order_seek(native, totalOrderSeek.toUByte())
+        return this
+    }
+
+    actual fun asyncIo(): Boolean {
+        checkOwningHandle()
+        return rocksdb_readoptions_get_async_io(native).toBoolean()
+    }
+
+    actual fun setAsyncIo(asyncIo: Boolean): ReadOptions {
+        checkOwningHandle()
+        rocksdb_readoptions_set_async_io(native, asyncIo.toUByte())
+        return this
+    }
+
+    actual fun deadline(): Long {
+        checkOwningHandle()
+        return rocksdb_readoptions_get_deadline(native).toCheckedLong("read options deadline")
+    }
+
+    actual fun setDeadline(deadlineTime: Long): ReadOptions {
+        checkOwningHandle()
+        rocksdb_readoptions_set_deadline(native, deadlineTime.asUInt64())
+        return this
+    }
+
+    actual fun ioTimeout(): Long {
+        checkOwningHandle()
+        return rocksdb_readoptions_get_io_timeout(native).toCheckedLong("read options ioTimeout")
+    }
+
+    actual fun setIoTimeout(ioTimeout: Long): ReadOptions {
+        checkOwningHandle()
+        rocksdb_readoptions_set_io_timeout(native, ioTimeout.asUInt64())
+        return this
+    }
+
+    actual fun backgroundPurgeOnIteratorCleanup(): Boolean {
+        checkOwningHandle()
+        return rocksdb_readoptions_get_background_purge_on_iterator_cleanup(native).toBoolean()
+    }
+
+    actual fun setBackgroundPurgeOnIteratorCleanup(backgroundPurgeOnIteratorCleanup: Boolean): ReadOptions {
+        checkOwningHandle()
+        rocksdb_readoptions_set_background_purge_on_iterator_cleanup(native, backgroundPurgeOnIteratorCleanup.toUByte())
+        return this
+    }
+
+    actual fun ignoreRangeDeletions(): Boolean {
+        checkOwningHandle()
+        return rocksdb_readoptions_get_ignore_range_deletions(native).toBoolean()
+    }
+
+    actual fun setIgnoreRangeDeletions(ignoreRangeDeletions: Boolean): ReadOptions {
+        checkOwningHandle()
+        rocksdb_readoptions_set_ignore_range_deletions(native, ignoreRangeDeletions.toUByte())
+        return this
+    }
+
+    actual fun maxSkippableInternalKeys(): Long {
+        checkOwningHandle()
+        return rocksdb_readoptions_get_max_skippable_internal_keys(native).toCheckedLong("read options maxSkippableInternalKeys")
+    }
+
+    actual fun setMaxSkippableInternalKeys(maxSkippableInternalKeys: Long): ReadOptions {
+        checkOwningHandle()
+        rocksdb_readoptions_set_max_skippable_internal_keys(native, maxSkippableInternalKeys.asUInt64())
+        return this
+    }
+
+    actual fun pinData(): Boolean {
+        checkOwningHandle()
+        return rocksdb_readoptions_get_pin_data(native).toBoolean()
+    }
+
+    actual fun setPinData(pinData: Boolean): ReadOptions {
+        checkOwningHandle()
+        rocksdb_readoptions_set_pin_data(native, pinData.toUByte())
+        return this
+    }
+
+    actual fun valueSizeSoftLimit(): Long {
+        checkOwningHandle()
+        val value = rocksdb_readoptions_get_value_size_soft_limit(native)
+        return if (value == ULong.MAX_VALUE) -1L else value.toCheckedLong("read options value size soft limit")
+    }
+
+    actual fun setValueSizeSoftLimit(valueSizeSoftLimit: Long): ReadOptions {
+        checkOwningHandle()
+        require(valueSizeSoftLimit >= 0 || valueSizeSoftLimit == -1L) { "Value size soft limit must be non-negative or -1" }
+        rocksdb_readoptions_set_value_size_soft_limit(native, if (valueSizeSoftLimit == -1L) ULong.MAX_VALUE else valueSizeSoftLimit.asUInt64())
         return this
     }
 

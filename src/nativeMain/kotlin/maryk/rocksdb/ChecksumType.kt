@@ -5,5 +5,7 @@ actual enum class ChecksumType(
 ) {
     kNoChecksum(0),
     kCRC32c(1),
-    kxxHash(2);
+    kxxHash(2),
+    kxxHash64(3),
+    kXXH3(4);
 }

@@ -14,6 +14,8 @@ expect class TableProperties {
     fun numDeletions(): Long
     fun numMergeOperands(): Long
     fun numRangeDeletions(): Long
+    /** Fixed user-key length, or zero when keys are variable length. */
+    fun fixedKeyLen(): Long
     fun formatVersion(): Long
     fun columnFamilyId(): Long
     fun columnFamilyName(): String?

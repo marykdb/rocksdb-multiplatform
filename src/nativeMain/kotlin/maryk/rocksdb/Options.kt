@@ -82,6 +82,8 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
     DBOptionsInterface<Options> {
     private var statistics: Statistics? = null
     private var env: Env? = null
+    private var fifoCompactionOptions: CompactionOptionsFIFO? = null
+    private var universalCompactionOptions: CompactionOptionsUniversal? = null
     private var tableFormatConfig: TableFormatConfig? = null
     private var ownedComparator: AbstractComparator? = null
     private var sstFileManager: SstFileManager? = null
@@ -513,4 +515,144 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
         }
         return requireNotNull(this.env)
     }
+
+    actual fun setCompactionOptionsFIFO(compactionOptionsFIFO: CompactionOptionsFIFO): Options {
+        checkOwningHandle()
+        compactionOptionsFIFO.checkOwningHandle()
+        rocksdb.rocksdb_options_set_compaction_options_fifo(native, compactionOptionsFIFO.native)
+        fifoCompactionOptions = compactionOptionsFIFO
+        return this
+    }
+
+    actual fun compactionOptionsFIFO(): CompactionOptionsFIFO? {
+        checkOwningHandle()
+        return fifoCompactionOptions
+    }
+
+    actual fun setCompactionOptionsUniversal(compactionOptionsUniversal: CompactionOptionsUniversal): Options {
+        checkOwningHandle()
+        compactionOptionsUniversal.checkOwningHandle()
+        rocksdb.rocksdb_options_set_compaction_options_universal(native, compactionOptionsUniversal.native)
+        universalCompactionOptions = compactionOptionsUniversal
+        return this
+    }
+
+    actual fun compactionOptionsUniversal(): CompactionOptionsUniversal? {
+        checkOwningHandle()
+        return universalCompactionOptions
+    }
+
+    actual fun setEnableBlobFiles(value: Boolean): Options {
+        checkOwningHandle()
+        rocksdb.rocksdb_options_set_enable_blob_files(native, value.toUByte())
+        return this
+    }
+
+    actual fun enableBlobFiles(): Boolean {
+        checkOwningHandle()
+        return rocksdb.rocksdb_options_get_enable_blob_files(native).toBoolean()
+    }
+
+    actual fun setMinBlobSize(value: Long): Options {
+        checkOwningHandle()
+        rocksdb.rocksdb_options_set_min_blob_size(native, value.asUInt64())
+        return this
+    }
+
+    actual fun minBlobSize(): Long {
+        checkOwningHandle()
+        return rocksdb.rocksdb_options_get_min_blob_size(native).toCheckedLong("minBlobSize")
+    }
+
+    actual fun setBlobFileSize(value: Long): Options {
+        checkOwningHandle()
+        rocksdb.rocksdb_options_set_blob_file_size(native, value.asUInt64())
+        return this
+    }
+
+    actual fun blobFileSize(): Long {
+        checkOwningHandle()
+        return rocksdb.rocksdb_options_get_blob_file_size(native).toCheckedLong("blobFileSize")
+    }
+
+    actual fun setBlobCompressionType(value: CompressionType): Options {
+        checkOwningHandle()
+        rocksdb.rocksdb_options_set_blob_compression_type(native, value.value.toInt())
+        return this
+    }
+
+    actual fun blobCompressionType(): CompressionType {
+        checkOwningHandle()
+        return getCompressionType(rocksdb.rocksdb_options_get_blob_compression_type(native).toByte())
+    }
+
+    actual fun setEnableBlobGarbageCollection(value: Boolean): Options {
+        checkOwningHandle()
+        rocksdb.rocksdb_options_set_enable_blob_gc(native, value.toUByte())
+        return this
+    }
+
+    actual fun enableBlobGarbageCollection(): Boolean {
+        checkOwningHandle()
+        return rocksdb.rocksdb_options_get_enable_blob_gc(native).toBoolean()
+    }
+
+    actual fun setBlobGarbageCollectionAgeCutoff(value: Double): Options {
+        checkOwningHandle()
+        require(value.isFinite() && value in 0.0..1.0) { "ratio must be between zero and one" }
+        rocksdb.rocksdb_options_set_blob_gc_age_cutoff(native, value)
+        return this
+    }
+
+    actual fun blobGarbageCollectionAgeCutoff(): Double {
+        checkOwningHandle()
+        return rocksdb.rocksdb_options_get_blob_gc_age_cutoff(native)
+    }
+
+    actual fun setBlobGarbageCollectionForceThreshold(value: Double): Options {
+        checkOwningHandle()
+        require(value.isFinite() && value in 0.0..1.0) { "ratio must be between zero and one" }
+        rocksdb.rocksdb_options_set_blob_gc_force_threshold(native, value)
+        return this
+    }
+
+    actual fun blobGarbageCollectionForceThreshold(): Double {
+        checkOwningHandle()
+        return rocksdb.rocksdb_options_get_blob_gc_force_threshold(native)
+    }
+
+    actual fun setBlobCompactionReadaheadSize(value: Long): Options {
+        checkOwningHandle()
+        rocksdb.rocksdb_options_set_blob_compaction_readahead_size(native, value.asUInt64())
+        return this
+    }
+
+    actual fun blobCompactionReadaheadSize(): Long {
+        checkOwningHandle()
+        return rocksdb.rocksdb_options_get_blob_compaction_readahead_size(native).toCheckedLong("blobCompactionReadaheadSize")
+    }
+
+    actual fun setBlobFileStartingLevel(value: Int): Options {
+        checkOwningHandle()
+        require(value >= 0) { "starting level must be non-negative" }
+        rocksdb.rocksdb_options_set_blob_file_starting_level(native, value)
+        return this
+    }
+
+    actual fun blobFileStartingLevel(): Int {
+        checkOwningHandle()
+        return rocksdb.rocksdb_options_get_blob_file_starting_level(native)
+    }
+
+    actual fun setPrepopulateBlobCache(value: PrepopulateBlobCache): Options {
+        checkOwningHandle()
+        rocksdb.rocksdb_options_set_prepopulate_blob_cache(native, value.ordinal)
+        return this
+    }
+
+    actual fun prepopulateBlobCache(): PrepopulateBlobCache {
+        checkOwningHandle()
+        return PrepopulateBlobCache.entries.first { it.ordinal == rocksdb.rocksdb_options_get_prepopulate_blob_cache(native) }
+    }
+
 }

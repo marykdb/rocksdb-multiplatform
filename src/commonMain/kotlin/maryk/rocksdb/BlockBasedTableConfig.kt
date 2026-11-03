@@ -53,4 +53,41 @@ expect class BlockBasedTableConfig() : TableFormatConfig {
 
     fun setDataBlockHashTableUtilRatio(ratio: Double): BlockBasedTableConfig
     fun dataBlockHashTableUtilRatio(): Double
+
+    fun setIndexBlockRestartInterval(value: Int): BlockBasedTableConfig
+    fun indexBlockRestartInterval(): Int
+
+    fun setOptimizeFiltersForMemory(value: Boolean): BlockBasedTableConfig
+    fun optimizeFiltersForMemory(): Boolean
+
+    fun setUseDeltaEncoding(value: Boolean): BlockBasedTableConfig
+    fun useDeltaEncoding(): Boolean
+
+    fun setVerifyCompression(value: Boolean): BlockBasedTableConfig
+    fun verifyCompression(): Boolean
+
+    fun setReadAmpBytesPerBit(value: Int): BlockBasedTableConfig
+    fun readAmpBytesPerBit(): Int
+
+    fun setSeparateKeyValueInDataBlock(value: Boolean): BlockBasedTableConfig
+    fun separateKeyValueInDataBlock(): Boolean
+
+    fun setUniformCvThreshold(value: Double): BlockBasedTableConfig
+    fun uniformCvThreshold(): Double
+
+    fun setEnableIndexCompression(value: Boolean): BlockBasedTableConfig
+    fun enableIndexCompression(): Boolean
+
+    fun setBlockAlign(value: Boolean): BlockBasedTableConfig
+    fun blockAlign(): Boolean
+
+    fun setSuperBlockAlignmentSize(value: Long): BlockBasedTableConfig
+    fun superBlockAlignmentSize(): Long
+
+    fun setSuperBlockAlignmentSpaceOverheadRatio(value: Long): BlockBasedTableConfig
+    fun superBlockAlignmentSpaceOverheadRatio(): Long
+
+    fun setIndexShortening(value: IndexShorteningMode): BlockBasedTableConfig
+    fun indexShortening(): IndexShorteningMode
+
 }

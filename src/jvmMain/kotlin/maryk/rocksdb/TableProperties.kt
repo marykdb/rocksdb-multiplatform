@@ -13,6 +13,7 @@ actual class TableProperties internal constructor(
     actual fun numDeletions(): Long = delegate.numDeletions
     actual fun numMergeOperands(): Long = delegate.numMergeOperands
     actual fun numRangeDeletions(): Long = delegate.numRangeDeletions
+    actual fun fixedKeyLen(): Long = delegate.fixedKeyLen
     actual fun formatVersion(): Long = delegate.formatVersion
     actual fun columnFamilyId(): Long = delegate.columnFamilyId
     actual fun columnFamilyName(): String? =

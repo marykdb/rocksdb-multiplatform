@@ -2,7 +2,10 @@ package maryk.rocksdb
 
 import cnames.structs.rocksdb_ingestexternalfileoptions_t
 import kotlinx.cinterop.CPointer
+import maryk.toBoolean
 import maryk.toUByte
+import rocksdb.rocksdb_ingestexternalfileoptions_get_write_global_seqno
+import rocksdb.rocksdb_ingestexternalfileoptions_set_write_global_seqno
 import rocksdb.rocksdb_ingestexternalfileoptions_create
 import rocksdb.rocksdb_ingestexternalfileoptions_destroy
 import rocksdb.rocksdb_ingestexternalfileoptions_set_allow_blocking_flush
@@ -90,4 +93,14 @@ actual class IngestExternalFileOptions actual constructor() : RocksObject() {
         return ingestBehind
     }
 
+    actual fun setWriteGlobalSeqno(writeGlobalSeqno: Boolean): IngestExternalFileOptions {
+        checkOwningHandle()
+        rocksdb_ingestexternalfileoptions_set_write_global_seqno(native, writeGlobalSeqno.toUByte())
+        return this
+    }
+
+    actual fun writeGlobalSeqno(): Boolean {
+        checkOwningHandle()
+        return rocksdb_ingestexternalfileoptions_get_write_global_seqno(native).toBoolean()
+    }
 }

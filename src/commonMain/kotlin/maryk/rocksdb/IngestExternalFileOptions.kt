@@ -18,4 +18,8 @@ expect class IngestExternalFileOptions() : RocksObject {
 
     fun setIngestBehind(ingestBehind: Boolean): IngestExternalFileOptions
     fun ingestBehind(): Boolean
+
+    /** Rewrite the external SST global sequence number for compatibility with older readers. */
+    fun setWriteGlobalSeqno(writeGlobalSeqno: Boolean): IngestExternalFileOptions
+    fun writeGlobalSeqno(): Boolean
 }

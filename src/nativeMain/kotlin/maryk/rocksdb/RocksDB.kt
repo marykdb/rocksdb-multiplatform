@@ -284,6 +284,7 @@ internal constructor(
     private val lifecycleGuard = NativeLifecycleGuard()
     private val columnFamilyHandles = mutableSetOf<ColumnFamilyHandle>()
     private var perfLevel: PerfLevel = PerfLevel.UNINITIALIZED
+    internal var fileTraceSession: TraceSession? = null
 
     private fun checkOpenForRead(readOptions: ReadOptions = defaultReadOptions) {
         checkOwningHandle()
@@ -311,6 +312,12 @@ internal constructor(
 
     actual override fun close() {
         withLifecycleLock {
+            var traceFailure: Throwable? = null
+            try {
+                fileTraceSession?.closeFromOwner()
+            } catch (error: Throwable) {
+                traceFailure = error
+            }
             if (tryClose()) {
                 invalidateBorrowedIterators()
                 invalidateBorrowedTransactionLogIterators()
@@ -322,6 +329,7 @@ internal constructor(
                 clearRetainedReferences()
                 super.close()
             }
+            traceFailure?.let { throw it }
         }
     }
 

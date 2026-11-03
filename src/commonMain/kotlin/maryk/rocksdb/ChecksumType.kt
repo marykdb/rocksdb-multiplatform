@@ -9,5 +9,7 @@ expect enum class ChecksumType {
     /** CRC32 Checksum */
     kCRC32c,
     /** XX Hash */
-    kxxHash;
+    kxxHash,
+    kxxHash64,
+    kXXH3;
 }

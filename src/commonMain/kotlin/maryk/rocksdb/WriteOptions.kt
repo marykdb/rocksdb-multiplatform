@@ -137,4 +137,7 @@ expect class WriteOptions() : RocksObject {
      * @return true if this write request is of lower priority, false otherwise.
      */
     fun lowPri(): Boolean
+    /** Keep per-memtable insertion hints for sequential keys within concurrent write batches. */
+    fun setMemtableInsertHintPerBatch(memtableInsertHintPerBatch: Boolean): WriteOptions
+    fun memtableInsertHintPerBatch(): Boolean
 }

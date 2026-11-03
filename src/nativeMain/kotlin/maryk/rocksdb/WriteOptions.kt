@@ -4,6 +4,8 @@ import cnames.structs.rocksdb_writeoptions_t
 import kotlinx.cinterop.CPointer
 import maryk.toBoolean
 import maryk.toUByte
+import rocksdb.rocksdb_writeoptions_get_memtable_insert_hint_per_batch
+import rocksdb.rocksdb_writeoptions_set_memtable_insert_hint_per_batch
 import rocksdb.rocksdb_writeoptions_create
 import rocksdb.rocksdb_writeoptions_destroy
 import rocksdb.rocksdb_writeoptions_disable_WAL
@@ -91,5 +93,16 @@ actual class WriteOptions internal constructor(
     actual fun lowPri(): Boolean {
         checkOpenHandle()
         return rocksdb_writeoptions_get_low_pri(native).toBoolean()
+    }
+
+    actual fun setMemtableInsertHintPerBatch(memtableInsertHintPerBatch: Boolean): WriteOptions {
+        checkOpenHandle()
+        rocksdb_writeoptions_set_memtable_insert_hint_per_batch(native, memtableInsertHintPerBatch.toUByte())
+        return this
+    }
+
+    actual fun memtableInsertHintPerBatch(): Boolean {
+        checkOpenHandle()
+        return rocksdb_writeoptions_get_memtable_insert_hint_per_batch(native).toBoolean()
     }
 }

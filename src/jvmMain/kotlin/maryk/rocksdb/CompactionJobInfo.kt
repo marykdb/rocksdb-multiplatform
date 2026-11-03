@@ -3,8 +3,18 @@ package maryk.rocksdb
 import kotlin.use
 
 actual class CompactionJobInfo internal constructor(
-    internal val delegate: org.rocksdb.CompactionJobInfo
+    delegate: org.rocksdb.CompactionJobInfo
 ) {
+    // The JNI object is borrowed for the callback, so copy every exposed field.
+    private val columnFamilyNameValue = delegate.columnFamilyName().copyOf()
+    private val baseInputLevelValue = delegate.baseInputLevel()
+    private val outputLevelValue = delegate.outputLevel()
+    private val inputFilesValue = delegate.inputFiles().toList()
+    private val outputFilesValue = delegate.outputFiles().toList()
+    private val compactionReasonValue = delegate.compactionReason()
+    private val threadIdValue = delegate.threadId()
+    private val jobIdValue = delegate.jobId()
+    private val compressionValue = delegate.compression()
     private val stats: CompactionJobStats = delegate.stats()?.let { stats ->
         stats.use {
             CompactionJobStats(
@@ -17,22 +27,33 @@ actual class CompactionJobInfo internal constructor(
                 numInputFilesAtOutputLevelValue = it.numInputFilesAtOutputLevel(),
                 numOutputFilesValue = it.numOutputFiles(),
                 numCorruptKeysValue = it.numCorruptKeys(),
+                numRecordsReplacedValue = it.numRecordsReplaced(),
+                totalInputRawKeyBytesValue = it.totalInputRawKeyBytes(),
+                totalInputRawValueBytesValue = it.totalInputRawValueBytes(),
+                numInputDeletionRecordsValue = it.numInputDeletionRecords(),
+                numExpiredDeletionRecordsValue = it.numExpiredDeletionRecords(),
+                fileWriteNanosValue = it.fileWriteNanos(),
+                fileRangeSyncNanosValue = it.fileRangeSyncNanos(),
+                fileFsyncNanosValue = it.fileFsyncNanos(),
+                filePrepareWriteNanosValue = it.filePrepareWriteNanos(),
+                numSingleDelFallthruValue = it.numSingleDelFallthru(),
+                numSingleDelMismatchValue = it.numSingleDelMismatch(),
             )
         }
     } ?: CompactionJobStats.empty(
-        numInputFilesFallback = delegate.inputFiles().size.toLong(),
-        numOutputFilesFallback = delegate.outputFiles().size.toLong(),
+        numInputFilesFallback = inputFilesValue.size.toLong(),
+        numOutputFilesFallback = outputFilesValue.size.toLong(),
     )
 
-    actual fun columnFamilyName(): ByteArray = delegate.columnFamilyName()
+    actual fun columnFamilyName(): ByteArray = columnFamilyNameValue.copyOf()
 
-    actual fun baseInputLevel(): Int = delegate.baseInputLevel()
+    actual fun baseInputLevel(): Int = baseInputLevelValue
 
-    actual fun outputLevel(): Int = delegate.outputLevel()
+    actual fun outputLevel(): Int = outputLevelValue
 
-    actual fun inputFiles(): List<String> = delegate.inputFiles()
+    actual fun inputFiles(): List<String> = inputFilesValue.toList()
 
-    actual fun outputFiles(): List<String> = delegate.outputFiles()
+    actual fun outputFiles(): List<String> = outputFilesValue.toList()
 
     actual fun elapsedMicros(): Long = stats.elapsedMicros()
 
@@ -46,11 +67,17 @@ actual class CompactionJobInfo internal constructor(
 
     actual fun totalOutputBytes(): Long = stats.totalOutputBytes()
 
-    actual fun compactionReason(): CompactionReason = delegate.compactionReason()
+    actual fun compactionReason(): CompactionReason = compactionReasonValue
 
     actual fun numInputFiles(): Long = stats.numInputFiles()
 
     actual fun numInputFilesAtOutputLevel(): Long = stats.numInputFilesAtOutputLevel()
+
+    actual fun threadId(): Long = threadIdValue
+
+    actual fun jobId(): Int = jobIdValue
+
+    actual fun compression(): CompressionType = compressionValue
 
     actual fun compactionStats(): CompactionJobStats = stats
 }

@@ -1,6 +1,14 @@
 package maryk.rocksdb
 
 expect class Options() : RocksObject, DBOptionsInterface<Options> {
+    /** Copy FIFO compaction settings into this options instance. */
+    fun setCompactionOptionsFIFO(compactionOptionsFIFO: CompactionOptionsFIFO): Options
+    fun compactionOptionsFIFO(): CompactionOptionsFIFO?
+
+    /** Copy universal compaction settings into this options instance. */
+    fun setCompactionOptionsUniversal(compactionOptionsUniversal: CompactionOptionsUniversal): Options
+    fun compactionOptionsUniversal(): CompactionOptionsUniversal?
+
     /**
      * Configure the table factory backing SSTs written for this instance.
      */
@@ -772,4 +780,45 @@ expect class Options() : RocksObject, DBOptionsInterface<Options> {
      * @return [RocksEnv] instance set in the options.
      */
     override fun getEnv(): Env
+
+    /** Separate large values into blob files. */
+    fun setEnableBlobFiles(value: Boolean): Options
+    fun enableBlobFiles(): Boolean
+
+    /** Minimum value size in bytes to store in a blob file. */
+    fun setMinBlobSize(value: Long): Options
+    fun minBlobSize(): Long
+
+    /** Target size in bytes for a blob file. */
+    fun setBlobFileSize(value: Long): Options
+    fun blobFileSize(): Long
+
+    /** Compression used for values in blob files. */
+    fun setBlobCompressionType(value: CompressionType): Options
+    fun blobCompressionType(): CompressionType
+
+    /** Relocate live blobs while compacting SST files. */
+    fun setEnableBlobGarbageCollection(value: Boolean): Options
+    fun enableBlobGarbageCollection(): Boolean
+
+    /** Fraction of the oldest blob files eligible for garbage collection. */
+    fun setBlobGarbageCollectionAgeCutoff(value: Double): Options
+    fun blobGarbageCollectionAgeCutoff(): Double
+
+    /** Garbage ratio threshold for forcing blob garbage collection. */
+    fun setBlobGarbageCollectionForceThreshold(value: Double): Options
+    fun blobGarbageCollectionForceThreshold(): Double
+
+    /** Blob-file readahead size in bytes during compaction. */
+    fun setBlobCompactionReadaheadSize(value: Long): Options
+    fun blobCompactionReadaheadSize(): Long
+
+    /** First SST level eligible to reference blob files. */
+    fun setBlobFileStartingLevel(value: Int): Options
+    fun blobFileStartingLevel(): Int
+
+    /** Whether flushes should insert newly written blobs into the blob cache. */
+    fun setPrepopulateBlobCache(value: PrepopulateBlobCache): Options
+    fun prepopulateBlobCache(): PrepopulateBlobCache
+
 }

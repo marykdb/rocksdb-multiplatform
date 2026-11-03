@@ -136,6 +136,28 @@ actual class CompactionOptionsFIFO internal constructor(
         checkOwningHandle()
         return rocksdb_compactionoptions_fifo_allow_compaction(native).toBoolean()
     }
+    actual fun setMaxDataFilesSize(size: Long): CompactionOptionsFIFO {
+        checkOwningHandle()
+        rocksdb.rocksdb_compactionoptions_fifo_set_max_data_files_size(native, size.asUInt64())
+        return this
+    }
+
+    actual fun maxDataFilesSize(): Long {
+        checkOwningHandle()
+        return rocksdb.rocksdb_compactionoptions_fifo_get_max_data_files_size(native)
+            .toCheckedLong("FIFO maximum data files size")
+    }
+
+    actual fun setUseKvRatioCompaction(useKvRatioCompaction: Boolean): CompactionOptionsFIFO {
+        checkOwningHandle()
+        rocksdb.rocksdb_compactionoptions_fifo_set_use_kv_ratio_compaction(native, useKvRatioCompaction.toUByte())
+        return this
+    }
+
+    actual fun useKvRatioCompaction(): Boolean {
+        checkOwningHandle()
+        return rocksdb.rocksdb_compactionoptions_fifo_get_use_kv_ratio_compaction(native).toBoolean()
+    }
 }
 
 actual class CompactionOptionsUniversal internal constructor(
@@ -218,5 +240,16 @@ actual class CompactionOptionsUniversal internal constructor(
     actual fun stopStyle(): CompactionStopStyle {
         checkOwningHandle()
         return getCompactionStopStyle(rocksdb_compactionoptions_universal_stop_style(native).toByte())
+    }
+
+    actual fun setAllowTrivialMove(allowTrivialMove: Boolean): CompactionOptionsUniversal {
+        checkOwningHandle()
+        rocksdb.rocksdb_compactionoptions_universal_set_allow_trivial_move(native, allowTrivialMove.toUByte())
+        return this
+    }
+
+    actual fun allowTrivialMove(): Boolean {
+        checkOwningHandle()
+        return rocksdb.rocksdb_compactionoptions_universal_get_allow_trivial_move(native).toBoolean()
     }
 }

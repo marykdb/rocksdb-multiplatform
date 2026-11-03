@@ -1,7 +1,7 @@
 package maryk.rocksdb
 
 /**
- * Flags for [RocksDB.getApproximateSizes]
+ * Flags for [RocksDB.approximateSizes]
  * that specify whether memtable stats should be included,
  * or file stats approximation or both.
  */

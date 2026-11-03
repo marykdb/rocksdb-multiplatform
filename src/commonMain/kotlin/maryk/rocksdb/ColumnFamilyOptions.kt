@@ -1,6 +1,14 @@
 package maryk.rocksdb
 
 expect class ColumnFamilyOptions() : RocksObject {
+    /** Copy FIFO compaction settings into this options instance. */
+    fun setCompactionOptionsFIFO(compactionOptionsFIFO: CompactionOptionsFIFO): ColumnFamilyOptions
+    fun compactionOptionsFIFO(): CompactionOptionsFIFO?
+
+    /** Copy universal compaction settings into this options instance. */
+    fun setCompactionOptionsUniversal(compactionOptionsUniversal: CompactionOptionsUniversal): ColumnFamilyOptions
+    fun compactionOptionsUniversal(): CompactionOptionsUniversal?
+
     /**
      * Configure the table factory backing SSTs written for this column family.
      */
@@ -630,4 +638,45 @@ expect class ColumnFamilyOptions() : RocksObject {
      * @return the maximum number of successive merges.
      */
     fun maxSuccessiveMerges(): Long
+
+    /** Separate large values into blob files. */
+    fun setEnableBlobFiles(value: Boolean): ColumnFamilyOptions
+    fun enableBlobFiles(): Boolean
+
+    /** Minimum value size in bytes to store in a blob file. */
+    fun setMinBlobSize(value: Long): ColumnFamilyOptions
+    fun minBlobSize(): Long
+
+    /** Target size in bytes for a blob file. */
+    fun setBlobFileSize(value: Long): ColumnFamilyOptions
+    fun blobFileSize(): Long
+
+    /** Compression used for values in blob files. */
+    fun setBlobCompressionType(value: CompressionType): ColumnFamilyOptions
+    fun blobCompressionType(): CompressionType
+
+    /** Relocate live blobs while compacting SST files. */
+    fun setEnableBlobGarbageCollection(value: Boolean): ColumnFamilyOptions
+    fun enableBlobGarbageCollection(): Boolean
+
+    /** Fraction of the oldest blob files eligible for garbage collection. */
+    fun setBlobGarbageCollectionAgeCutoff(value: Double): ColumnFamilyOptions
+    fun blobGarbageCollectionAgeCutoff(): Double
+
+    /** Garbage ratio threshold for forcing blob garbage collection. */
+    fun setBlobGarbageCollectionForceThreshold(value: Double): ColumnFamilyOptions
+    fun blobGarbageCollectionForceThreshold(): Double
+
+    /** Blob-file readahead size in bytes during compaction. */
+    fun setBlobCompactionReadaheadSize(value: Long): ColumnFamilyOptions
+    fun blobCompactionReadaheadSize(): Long
+
+    /** First SST level eligible to reference blob files. */
+    fun setBlobFileStartingLevel(value: Int): ColumnFamilyOptions
+    fun blobFileStartingLevel(): Int
+
+    /** Whether flushes should insert newly written blobs into the blob cache. */
+    fun setPrepopulateBlobCache(value: PrepopulateBlobCache): ColumnFamilyOptions
+    fun prepopulateBlobCache(): PrepopulateBlobCache
+
 }
