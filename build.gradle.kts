@@ -23,6 +23,7 @@ import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.named
@@ -318,6 +319,12 @@ fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String
 
     project.tasks.named(interop.interopProcessingTaskName).configure {
         dependsOn(downloadTask)
+        // Cinterop embeds these archives in its KLIB; header changes alone do not
+        // detect replacement libraries with an unchanged C API.
+        inputs.dir(libDir)
+            .withPropertyName("rocksdbStaticLibraries")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.property("rocksdbBundleIdentity", "version=$version sha256=$sha")
     }
 
     binaries.withType<TestExecutable>().configureEach {
@@ -333,6 +340,10 @@ fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String
     binaries.withType<NativeBinary>().configureEach {
         linkTaskProvider.configure {
             dependsOn(downloadTask)
+            inputs.dir(libDir)
+                .withPropertyName("rocksdbStaticLibraries")
+                .withPathSensitivity(PathSensitivity.RELATIVE)
+            inputs.property("rocksdbBundleIdentity", "version=$version sha256=$sha")
         }
     }
 }
