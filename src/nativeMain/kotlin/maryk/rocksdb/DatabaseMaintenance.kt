@@ -77,7 +77,7 @@ actual fun RocksDB.approximateSizes(columnFamilyHandle: ColumnFamilyHandle?, ran
     val sizes = allocArray<uint64_tVar>(ranges.size)
     val flags = sizeApproximationFlags.fold(0) { flags, value -> flags or value.value.toInt() }
     wrapWithErrorThrower {
-        rocksdb_approximate_sizes_cf_with_flags(native, columnFamilyHandle?.native, ranges.size,
+        rocksdb_approximate_sizes_cf_with_flags(native, columnFamilyHandle.native, ranges.size,
             bounds.starts, bounds.startLengths, bounds.limits, bounds.limitLengths, flags.toUByte(), sizes, it)
     }
     LongArray(ranges.size) { sizes[it].toCheckedLong("approximate range size") }

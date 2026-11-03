@@ -4,6 +4,7 @@ package maryk.rocksdb
 
 import cnames.structs.rocksdb_envoptions_t
 import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.convert
 import maryk.asSizeT
 import maryk.asUInt64
 import maryk.toBoolean
@@ -98,7 +99,7 @@ actual class EnvOptions actual constructor() : RocksObject() {
 
     actual fun bytesPerSync(): Long {
         checkOwningHandle()
-        return rocksdb.rocksdb_envoptions_get_bytes_per_sync(native).toULong().toCheckedLong("environment bytes_per_sync")
+        return rocksdb.rocksdb_envoptions_get_bytes_per_sync(native).toCheckedLong("environment bytes_per_sync")
     }
 
     actual fun setFallocateWithKeepSize(value: Boolean): EnvOptions {
@@ -120,7 +121,7 @@ actual class EnvOptions actual constructor() : RocksObject() {
 
     actual fun compactionReadaheadSize(): Long {
         checkOwningHandle()
-        return rocksdb.rocksdb_envoptions_get_compaction_readahead_size(native).toULong().toCheckedLong("environment compaction_readahead_size")
+        return rocksdb.rocksdb_envoptions_get_compaction_readahead_size(native).convert<ULong>().toCheckedLong("environment compaction_readahead_size")
     }
 
     actual fun setWritableFileMaxBufferSize(value: Long): EnvOptions {
@@ -131,7 +132,7 @@ actual class EnvOptions actual constructor() : RocksObject() {
 
     actual fun writableFileMaxBufferSize(): Long {
         checkOwningHandle()
-        return rocksdb.rocksdb_envoptions_get_writable_file_max_buffer_size(native).toULong().toCheckedLong("environment writable_file_max_buffer_size")
+        return rocksdb.rocksdb_envoptions_get_writable_file_max_buffer_size(native).convert<ULong>().toCheckedLong("environment writable_file_max_buffer_size")
     }
 
     actual fun setRateLimiter(rateLimiter: RateLimiter): EnvOptions {

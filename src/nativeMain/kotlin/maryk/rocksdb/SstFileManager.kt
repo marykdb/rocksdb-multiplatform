@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalForeignApi::class)
+@file:OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.UnsafeNumber::class)
 
 package maryk.rocksdb
 

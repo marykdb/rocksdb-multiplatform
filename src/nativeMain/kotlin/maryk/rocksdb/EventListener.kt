@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.cinterop.UnsafeNumber::class)
+
 package maryk.rocksdb
 
 import cnames.structs.rocksdb_compactionjobinfo_t

@@ -285,7 +285,7 @@ actual class MutableDBOptionsBuilder internal constructor(
     actual override fun setDailyOffpeakTimeUTC(offpeakTimeUTC: String): MutableDBOptionsBuilder {
         checkOpen()
         rocksdb_mutable_db_options_set_daily_offpeak_time_utc(native, offpeakTimeUTC)
-        explicitValues["daily_offpeak_time_utc"] = offpeakTimeUTC.toString()
+        explicitValues["daily_offpeak_time_utc"] = offpeakTimeUTC
         return this
     }
 
