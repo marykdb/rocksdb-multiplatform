@@ -9,6 +9,36 @@ import kotlin.test.*
 
 class TransactionTest : AbstractTransactionTest() {
     @Test
+    fun singleDeleteColumnFamilyWithKeyPartsAndAssumeTracked() {
+        val key = "single-delete-cf-key".encodeToByteArray()
+        val value = "single-delete-cf-value".encodeToByteArray()
+
+        startDb().use { dbContainer ->
+            val testCf = dbContainer.getTestColumnFamily()
+            ReadOptions().use { readOptions ->
+                dbContainer.beginTransaction().use { txn ->
+                    txn.put(testCf, key, value)
+                    txn.commit()
+                }
+
+                dbContainer.beginTransaction().use { txn ->
+                    txn.getForUpdate(readOptions, testCf, key, true)
+                    txn.singleDelete(
+                        testCf,
+                        arrayOf("single-delete-".encodeToByteArray(), "cf-key".encodeToByteArray()),
+                        true
+                    )
+                    txn.commit()
+                }
+
+                dbContainer.beginTransaction().use { txn ->
+                    assertNull(txn.get(readOptions, testCf, key))
+                }
+            }
+        }
+    }
+
+    @Test
     fun putAndDeleteAssumeTrackedAfterGetForUpdate() {
         val key = "assume-tracked-key".encodeToByteArray()
         val value = "assume-tracked-value".encodeToByteArray()

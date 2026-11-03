@@ -206,7 +206,7 @@ abstract class AbstractTransactionTest {
     }
 
     @Test
-    fun singleDeleteColumnFamilyWithKeyPartsAndAssumeTracked() {
+    fun singleDeleteColumnFamilyWithKeyParts() {
         val key = "single-delete-cf-key".encodeToByteArray()
         val value = "single-delete-cf-value".encodeToByteArray()
 
@@ -223,7 +223,7 @@ abstract class AbstractTransactionTest {
                     txn.singleDelete(
                         testCf,
                         arrayOf("single-delete-".encodeToByteArray(), "cf-key".encodeToByteArray()),
-                        true
+                        false
                     )
                     txn.commit()
                 }

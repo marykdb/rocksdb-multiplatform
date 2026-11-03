@@ -1495,7 +1495,10 @@ expect class Transaction : RocksObject {
      *
      * @param columnFamilyHandle The column family to single-delete the key from.
      * @param key The specified key to single-delete.
-     * @param assumeTracked `true` when it is expected that the key is already tracked.
+     * @param assumeTracked `true` when the key is already tracked by a pessimistic
+     * transaction created by [TransactionDB]. Optimistic transactions created by
+     * [OptimisticTransactionDB] require `false`; RocksDB does not support this
+     * optimization for optimistic transactions.
      *
      * @throws RocksDBException when one of the TransactionDB conditions
      *     described above occurs, or in the case of an unexpected error.
@@ -1522,6 +1525,8 @@ expect class Transaction : RocksObject {
     /**
      * Similar to [`singleDelete`](#singleDelete) but allows the key to be
      * supplied in several parts that will be concatenated together.
+     * [assumeTracked] may be `true` only for pessimistic [TransactionDB]
+     * transactions; optimistic [OptimisticTransactionDB] transactions require `false`.
      */
     fun singleDelete(
         columnFamilyHandle: ColumnFamilyHandle,
