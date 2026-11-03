@@ -81,6 +81,7 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
     RocksObject(),
     DBOptionsInterface<Options> {
     private var statistics: Statistics? = null
+    private var writeBufferManager: WriteBufferManager? = null
     private var env: Env? = null
     private var fifoCompactionOptions: CompactionOptionsFIFO? = null
     private var universalCompactionOptions: CompactionOptionsUniversal? = null
@@ -102,6 +103,7 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
             rocksdb_options_destroy(native)
             comparator?.closeFromOptions()
             statistics = null
+            writeBufferManager = null
             env = null
             tableFormatConfig = null
             sstFileManager = null
@@ -139,8 +141,16 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
         return this
     }
 
+    internal fun attachWriteBufferManager(manager: WriteBufferManager): Options {
+        checkOwningHandle()
+        manager.checkOwningHandle()
+        rocksdb.rocksdb_options_set_write_buffer_manager(native, manager.native)
+        writeBufferManager = manager
+        return this
+    }
+
     internal fun retainedNativeReferences(): List<Any> =
-        listOfNotNull(env, statistics, sstFileManager)
+        listOfNotNull(env, statistics, sstFileManager, writeBufferManager)
 
     actual fun setMaxOpenFiles(maxOpenFiles: Int): Options {
         checkOwningHandle()

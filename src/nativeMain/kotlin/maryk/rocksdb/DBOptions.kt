@@ -56,6 +56,7 @@ actual class DBOptions internal constructor(
     internal val native: CPointer<rocksdb_options_t>
 ) : RocksObject(), DBOptionsInterface<DBOptions> {
     private var statistics: Statistics? = null
+    private var writeBufferManager: WriteBufferManager? = null
     private var env: Env? = null
 
     actual constructor() : this(requireNotNull(rocksdb_options_create()) { "Unable to allocate RocksDB DB options" })
@@ -65,6 +66,7 @@ actual class DBOptions internal constructor(
             statistics?.disconnectFromNative(native)
             rocksdb_options_destroy(native)
             statistics = null
+            writeBufferManager = null
             env = null
             super.close()
         }
@@ -156,8 +158,16 @@ actual class DBOptions internal constructor(
         return requireNotNull(env)
     }
 
+    internal fun attachWriteBufferManager(manager: WriteBufferManager): DBOptions {
+        checkOwningHandle()
+        manager.checkOwningHandle()
+        rocksdb.rocksdb_options_set_write_buffer_manager(native, manager.native)
+        writeBufferManager = manager
+        return this
+    }
+
     internal fun retainedNativeReferences(): List<Any> =
-        listOfNotNull(env, statistics)
+        listOfNotNull(env, statistics, writeBufferManager)
 
     actual fun setUseFsync(useFsync: Boolean): DBOptions {
         checkOwningHandle()
