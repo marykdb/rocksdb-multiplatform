@@ -5,3 +5,6 @@ xcodeBuild
 local.properties
 /.kotlin/
 /lib/
+
+# Generated local toolchain configuration
+/.toolchain/local.module-template.yaml
