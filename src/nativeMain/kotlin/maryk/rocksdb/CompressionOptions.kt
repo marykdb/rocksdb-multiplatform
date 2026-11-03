@@ -6,6 +6,12 @@ import cnames.structs.rocksdb_compression_options_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import maryk.asUInt32
+import maryk.toBoolean
+import maryk.toUByte
+import rocksdb.rocksdb_compression_options_set_enabled
+import rocksdb.rocksdb_compression_options_get_enabled
+import rocksdb.rocksdb_compression_options_set_zstd_max_train_bytes
+import rocksdb.rocksdb_compression_options_get_zstd_max_train_bytes
 import maryk.toCheckedInt
 import rocksdb.rocksdb_compression_options_create
 import rocksdb.rocksdb_compression_options_destroy
@@ -76,5 +82,27 @@ actual class CompressionOptions internal constructor(
     actual fun maxDictBytes(): Int {
         checkOwningHandle()
         return rocksdb_compression_options_get_max_dict_bytes(native).toCheckedInt("compression options max dictionary bytes")
+    }
+    actual fun setEnabled(enabled: Boolean): CompressionOptions {
+        checkOwningHandle()
+        rocksdb_compression_options_set_enabled(native, enabled.toUByte())
+        return this
+    }
+
+    actual fun enabled(): Boolean {
+        checkOwningHandle()
+        return rocksdb_compression_options_get_enabled(native).toBoolean()
+    }
+
+    actual fun setZStdMaxTrainBytes(bytes: Int): CompressionOptions {
+        checkOwningHandle()
+        rocksdb_compression_options_set_zstd_max_train_bytes(native, bytes.asUInt32())
+        return this
+    }
+
+    actual fun zstdMaxTrainBytes(): Int {
+        checkOwningHandle()
+        return rocksdb_compression_options_get_zstd_max_train_bytes(native)
+            .toCheckedInt("compression dictionary training bytes")
     }
 }

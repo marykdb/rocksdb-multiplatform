@@ -9,4 +9,8 @@ expect class CompressionOptions() : RocksObject {
     fun strategy(): Int
     fun setMaxDictBytes(bytes: Int): CompressionOptions
     fun maxDictBytes(): Int
+    fun setEnabled(enabled: Boolean): CompressionOptions
+    fun enabled(): Boolean
+    fun setZStdMaxTrainBytes(bytes: Int): CompressionOptions
+    fun zstdMaxTrainBytes(): Int
 }

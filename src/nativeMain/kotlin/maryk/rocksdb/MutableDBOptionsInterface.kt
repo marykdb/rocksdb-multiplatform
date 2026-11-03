@@ -31,4 +31,10 @@ actual interface MutableDBOptionsInterface<T : MutableDBOptionsInterface<T>> {
     actual fun compactionReadaheadSize(): Long
     actual fun setDailyOffpeakTimeUTC(offpeakTimeUTC: String): T
     actual fun dailyOffpeakTimeUTC(): String
+
+    actual fun setMaxBackgroundCompactions(value: Int): T
+    actual fun maxBackgroundCompactions(): Int
+    actual fun setMaxCompactionTriggerWakeupSeconds(value: Long): T
+    actual fun maxCompactionTriggerWakeupSeconds(): Long
+
 }

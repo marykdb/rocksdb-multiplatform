@@ -46,4 +46,10 @@ expect interface MutableDBOptionsInterface<T : MutableDBOptionsInterface<T>> {
 
     fun setDailyOffpeakTimeUTC(offpeakTimeUTC: String): T
     fun dailyOffpeakTimeUTC(): String
+
+    fun setMaxBackgroundCompactions(value: Int): T
+    fun maxBackgroundCompactions(): Int
+    fun setMaxCompactionTriggerWakeupSeconds(value: Long): T
+    fun maxCompactionTriggerWakeupSeconds(): Long
+
 }

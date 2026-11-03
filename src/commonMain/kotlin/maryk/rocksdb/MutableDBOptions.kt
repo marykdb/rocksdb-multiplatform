@@ -10,6 +10,7 @@ expect fun parseMutableDBOptions(
     ignoreUnknown: Boolean = false
 ): MutableDBOptionsBuilder
 
+/** Query values after explicitly setting or parsing them; an unset value has no portable getter default. */
 expect class MutableDBOptionsBuilder : MutableDBOptionsInterface<MutableDBOptionsBuilder> {
     fun build(): MutableDBOptions
     override fun setMaxBackgroundJobs(maxBackgroundJobs: Int): MutableDBOptionsBuilder
@@ -42,4 +43,10 @@ expect class MutableDBOptionsBuilder : MutableDBOptionsInterface<MutableDBOption
     override fun compactionReadaheadSize(): Long
     override fun setDailyOffpeakTimeUTC(offpeakTimeUTC: String): MutableDBOptionsBuilder
     override fun dailyOffpeakTimeUTC(): String
+
+    override fun setMaxBackgroundCompactions(value: Int): MutableDBOptionsBuilder
+    override fun maxBackgroundCompactions(): Int
+    override fun setMaxCompactionTriggerWakeupSeconds(value: Long): MutableDBOptionsBuilder
+    override fun maxCompactionTriggerWakeupSeconds(): Long
+
 }

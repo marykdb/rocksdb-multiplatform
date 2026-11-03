@@ -1,5 +1,8 @@
 package maryk.rocksdb
 
+import rocksdb.rocksdb_mutable_db_options_get_max_compaction_trigger_wakeup_seconds
+import rocksdb.rocksdb_mutable_db_options_set_max_compaction_trigger_wakeup_seconds
+
 import cnames.structs.rocksdb_mutable_db_options_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.toKString
@@ -297,4 +300,31 @@ actual class MutableDBOptionsBuilder internal constructor(
             ?: error("Unable to clone mutable DB options")
         return MutableDBOptions(copy, explicitValues.toMap())
     }
+
+    actual override fun setMaxBackgroundCompactions(value: Int): MutableDBOptionsBuilder {
+        checkOpen()
+        rocksdb_mutable_db_options_set_max_background_compactions(native, value)
+        explicitValues["max_background_compactions"] = value.toString()
+        return this
+    }
+
+    actual override fun maxBackgroundCompactions(): Int {
+        checkOpen()
+        if ("max_background_compactions" !in explicitValues) throw NoSuchElementException("max_background_compactions has not been set")
+        return rocksdb_mutable_db_options_get_max_background_compactions(native)
+    }
+
+    actual override fun setMaxCompactionTriggerWakeupSeconds(value: Long): MutableDBOptionsBuilder {
+        checkOpen()
+        rocksdb_mutable_db_options_set_max_compaction_trigger_wakeup_seconds(native, value.asUInt64())
+        explicitValues["max_compaction_trigger_wakeup_seconds"] = value.toString()
+        return this
+    }
+
+    actual override fun maxCompactionTriggerWakeupSeconds(): Long {
+        checkOpen()
+        if ("max_compaction_trigger_wakeup_seconds" !in explicitValues) throw NoSuchElementException("max_compaction_trigger_wakeup_seconds has not been set")
+        return rocksdb_mutable_db_options_get_max_compaction_trigger_wakeup_seconds(native).toCheckedLong("max_compaction_trigger_wakeup_seconds")
+    }
+
 }

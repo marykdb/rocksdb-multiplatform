@@ -679,4 +679,60 @@ expect class ColumnFamilyOptions() : RocksObject {
     fun setPrepopulateBlobCache(value: PrepopulateBlobCache): ColumnFamilyOptions
     fun prepopulateBlobCache(): PrepopulateBlobCache
 
+
+    /** Additional startup tuning. Values are validated by RocksDB when opening the database. */
+    fun setLevelCompactionDynamicLevelBytes(value: Boolean): ColumnFamilyOptions
+    fun levelCompactionDynamicLevelBytes(): Boolean
+    fun setMaxCompactionBytes(value: Long): ColumnFamilyOptions
+    fun maxCompactionBytes(): Long
+    fun setInplaceUpdateSupport(value: Boolean): ColumnFamilyOptions
+    fun inplaceUpdateSupport(): Boolean
+    fun setInplaceUpdateNumLocks(value: Long): ColumnFamilyOptions
+    fun inplaceUpdateNumLocks(): Long
+    fun setExperimentalMempurgeThreshold(value: Double): ColumnFamilyOptions
+    fun experimentalMempurgeThreshold(): Double
+    fun setMemtableWholeKeyFiltering(value: Boolean): ColumnFamilyOptions
+    fun memtableWholeKeyFiltering(): Boolean
+    fun setOptimizeFiltersForHits(value: Boolean): ColumnFamilyOptions
+    fun optimizeFiltersForHits(): Boolean
+    fun setSoftPendingCompactionBytesLimit(value: Long): ColumnFamilyOptions
+    fun softPendingCompactionBytesLimit(): Long
+    fun setHardPendingCompactionBytesLimit(value: Long): ColumnFamilyOptions
+    fun hardPendingCompactionBytesLimit(): Long
+    fun setParanoidFileChecks(value: Boolean): ColumnFamilyOptions
+    fun paranoidFileChecks(): Boolean
+    fun setReportBgIoStats(value: Boolean): ColumnFamilyOptions
+    fun reportBgIoStats(): Boolean
+    /** Age in seconds after which SST files become eligible for compaction; this does not expire individual keys.
+     * Use [engineDefaultCompactionAgeSeconds] (-2) for the engine default or 0 to disable the age trigger. */
+    fun setTtl(value: Long): ColumnFamilyOptions
+    fun ttl(): Long
+    /** Age in seconds after which SST files are eligible for periodic compaction.
+     * Use [engineDefaultCompactionAgeSeconds] (-2) for the engine default or 0 to disable the age trigger. */
+    fun setPeriodicCompactionSeconds(value: Long): ColumnFamilyOptions
+    fun periodicCompactionSeconds(): Long
+    fun setForceConsistencyChecks(value: Boolean): ColumnFamilyOptions
+    fun forceConsistencyChecks(): Boolean
+    fun setMemtableMaxRangeDeletions(value: Int): ColumnFamilyOptions
+    fun memtableMaxRangeDeletions(): Int
+    fun setMinTombstonesForRangeConversion(value: Int): ColumnFamilyOptions
+    fun minTombstonesForRangeConversion(): Int
+    fun setReadTriggeredCompactionThreshold(value: Double): ColumnFamilyOptions
+    fun readTriggeredCompactionThreshold(): Double
+    fun setCompactionPriority(value: CompactionPriority): ColumnFamilyOptions
+    fun compactionPriority(): CompactionPriority
+    /** Configure point lookups using a block-cache budget in megabytes. Replaces table and prefix settings. */
+    fun optimizeForPointLookup(budget: Long): ColumnFamilyOptions
+    /** Configure level compaction using a memtable memory budget in bytes; the no-argument overload uses 512 MiB. */
+    fun optimizeLevelStyleCompaction(budget: Long): ColumnFamilyOptions
+    fun optimizeLevelStyleCompaction(): ColumnFamilyOptions
+    /** Configure universal compaction using a memtable memory budget in bytes; the no-argument overload uses 512 MiB. */
+    fun optimizeUniversalStyleCompaction(budget: Long): ColumnFamilyOptions
+    fun optimizeUniversalStyleCompaction(): ColumnFamilyOptions
+
+
+    /** Compression for the bottommost SST level, separate from the general compression setting. */
+    fun setBottommostCompressionType(compressionType: CompressionType): ColumnFamilyOptions
+    fun bottommostCompressionType(): CompressionType
+
 }

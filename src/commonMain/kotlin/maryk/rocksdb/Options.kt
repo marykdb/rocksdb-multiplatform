@@ -821,4 +821,191 @@ expect class Options() : RocksObject, DBOptionsInterface<Options> {
     fun setPrepopulateBlobCache(value: PrepopulateBlobCache): Options
     fun prepopulateBlobCache(): PrepopulateBlobCache
 
+
+    /** Additional startup tuning. Values are validated by RocksDB when opening the database. */
+    fun setOpenFilesAsync(value: Boolean): Options
+    fun openFilesAsync(): Boolean
+    fun setMaxFileOpeningThreads(value: Int): Options
+    fun maxFileOpeningThreads(): Int
+    fun setMaxTotalWalSize(value: Long): Options
+    fun maxTotalWalSize(): Long
+    fun setDbLogDir(value: String): Options
+    fun dbLogDir(): String
+    fun setWalDir(value: String): Options
+    fun walDir(): String
+    fun setDeleteObsoleteFilesPeriodMicros(value: Long): Options
+    fun deleteObsoleteFilesPeriodMicros(): Long
+    fun setMaxBackgroundCompactions(value: Int): Options
+    fun maxBackgroundCompactions(): Int
+    fun setMaxSubcompactions(value: Int): Options
+    fun maxSubcompactions(): Int
+    fun setMaxBackgroundFlushes(value: Int): Options
+    fun maxBackgroundFlushes(): Int
+    fun setMaxBackgroundJobs(value: Int): Options
+    fun maxBackgroundJobs(): Int
+    fun setRecycleLogFileNum(value: Long): Options
+    fun recycleLogFileNum(): Long
+    fun setMaxManifestFileSize(value: Long): Options
+    fun maxManifestFileSize(): Long
+    fun setTableCacheNumshardbits(value: Int): Options
+    fun tableCacheNumshardbits(): Int
+    fun setWalTtlSeconds(value: Long): Options
+    fun walTtlSeconds(): Long
+    fun setMaxWriteBatchGroupSizeBytes(value: Long): Options
+    fun maxWriteBatchGroupSizeBytes(): Long
+    fun setManifestPreallocationSize(value: Long): Options
+    fun manifestPreallocationSize(): Long
+    /** Request direct I/O for reads. Opening requires support from the selected filesystem. */
+    fun setUseDirectReads(value: Boolean): Options
+    fun useDirectReads(): Boolean
+    /** Request direct I/O for flushes and compactions; requires filesystem support. */
+    fun setUseDirectIoForFlushAndCompaction(value: Boolean): Options
+    fun useDirectIoForFlushAndCompaction(): Boolean
+    fun setAllowFAllocate(value: Boolean): Options
+    fun allowFAllocate(): Boolean
+    fun setAllowMmapReads(value: Boolean): Options
+    fun allowMmapReads(): Boolean
+    fun setAllowMmapWrites(value: Boolean): Options
+    fun allowMmapWrites(): Boolean
+    fun setIsFdCloseOnExec(value: Boolean): Options
+    fun isFdCloseOnExec(): Boolean
+    fun setStatsDumpPeriodSec(value: Int): Options
+    fun statsDumpPeriodSec(): Int
+    fun setMaxCompactionTriggerWakeupSeconds(value: Long): Options
+    fun maxCompactionTriggerWakeupSeconds(): Long
+    fun setStatsPersistPeriodSec(value: Int): Options
+    fun statsPersistPeriodSec(): Int
+    fun setStatsHistoryBufferSize(value: Long): Options
+    fun statsHistoryBufferSize(): Long
+    fun setAdviseRandomOnOpen(value: Boolean): Options
+    fun adviseRandomOnOpen(): Boolean
+    fun setDbWriteBufferSize(value: Long): Options
+    fun dbWriteBufferSize(): Long
+    fun setCompactionReadaheadSize(value: Long): Options
+    fun compactionReadaheadSize(): Long
+    fun setDailyOffpeakTimeUTC(value: String): Options
+    fun dailyOffpeakTimeUTC(): String
+    fun setWritableFileMaxBufferSize(value: Long): Options
+    fun writableFileMaxBufferSize(): Long
+    fun setUseAdaptiveMutex(value: Boolean): Options
+    fun useAdaptiveMutex(): Boolean
+    fun setWalBytesPerSync(value: Long): Options
+    fun walBytesPerSync(): Long
+    fun setStrictBytesPerSync(value: Boolean): Options
+    fun strictBytesPerSync(): Boolean
+    fun setEnableThreadTracking(value: Boolean): Options
+    fun enableThreadTracking(): Boolean
+    fun setDelayedWriteRate(value: Long): Options
+    fun delayedWriteRate(): Long
+    fun setEnablePipelinedWrite(value: Boolean): Options
+    fun enablePipelinedWrite(): Boolean
+    /** Allow writes outside sequence order. This weakens snapshot consistency; use only when that tradeoff is acceptable. */
+    fun setUnorderedWrite(value: Boolean): Options
+    fun unorderedWrite(): Boolean
+    fun setAllowConcurrentMemtableWrite(value: Boolean): Options
+    fun allowConcurrentMemtableWrite(): Boolean
+    fun setEnableWriteThreadAdaptiveYield(value: Boolean): Options
+    fun enableWriteThreadAdaptiveYield(): Boolean
+    fun setWriteThreadMaxYieldUsec(value: Long): Options
+    fun writeThreadMaxYieldUsec(): Long
+    fun setWriteThreadSlowYieldUsec(value: Long): Options
+    fun writeThreadSlowYieldUsec(): Long
+    fun setSkipStatsUpdateOnDbOpen(value: Boolean): Options
+    fun skipStatsUpdateOnDbOpen(): Boolean
+    fun setAllow2pc(value: Boolean): Options
+    fun allow2pc(): Boolean
+    fun setDumpMallocStats(value: Boolean): Options
+    fun dumpMallocStats(): Boolean
+    fun setAvoidFlushDuringRecovery(value: Boolean): Options
+    fun avoidFlushDuringRecovery(): Boolean
+    fun setAvoidFlushDuringShutdown(value: Boolean): Options
+    fun avoidFlushDuringShutdown(): Boolean
+    fun setAllowIngestBehind(value: Boolean): Options
+    fun allowIngestBehind(): Boolean
+    fun setTwoWriteQueues(value: Boolean): Options
+    fun twoWriteQueues(): Boolean
+    fun setManualWalFlush(value: Boolean): Options
+    fun manualWalFlush(): Boolean
+    fun setLevelCompactionDynamicLevelBytes(value: Boolean): Options
+    fun levelCompactionDynamicLevelBytes(): Boolean
+    fun setArenaBlockSize(value: Long): Options
+    fun arenaBlockSize(): Long
+    fun setMaxSequentialSkipInIterations(value: Long): Options
+    fun maxSequentialSkipInIterations(): Long
+    fun setInplaceUpdateSupport(value: Boolean): Options
+    fun inplaceUpdateSupport(): Boolean
+    fun setInplaceUpdateNumLocks(value: Long): Options
+    fun inplaceUpdateNumLocks(): Long
+    fun setMemtablePrefixBloomSizeRatio(value: Double): Options
+    fun memtablePrefixBloomSizeRatio(): Double
+    fun setExperimentalMempurgeThreshold(value: Double): Options
+    fun experimentalMempurgeThreshold(): Double
+    fun setMemtableWholeKeyFiltering(value: Boolean): Options
+    fun memtableWholeKeyFiltering(): Boolean
+    fun setMaxSuccessiveMerges(value: Long): Options
+    fun maxSuccessiveMerges(): Long
+    fun setOptimizeFiltersForHits(value: Boolean): Options
+    fun optimizeFiltersForHits(): Boolean
+    fun setMemtableHugePageSize(value: Long): Options
+    fun memtableHugePageSize(): Long
+    fun setSoftPendingCompactionBytesLimit(value: Long): Options
+    fun softPendingCompactionBytesLimit(): Long
+    fun setHardPendingCompactionBytesLimit(value: Long): Options
+    fun hardPendingCompactionBytesLimit(): Long
+    fun setParanoidFileChecks(value: Boolean): Options
+    fun paranoidFileChecks(): Boolean
+    fun setReportBgIoStats(value: Boolean): Options
+    fun reportBgIoStats(): Boolean
+    /** Age in seconds after which SST files become eligible for compaction; this does not expire individual keys.
+     * Use [engineDefaultCompactionAgeSeconds] (-2) for the engine default or 0 to disable the age trigger. */
+    fun setTtl(value: Long): Options
+    fun ttl(): Long
+    /** Age in seconds after which SST files are eligible for periodic compaction.
+     * Use [engineDefaultCompactionAgeSeconds] (-2) for the engine default or 0 to disable the age trigger. */
+    fun setPeriodicCompactionSeconds(value: Long): Options
+    fun periodicCompactionSeconds(): Long
+    fun setForceConsistencyChecks(value: Boolean): Options
+    fun forceConsistencyChecks(): Boolean
+    fun setAtomicFlush(value: Boolean): Options
+    fun atomicFlush(): Boolean
+    fun setAvoidUnnecessaryBlockingIO(value: Boolean): Options
+    fun avoidUnnecessaryBlockingIO(): Boolean
+    fun setPersistStatsToDisk(value: Boolean): Options
+    fun persistStatsToDisk(): Boolean
+    fun setWriteDbidToManifest(value: Boolean): Options
+    fun writeDbidToManifest(): Boolean
+    fun setLogReadaheadSize(value: Long): Options
+    fun logReadaheadSize(): Long
+    fun setBestEffortsRecovery(value: Boolean): Options
+    fun bestEffortsRecovery(): Boolean
+    fun setMaxBgErrorResumeCount(value: Int): Options
+    fun maxBgerrorResumeCount(): Int
+    fun setBgerrorResumeRetryInterval(value: Long): Options
+    fun bgerrorResumeRetryInterval(): Long
+    fun setMemtableMaxRangeDeletions(value: Int): Options
+    fun memtableMaxRangeDeletions(): Int
+    fun setMinTombstonesForRangeConversion(value: Int): Options
+    fun minTombstonesForRangeConversion(): Int
+    fun setReadTriggeredCompactionThreshold(value: Double): Options
+    fun readTriggeredCompactionThreshold(): Double
+    fun setCompactionPriority(value: CompactionPriority): Options
+    fun compactionPriority(): CompactionPriority
+    /** Configure point lookups using a block-cache budget in megabytes. Replaces table and prefix settings. */
+    fun optimizeForPointLookup(budget: Long): Options
+    /** Configure level compaction using a memtable memory budget in bytes; the no-argument overload uses 512 MiB. */
+    fun optimizeLevelStyleCompaction(budget: Long): Options
+    fun optimizeLevelStyleCompaction(): Options
+    /** Configure universal compaction using a memtable memory budget in bytes; the no-argument overload uses 512 MiB. */
+    fun optimizeUniversalStyleCompaction(budget: Long): Options
+    fun optimizeUniversalStyleCompaction(): Options
+    /** Tune for bulk loading, including disabling automatic compaction. Review the settings before normal use. */
+    fun prepareForBulkLoad(): Options
+    /** Configure background thread pools and the allowed compaction/flush concurrency. */
+    fun setIncreaseParallelism(totalThreads: Int): Options
+
+
+    /** Compression for the bottommost SST level, separate from the general compression setting. */
+    fun setBottommostCompressionType(compressionType: CompressionType): Options
+    fun bottommostCompressionType(): CompressionType
+
 }

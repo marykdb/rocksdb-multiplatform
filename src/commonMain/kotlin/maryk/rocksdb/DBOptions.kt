@@ -298,4 +298,132 @@ expect class DBOptions() : RocksObject, DBOptionsInterface<DBOptions> {
      * Returns the configured recovery policy for WAL replay.
      */
     fun walRecoveryMode(): WALRecoveryMode
+
+    /** Additional startup tuning. Values are validated by RocksDB when opening the database. */
+    fun setOpenFilesAsync(value: Boolean): DBOptions
+    fun openFilesAsync(): Boolean
+    fun setMaxOpenFiles(value: Int): DBOptions
+    fun maxOpenFiles(): Int
+    fun setMaxFileOpeningThreads(value: Int): DBOptions
+    fun maxFileOpeningThreads(): Int
+    fun setMaxTotalWalSize(value: Long): DBOptions
+    fun maxTotalWalSize(): Long
+    fun setDbLogDir(value: String): DBOptions
+    fun dbLogDir(): String
+    fun setWalDir(value: String): DBOptions
+    fun walDir(): String
+    fun setDeleteObsoleteFilesPeriodMicros(value: Long): DBOptions
+    fun deleteObsoleteFilesPeriodMicros(): Long
+    fun setMaxBackgroundJobs(value: Int): DBOptions
+    fun maxBackgroundJobs(): Int
+    fun setMaxBackgroundCompactions(value: Int): DBOptions
+    fun maxBackgroundCompactions(): Int
+    fun setMaxSubcompactions(value: Int): DBOptions
+    fun maxSubcompactions(): Int
+    fun setMaxBackgroundFlushes(value: Int): DBOptions
+    fun maxBackgroundFlushes(): Int
+    fun setRecycleLogFileNum(value: Long): DBOptions
+    fun recycleLogFileNum(): Long
+    fun setMaxManifestFileSize(value: Long): DBOptions
+    fun maxManifestFileSize(): Long
+    fun setTableCacheNumshardbits(value: Int): DBOptions
+    fun tableCacheNumshardbits(): Int
+    fun setWalTtlSeconds(value: Long): DBOptions
+    fun walTtlSeconds(): Long
+    fun setMaxWriteBatchGroupSizeBytes(value: Long): DBOptions
+    fun maxWriteBatchGroupSizeBytes(): Long
+    fun setManifestPreallocationSize(value: Long): DBOptions
+    fun manifestPreallocationSize(): Long
+    fun setAllowMmapReads(value: Boolean): DBOptions
+    fun allowMmapReads(): Boolean
+    fun setAllowMmapWrites(value: Boolean): DBOptions
+    fun allowMmapWrites(): Boolean
+    /** Request direct I/O for reads. Opening requires support from the selected filesystem. */
+    fun setUseDirectReads(value: Boolean): DBOptions
+    fun useDirectReads(): Boolean
+    /** Request direct I/O for flushes and compactions; requires filesystem support. */
+    fun setUseDirectIoForFlushAndCompaction(value: Boolean): DBOptions
+    fun useDirectIoForFlushAndCompaction(): Boolean
+    fun setAllowFAllocate(value: Boolean): DBOptions
+    fun allowFAllocate(): Boolean
+    fun setIsFdCloseOnExec(value: Boolean): DBOptions
+    fun isFdCloseOnExec(): Boolean
+    fun setStatsDumpPeriodSec(value: Int): DBOptions
+    fun statsDumpPeriodSec(): Int
+    fun setMaxCompactionTriggerWakeupSeconds(value: Long): DBOptions
+    fun maxCompactionTriggerWakeupSeconds(): Long
+    fun setStatsPersistPeriodSec(value: Int): DBOptions
+    fun statsPersistPeriodSec(): Int
+    fun setStatsHistoryBufferSize(value: Long): DBOptions
+    fun statsHistoryBufferSize(): Long
+    fun setAdviseRandomOnOpen(value: Boolean): DBOptions
+    fun adviseRandomOnOpen(): Boolean
+    fun setDbWriteBufferSize(value: Long): DBOptions
+    fun dbWriteBufferSize(): Long
+    fun setCompactionReadaheadSize(value: Long): DBOptions
+    fun compactionReadaheadSize(): Long
+    fun setDailyOffpeakTimeUTC(value: String): DBOptions
+    fun dailyOffpeakTimeUTC(): String
+    fun setWritableFileMaxBufferSize(value: Long): DBOptions
+    fun writableFileMaxBufferSize(): Long
+    fun setUseAdaptiveMutex(value: Boolean): DBOptions
+    fun useAdaptiveMutex(): Boolean
+    fun setBytesPerSync(value: Long): DBOptions
+    fun bytesPerSync(): Long
+    fun setWalBytesPerSync(value: Long): DBOptions
+    fun walBytesPerSync(): Long
+    fun setStrictBytesPerSync(value: Boolean): DBOptions
+    fun strictBytesPerSync(): Boolean
+    fun setEnableThreadTracking(value: Boolean): DBOptions
+    fun enableThreadTracking(): Boolean
+    fun setDelayedWriteRate(value: Long): DBOptions
+    fun delayedWriteRate(): Long
+    fun setEnablePipelinedWrite(value: Boolean): DBOptions
+    fun enablePipelinedWrite(): Boolean
+    /** Allow writes outside sequence order. This weakens snapshot consistency; use only when that tradeoff is acceptable. */
+    fun setUnorderedWrite(value: Boolean): DBOptions
+    fun unorderedWrite(): Boolean
+    fun setAllowConcurrentMemtableWrite(value: Boolean): DBOptions
+    fun allowConcurrentMemtableWrite(): Boolean
+    fun setEnableWriteThreadAdaptiveYield(value: Boolean): DBOptions
+    fun enableWriteThreadAdaptiveYield(): Boolean
+    fun setWriteThreadMaxYieldUsec(value: Long): DBOptions
+    fun writeThreadMaxYieldUsec(): Long
+    fun setWriteThreadSlowYieldUsec(value: Long): DBOptions
+    fun writeThreadSlowYieldUsec(): Long
+    fun setSkipStatsUpdateOnDbOpen(value: Boolean): DBOptions
+    fun skipStatsUpdateOnDbOpen(): Boolean
+    fun setAllow2pc(value: Boolean): DBOptions
+    fun allow2pc(): Boolean
+    fun setDumpMallocStats(value: Boolean): DBOptions
+    fun dumpMallocStats(): Boolean
+    fun setAvoidFlushDuringRecovery(value: Boolean): DBOptions
+    fun avoidFlushDuringRecovery(): Boolean
+    fun setAvoidFlushDuringShutdown(value: Boolean): DBOptions
+    fun avoidFlushDuringShutdown(): Boolean
+    fun setAllowIngestBehind(value: Boolean): DBOptions
+    fun allowIngestBehind(): Boolean
+    fun setTwoWriteQueues(value: Boolean): DBOptions
+    fun twoWriteQueues(): Boolean
+    fun setManualWalFlush(value: Boolean): DBOptions
+    fun manualWalFlush(): Boolean
+    fun setAtomicFlush(value: Boolean): DBOptions
+    fun atomicFlush(): Boolean
+    fun setAvoidUnnecessaryBlockingIO(value: Boolean): DBOptions
+    fun avoidUnnecessaryBlockingIO(): Boolean
+    fun setPersistStatsToDisk(value: Boolean): DBOptions
+    fun persistStatsToDisk(): Boolean
+    fun setWriteDbidToManifest(value: Boolean): DBOptions
+    fun writeDbidToManifest(): Boolean
+    fun setLogReadaheadSize(value: Long): DBOptions
+    fun logReadaheadSize(): Long
+    fun setBestEffortsRecovery(value: Boolean): DBOptions
+    fun bestEffortsRecovery(): Boolean
+    fun setMaxBgErrorResumeCount(value: Int): DBOptions
+    fun maxBgerrorResumeCount(): Int
+    fun setBgerrorResumeRetryInterval(value: Long): DBOptions
+    fun bgerrorResumeRetryInterval(): Long
+    /** Configure background thread pools and the allowed compaction/flush concurrency. */
+    fun setIncreaseParallelism(totalThreads: Int): DBOptions
+
 }
