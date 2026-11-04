@@ -14,6 +14,16 @@ expect class Options() : RocksObject, DBOptionsInterface<Options> {
      */
     fun setTableFormatConfig(tableFormatConfig: TableFormatConfig): Options
 
+    /** Attach a merge operator before opening the database. Native takes ownership of this instance. */
+    fun setMergeOperator(mergeOperator: MergeOperator): Options
+    fun setMergeOperatorName(name: String): Options
+
+    /** Compression by level; an empty list restores the global compression setting. */
+    fun setCompressionPerLevel(compressionLevels: List<CompressionType>): Options
+
+    /** Attach a shared row cache. Close databases and options before closing the cache. */
+    fun setRowCache(rowCache: Cache): Options
+
     /** Attach an [SstFileManager] so RocksDB can coordinate file deletion with other instances. */
     fun setSstFileManager(sstFileManager: SstFileManager): Options
 

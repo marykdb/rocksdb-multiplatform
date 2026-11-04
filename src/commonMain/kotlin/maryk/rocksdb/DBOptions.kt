@@ -5,6 +5,9 @@ expect fun DBOptions.addEventListener(listener: EventListener): DBOptions
 expect fun Options.addEventListener(listener: EventListener): Options
 
 expect class DBOptions() : RocksObject, DBOptionsInterface<DBOptions> {
+    /** Attach a shared row cache. Close databases and options before closing the cache. */
+    fun setRowCache(rowCache: Cache): DBOptions
+
     /**
      * If this value is set to true, then the database will be created
      * if it is missing during `RocksDB.open()`.

@@ -37,19 +37,15 @@ private fun createPersistentCache(
     optimizedForNvm: Boolean,
 ): CPointer<rocksdb_persistent_cache_t> {
     env.checkOwningHandle()
-    check(logger.disownHandle()) { "Logger is already closed or registered." }
-    return try {
-        Unit.wrapWithNullErrorThrower { error ->
-            rocksdb_persistent_cache_create(
-                env.native,
-                path,
-                size.asUInt64(),
-                logger.native,
-                optimizedForNvm.toUByte(),
-                error,
-            )
-        } ?: error("Unable to create persistent cache at $path")
-    } finally {
-        logger.closeAfterSharedOwnershipTransfer()
-    }
+    logger.checkOwningHandle()
+    return Unit.wrapWithNullErrorThrower { error ->
+        rocksdb_persistent_cache_create(
+            env.native,
+            path,
+            size.asUInt64(),
+            logger.native,
+            optimizedForNvm.toUByte(),
+            error,
+        )
+    } ?: error("Unable to create persistent cache at $path")
 }

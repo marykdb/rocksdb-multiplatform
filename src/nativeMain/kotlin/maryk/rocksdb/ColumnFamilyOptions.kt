@@ -252,6 +252,12 @@ actual class ColumnFamilyOptions private constructor(
         return this
     }
 
+    actual fun setCompressionPerLevel(compressionLevels: List<CompressionType>): ColumnFamilyOptions {
+        checkOwningHandle()
+        setNativeCompressionPerLevel(native, compressionLevels)
+        return this
+    }
+
     actual fun setMergeOperatorName(name: String): ColumnFamilyOptions {
         checkOwningHandle()
         val nameBytes = name.encodeToByteArray()

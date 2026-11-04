@@ -64,6 +64,55 @@ openRocksDB("path_to_store_on_disk").use { db ->
 
 Check out the [tests](src/commonTest/kotlin/maryk/rocksdb) for more examples on how to use this library.
 
+Bloom filters for block-based SST files can be configured from common Kotlin code:
+
+```kotlin
+BloomFilter(9.9).use { filter ->
+    val tableConfig = BlockBasedTableConfig().setFilterPolicy(filter)
+    Options().setCreateIfMissing(true).setTableFormatConfig(tableConfig).use { options ->
+        openRocksDB(options, "path_to_store_on_disk").use { db ->
+            // Reads automatically consult filters in SST files written with this configuration.
+        }
+    }
+}
+```
+
+The same filter can be reused across options. Keep it open until those options and their databases
+have closed. Use `setFilterPolicy(null)` to disable filters for subsequently configured table factories;
+existing SST files keep their stored filters.
+
+Other shared configuration APIs include:
+
+- `Options.setMergeOperator(...)` and `setMergeOperatorName(...)` for the default column family.
+  On Native, attaching an operator transfers ownership; use a separate operator instance for each options instance.
+- `Options.setCompressionPerLevel(...)` and `ColumnFamilyOptions.setCompressionPerLevel(...)`.
+  Pass an empty list to restore the global compression setting.
+- `Options.setRowCache(...)` and `DBOptions.setRowCache(...)` for a shared lookup cache.
+- `BlockBasedTableConfig.setPersistentCache(...)` for caching SST pages on persistent media.
+  Pass `null` to detach it from future table factories; existing factories retain their cache.
+  Keep the cache's environment and logger open until all using databases, options and caches close.
+- `BlockBasedTableConfig.setIndexSearchType(...)` with `kBinary`, `kInterpolation`, or `kAuto`.
+  Interpolation and automatic selection require the bytewise comparator.
+- `Options.setLogger(...)` and `DBOptions.setLogger(...)` for a shared callback logger:
+
+```kotlin
+val logger = createLogger(InfoLogLevel.INFO_LEVEL) { level, message ->
+    println("$level: $message")
+}
+logger.use {
+    Options().setCreateIfMissing(true).use { options ->
+        options.setLogger(logger)
+        openRocksDB(options, "path_to_store_on_disk").use { db ->
+            // Logger callbacks can run on background threads.
+        }
+    }
+}
+```
+
+Keep shared caches and loggers open until their databases and options have closed. Callbacks passed
+to `createLogger` must be thread-safe; callback exceptions are contained before returning to RocksDB.
+On Native, also keep the logger open until any persistent caches using it have closed.
+
 ## Contributing
 
 We welcome contributions to the project! If you find a bug or want to suggest a new feature, please submit an issue or 

@@ -168,6 +168,9 @@ expect class ColumnFamilyOptions() : RocksObject {
      */
     fun setMergeOperator(mergeOperator: MergeOperator): ColumnFamilyOptions
 
+    /** Compression by level; an empty list restores the global compression setting. */
+    fun setCompressionPerLevel(compressionLevels: List<CompressionType>): ColumnFamilyOptions
+
     /**
      * A single CompactionFilter instance to call into during compaction.
      * Allows an application to modify/delete a key-value during background

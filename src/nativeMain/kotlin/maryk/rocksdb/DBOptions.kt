@@ -185,6 +185,13 @@ actual class DBOptions internal constructor(
 
     actual constructor() : this(requireNotNull(rocksdb_options_create()) { "Unable to allocate RocksDB DB options" })
 
+    actual fun setRowCache(rowCache: Cache): DBOptions {
+        checkOwningHandle()
+        rowCache.checkOwningHandle()
+        rocksdb.rocksdb_options_set_row_cache(native, rowCache.native)
+        return this
+    }
+
     override fun close() {
         if (tryClose()) {
             statistics?.disconnectFromNative(native)

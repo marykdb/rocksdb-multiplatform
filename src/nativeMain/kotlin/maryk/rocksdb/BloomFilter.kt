@@ -5,31 +5,23 @@ package maryk.rocksdb
 import cnames.structs.rocksdb_filterpolicy_t
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
-import rocksdb.rocksdb_filterpolicy_create_bloom
 import rocksdb.rocksdb_filterpolicy_create_bloom_full
 import rocksdb.rocksdb_filterpolicy_destroy
 
-actual class BloomFilter internal constructor(
-    internal val native: CPointer<rocksdb_filterpolicy_t>
+actual class BloomFilter actual constructor(
+    private val bitsPerKey: Double
 ) : FilterPolicy() {
-    actual constructor() : this(
-        requireNotNull(rocksdb_filterpolicy_create_bloom(10.toDouble())) {
-            "Unable to allocate RocksDB bloom filter"
-        }
-    )
+    private val native = newBloomPolicy(bitsPerKey)
 
-    actual constructor(bitsPerKey: Double) : this(
-        requireNotNull(rocksdb_filterpolicy_create_bloom(bitsPerKey)) {
-            "Unable to allocate RocksDB bloom filter"
-        }
-    )
+    actual constructor() : this(10.0)
 
-    actual constructor(bitsPerKey: Double, useBlockBasedBuilder: Boolean) : this(
-        // The value useBlockBasedBuilder is ignored in java implementation so ignore it here too.
-        requireNotNull(rocksdb_filterpolicy_create_bloom_full(bitsPerKey)) {
-            "Unable to allocate RocksDB full bloom filter"
-        }
-    )
+    // The legacy builder flag is ignored by RocksJava as well.
+    actual constructor(bitsPerKey: Double, useBlockBasedBuilder: Boolean) : this(bitsPerKey)
+
+    internal override fun createNativeCopy(): CPointer<rocksdb_filterpolicy_t> {
+        checkOwningHandle()
+        return newBloomPolicy(bitsPerKey)
+    }
 
     override fun close() {
         if (tryClose()) {
@@ -38,3 +30,8 @@ actual class BloomFilter internal constructor(
         }
     }
 }
+
+private fun newBloomPolicy(bitsPerKey: Double): CPointer<rocksdb_filterpolicy_t> =
+    requireNotNull(rocksdb_filterpolicy_create_bloom_full(bitsPerKey)) {
+        "Unable to allocate RocksDB bloom filter"
+    }

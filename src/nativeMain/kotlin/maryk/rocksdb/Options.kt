@@ -184,6 +184,8 @@ import maryk.toBoolean
 import maryk.toCheckedInt
 import maryk.toCheckedLong
 import maryk.toUByte
+import maryk.usePointer
+import maryk.wrapWithErrorThrower
 import rocksdb.rocksdb_options_create
 import rocksdb.rocksdb_options_destroy
 import rocksdb.rocksdb_options_get_WAL_size_limit_MB
@@ -261,6 +263,37 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
     private var sstFileManager: SstFileManager? = null
 
     actual constructor() : this(requireNotNull(rocksdb_options_create()) { "Unable to allocate RocksDB options" })
+
+    actual fun setMergeOperator(mergeOperator: MergeOperator): Options {
+        checkOwningHandle()
+        mergeOperator.transferOwnershipToNative()
+        rocksdb.rocksdb_options_set_merge_operator(native, mergeOperator.native)
+        return this
+    }
+
+    actual fun setMergeOperatorName(name: String): Options {
+        checkOwningHandle()
+        val bytes = name.encodeToByteArray()
+        wrapWithErrorThrower { error ->
+            bytes.usePointer { pointer ->
+                rocksdb.rocksdb_options_set_merge_operator_name(native, pointer, bytes.size.asSizeT(), error)
+            }
+        }
+        return this
+    }
+
+    actual fun setCompressionPerLevel(compressionLevels: List<CompressionType>): Options {
+        checkOwningHandle()
+        setNativeCompressionPerLevel(native, compressionLevels)
+        return this
+    }
+
+    actual fun setRowCache(rowCache: Cache): Options {
+        checkOwningHandle()
+        rowCache.checkOwningHandle()
+        rocksdb.rocksdb_options_set_row_cache(native, rowCache.native)
+        return this
+    }
 
     override fun close() {
         if (tryClose()) {

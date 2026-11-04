@@ -9,6 +9,14 @@ expect class BlockBasedTableConfig() : TableFormatConfig {
 
     fun setBlockCache(cache: Cache?): BlockBasedTableConfig
 
+    /**
+     * Attach a shared persistent cache, or null to disable it for subsequently
+     * configured table factories. Existing factories retain their cache.
+     * Keep the cache's environment and logger open until all using databases,
+     * options and caches have closed.
+     */
+    fun setPersistentCache(persistentCache: PersistentCache?): BlockBasedTableConfig
+
     fun setBlockSize(blockSize: Long): BlockBasedTableConfig
     fun blockSize(): Long
 
@@ -39,6 +47,14 @@ expect class BlockBasedTableConfig() : TableFormatConfig {
     fun setWholeKeyFiltering(wholeKeyFiltering: Boolean): BlockBasedTableConfig
     fun wholeKeyFiltering(): Boolean
 
+    /**
+     * Sets the SST filter policy, or null to disable filtering.
+     * A policy can be reused across configurations and options. Keep it open until
+     * the options and databases using it have closed.
+     */
+    fun setFilterPolicy(filterPolicy: FilterPolicy?): BlockBasedTableConfig
+    fun filterPolicy(): FilterPolicy?
+
     fun setFormatVersion(formatVersion: Int): BlockBasedTableConfig
     fun formatVersion(): Int
 
@@ -47,6 +63,9 @@ expect class BlockBasedTableConfig() : TableFormatConfig {
 
     fun setIndexType(indexType: IndexType): BlockBasedTableConfig
     fun indexType(): IndexType
+
+    fun setIndexSearchType(indexSearchType: IndexSearchType): BlockBasedTableConfig
+    fun indexSearchType(): IndexSearchType
 
     fun setDataBlockIndexType(dataBlockIndexType: DataBlockIndexType): BlockBasedTableConfig
     fun dataBlockIndexType(): DataBlockIndexType

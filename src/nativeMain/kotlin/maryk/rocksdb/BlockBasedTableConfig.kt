@@ -31,6 +31,7 @@ import rocksdb.rocksdb_options_set_block_based_table_factory
 actual class BlockBasedTableConfig actual constructor() : TableFormatConfig() {
     private var noBlockCache = false
     private var blockCache: Cache? = null
+    private var persistentCache: PersistentCache? = null
     private var blockSize: Long = 4096
     private var blockSizeDeviation: Int = 10
     private var blockRestartInterval: Int = 16
@@ -41,9 +42,11 @@ actual class BlockBasedTableConfig actual constructor() : TableFormatConfig() {
     private var pinL0FilterAndIndexBlocksInCache = false
     private var pinTopLevelIndexAndFilter = true
     private var wholeKeyFiltering = true
+    private var filterPolicy: FilterPolicy? = null
     private var formatVersion = 7
     private var checksumType: ChecksumType = ChecksumType.kXXH3
     private var indexType: IndexType = IndexType.kBinarySearch
+    private var indexSearchType: IndexSearchType = IndexSearchType.kBinary
     private var dataBlockIndexType: DataBlockIndexType = DataBlockIndexType.kDataBlockBinarySearch
     private var dataBlockHashTableUtilRatio: Double = 0.75
 
@@ -86,15 +89,24 @@ actual class BlockBasedTableConfig actual constructor() : TableFormatConfig() {
                 pinTopLevelIndexAndFilter.toUByte()
             )
             rocksdb_block_based_options_set_whole_key_filtering(native, wholeKeyFiltering.toUByte())
+            filterPolicy?.let { policy ->
+                // The C setter takes ownership. Each factory needs its own allocation.
+                rocksdb.rocksdb_block_based_options_set_filter_policy(native, policy.createNativeCopy())
+            }
             rocksdb_block_based_options_set_format_version(native, formatVersion)
             rocksdb_block_based_options_set_checksum(native, checksumType.value)
             rocksdb_block_based_options_set_index_type(native, indexType.value.toInt())
+            rocksdb.rocksdb_block_based_options_set_index_block_search_type(native, indexSearchType.ordinal)
             rocksdb_block_based_options_set_data_block_index_type(native, dataBlockIndexType.ordinal)
             rocksdb_block_based_options_set_data_block_hash_ratio(native, dataBlockHashTableUtilRatio)
             blockCache?.let { cache ->
                 cache.checkOwningHandle()
                 rocksdb_block_based_options_set_block_cache(native, cache.native)
             }
+            rocksdb.rocksdb_block_based_options_set_persistent_cache(native, persistentCache?.let { cache ->
+                cache.checkOwningHandle()
+                cache.native
+            })
 
             rocksdb.rocksdb_block_based_options_set_index_block_restart_interval(native, indexBlockRestartIntervalValue)
             rocksdb.rocksdb_block_based_options_set_optimize_filters_for_memory(native, optimizeFiltersForMemoryValue.toUByte())
@@ -117,6 +129,12 @@ actual class BlockBasedTableConfig actual constructor() : TableFormatConfig() {
 
     actual fun setNoBlockCache(noBlockCache: Boolean): BlockBasedTableConfig {
         this.noBlockCache = noBlockCache
+        return this
+    }
+
+    actual fun setPersistentCache(persistentCache: PersistentCache?): BlockBasedTableConfig {
+        persistentCache?.checkOwningHandle()
+        this.persistentCache = persistentCache
         return this
     }
 
@@ -197,6 +215,14 @@ actual class BlockBasedTableConfig actual constructor() : TableFormatConfig() {
 
     actual fun wholeKeyFiltering(): Boolean = wholeKeyFiltering
 
+    actual fun setFilterPolicy(filterPolicy: FilterPolicy?): BlockBasedTableConfig {
+        filterPolicy?.checkOwningHandle()
+        this.filterPolicy = filterPolicy
+        return this
+    }
+
+    actual fun filterPolicy(): FilterPolicy? = filterPolicy
+
     actual fun setFormatVersion(formatVersion: Int): BlockBasedTableConfig {
         this.formatVersion = formatVersion
         return this
@@ -217,6 +243,13 @@ actual class BlockBasedTableConfig actual constructor() : TableFormatConfig() {
     }
 
     actual fun indexType(): IndexType = indexType
+
+    actual fun setIndexSearchType(indexSearchType: IndexSearchType): BlockBasedTableConfig {
+        this.indexSearchType = indexSearchType
+        return this
+    }
+
+    actual fun indexSearchType(): IndexSearchType = indexSearchType
 
     actual fun setDataBlockIndexType(dataBlockIndexType: DataBlockIndexType): BlockBasedTableConfig {
         this.dataBlockIndexType = dataBlockIndexType
