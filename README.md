@@ -3,18 +3,11 @@
 
 # Kotlin Multiplatform bindings for RocksDB
 
-This project provides Kotlin Multiplatform bindings for RocksDB, a high-performance embedded key-value store for
-storage of data on disk. It uses the official native RocksDB
-implementation and exposes it through a Kotlin API, with prebuilt native binaries for the supported targets. Those
-native binaries are built separately in [build-rocksdb](https://github.com/marykdb/build-rocksdb).
+Kotlin Multiplatform bindings for [RocksDB](https://rocksdb.org), an embedded key-value store for disk-based storage.
+Use a shared Kotlin API across JVM, Android, and Kotlin/Native targets.
 
-The aim of this project is to make RocksDB usable from shared Kotlin code across JVM, Android, and native
-Linux/macOS/iOS/tvOS/watchOS/Windows targets. On JVM and Android it bridges the RocksDB Java API. On Kotlin/Native
-targets it calls the native RocksDB library through Kotlin/Native interop.
-
-This project is useful for developers who want to build multiplatform applications that require high-performance disk-based
-storage. Because the storage engine is still upstream RocksDB, performance should be close to RocksDB itself, apart from
-the expected JNI or native interop overhead depending on the target and usage pattern.
+JVM and Android use the RocksDB Java API. Kotlin/Native uses prebuilt native binaries from
+[build-rocksdb](https://github.com/marykdb/build-rocksdb).
 
 ## RocksDB API Support
 
@@ -22,9 +15,9 @@ The project supports the full RocksDB Java interfaces on the JVM and Android pla
 The common Kotlin API includes most common operations, but if you need additional features, you can request
 them by creating an issue or submitting a merge request.
 
-## Supported platforms 
+## Supported platforms
 
-- **JVM** - linux32, linux32-musl, linux64, linux64-musl, macOS, win64 (Same as RocksDBJava) 
+- **JVM** - linux32, linux32-musl, linux64, linux64-musl, macOS, win64 (Same as RocksDBJava)
 - **Android** - arm64-v8a, armeabi-v7a, x86, x86_64 (Default Android native build targets)
 
 Kotlin Native:
@@ -35,10 +28,6 @@ Kotlin Native:
 - **Linux**: linuxX64 & linuxArm64
 - **Windows**: mingwX64
 - **Android**: androidNativeArm32, androidNativeArm64, androidNativeX86 & androidNativeX64
-
-## Reference
-
-You can refer to the [API reference](src/commonMain/kotlin/maryk/rocksdb) or the official [RocksDB website](https://rocksdb.org) for more information.
 
 ## Gradle Dependency
 
@@ -55,67 +44,22 @@ Here's an example of how to open a RocksDB database, write a key-value pair and 
 openRocksDB("path_to_store_on_disk").use { db ->
     val key = "test".encodeToByteArray()
     db.put(key, "value".encodeToByteArray())
-    
-    val value = db.get("test".encodeToByteArray())
-    
+
+    val value = db.get(key)
+
     println(value?.decodeToString())
 }
 ```
 
-Check out the [tests](src/commonTest/kotlin/maryk/rocksdb) for more examples on how to use this library.
+## Documentation
 
-Bloom filters for block-based SST files can be configured from common Kotlin code:
-
-```kotlin
-BloomFilter(9.9).use { filter ->
-    val tableConfig = BlockBasedTableConfig().setFilterPolicy(filter)
-    Options().setCreateIfMissing(true).setTableFormatConfig(tableConfig).use { options ->
-        openRocksDB(options, "path_to_store_on_disk").use { db ->
-            // Reads automatically consult filters in SST files written with this configuration.
-        }
-    }
-}
-```
-
-The same filter can be reused across options. Keep it open until those options and their databases
-have closed. Use `setFilterPolicy(null)` to disable filters for subsequently configured table factories;
-existing SST files keep their stored filters.
-
-Other shared configuration APIs include:
-
-- `Options.setMergeOperator(...)` and `setMergeOperatorName(...)` for the default column family.
-  On Native, attaching an operator transfers ownership; use a separate operator instance for each options instance.
-- `Options.setCompressionPerLevel(...)` and `ColumnFamilyOptions.setCompressionPerLevel(...)`.
-  Pass an empty list to restore the global compression setting.
-- `Options.setRowCache(...)` and `DBOptions.setRowCache(...)` for a shared lookup cache.
-- `BlockBasedTableConfig.setPersistentCache(...)` for caching SST pages on persistent media.
-  Pass `null` to detach it from future table factories; existing factories retain their cache.
-  Keep the cache's environment and logger open until all using databases, options and caches close.
-- `BlockBasedTableConfig.setIndexSearchType(...)` with `kBinary`, `kInterpolation`, or `kAuto`.
-  Interpolation and automatic selection require the bytewise comparator.
-- `Options.setLogger(...)` and `DBOptions.setLogger(...)` for a shared callback logger:
-
-```kotlin
-val logger = createLogger(InfoLogLevel.INFO_LEVEL) { level, message ->
-    println("$level: $message")
-}
-logger.use {
-    Options().setCreateIfMissing(true).use { options ->
-        options.setLogger(logger)
-        openRocksDB(options, "path_to_store_on_disk").use { db ->
-            // Logger callbacks can run on background threads.
-        }
-    }
-}
-```
-
-Keep shared caches and loggers open until their databases and options have closed. Callbacks passed
-to `createLogger` must be thread-safe; callback exceptions are contained before returning to RocksDB.
-On Native, also keep the logger open until any persistent caches using it have closed.
+- [API source](src/commonMain/kotlin/maryk/rocksdb)
+- [Configuration guide](docs/configuration.md) — filters, caches, merge operators, compression, and logging
+- [Tests and examples](src/commonTest/kotlin/maryk/rocksdb)
 
 ## Contributing
 
-We welcome contributions to the project! If you find a bug or want to suggest a new feature, please submit an issue or 
+We welcome contributions to the project! If you find a bug or want to suggest a new feature, please submit an issue or
 submit a pull request.
 
 ## License
