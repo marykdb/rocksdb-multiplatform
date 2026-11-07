@@ -53,7 +53,7 @@ actual fun openTransactionDB(
             val native = openTransactionColumnFamiliesWithLengths(
                 dbOptions.native,
                 transactionDbOptions.native,
-                path.cstr.getPointer(this),
+                path.checkedNativePath().cstr.getPointer(this),
                 columnFamilyDescriptors.size,
                 namesArray,
                 nameLengths,
@@ -85,7 +85,7 @@ actual fun openTransactionDB(
         options.checkOwningHandle()
         transactionDbOptions.checkOwningHandle()
         val retainedReferences = options.retainedNativeReferences()
-        rocksdb.rocksdb_transactiondb_open(options.native, transactionDbOptions.native, path, error)?.let { native ->
+        rocksdb.rocksdb_transactiondb_open(options.native, transactionDbOptions.native, path.checkedNativePath(), error)?.let { native ->
             wrapOpenedDb(
                 closeNativeDb = { rocksdb.rocksdb_transactiondb_close(native) },
                 releaseComparator = { options.releaseOwnedComparator() },

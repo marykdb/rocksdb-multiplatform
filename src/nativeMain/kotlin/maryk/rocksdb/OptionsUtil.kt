@@ -60,7 +60,7 @@ actual object OptionsUtil {
     actual fun getLatestOptionsFileName(dbPath: String, env: Env): String {
         env.checkOwningHandle()
         val pointer = Unit.wrapWithNullErrorThrower { error ->
-            rocksdb_optionsutil_get_latest_options_file_name(dbPath, env.native, error)
+            rocksdb_optionsutil_get_latest_options_file_name(dbPath.checkedNativePath(), env.native, error)
         }
         return pointer?.let { name ->
             try {
@@ -83,11 +83,12 @@ actual object OptionsUtil {
             error: CValuesRef<CPointerVar<ByteVar>>,
         ) -> CPointer<rocksdb_loaded_cf_options_t>?,
     ) {
+        path.checkedNativePath()
         configOptions.checkOwningHandle()
         dbOptions.checkOwningHandle()
         columnFamilyDescriptors.closeOptionsAndClear()
         val descriptorSet = Unit.wrapWithNullErrorThrower { error ->
-            loader(configOptions.native, path, dbOptions.native, error)
+            loader(configOptions.native, path.checkedNativePath(), dbOptions.native, error)
         }
         descriptorSet?.let { bundle ->
             try {

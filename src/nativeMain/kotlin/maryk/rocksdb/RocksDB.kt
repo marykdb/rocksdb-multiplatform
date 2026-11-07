@@ -2320,7 +2320,7 @@ internal constructor(
         memScoped {
             val names = allocArray<CPointerVar<ByteVar>>(filePaths.size)
             filePaths.forEachIndexed { index, path ->
-                names[index] = path.cstr.ptr
+                names[index] = path.checkedNativePath().cstr.ptr
             }
             wrapWithErrorThrower { error ->
                 action(names, filePaths.size.asSizeT(), error)
@@ -2449,7 +2449,7 @@ internal constructor(
 actual fun destroyRocksDB(path: String, options: Options) {
     options.checkOwningHandle()
     Unit.wrapWithErrorThrower { error ->
-        rocksdb_destroy_db(options.native, path, error)
+        rocksdb_destroy_db(options.native, path.checkedNativePath(), error)
     }
 }
 
@@ -2463,7 +2463,7 @@ actual fun listColumnFamilies(
             val cfCount = alloc<size_tVar>()
             val nameLengths = alloc<CPointerVar<size_tVar>>()
             val values = rocksdb_list_column_families_with_lengths(
-                options.native, path.cstr.getPointer(this), cfCount.ptr, nameLengths.ptr, error
+                options.native, path.checkedNativePath().cstr.getPointer(this), cfCount.ptr, nameLengths.ptr, error
             )
 
             try {

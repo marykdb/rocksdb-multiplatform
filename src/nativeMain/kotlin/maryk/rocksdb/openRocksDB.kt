@@ -33,7 +33,7 @@ actual fun openRocksDB(options: Options, path: String): RocksDB {
     options.checkOwningHandle()
     return Unit.wrapWithNullErrorThrower { error ->
         val retainedReferences = options.retainedNativeReferences()
-        rocksdb_open(options.native, path, error)?.let { native ->
+        rocksdb_open(options.native, path.checkedNativePath(), error)?.let { native ->
             wrapOpenedDb(
                 closeNativeDb = { rocksdb_close(native) },
                 releaseComparator = { options.releaseOwnedComparator() },
@@ -80,7 +80,7 @@ actual fun openRocksDB(
             val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyDescriptors.size)
             val native = rocksdb_open_column_families_with_lengths(
                 options.native,
-                path.cstr.getPointer(this),
+                path.checkedNativePath().cstr.getPointer(this),
                 columnFamilyDescriptors.size,
                 namesArray,
                 nameLengths,
@@ -108,7 +108,7 @@ actual fun openAsSecondaryRocksDB(
 ): RocksDB = Unit.wrapWithNullErrorThrower { error ->
     options.checkOwningHandle()
     val retainedReferences = options.retainedNativeReferences()
-    rocksdb_open_as_secondary(options.native, path, secondaryPath, error)?.let { native ->
+    rocksdb_open_as_secondary(options.native, path.checkedNativePath(), secondaryPath.checkedNativePath(), error)?.let { native ->
         wrapOpenedDb(
             closeNativeDb = { rocksdb_close(native) },
             releaseComparator = { options.releaseOwnedComparator() },
@@ -146,8 +146,8 @@ actual fun openAsSecondaryRocksDB(
             val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyDescriptors.size)
             val native = rocksdb_open_as_secondary_column_families_with_lengths(
                 options.native,
-                path.cstr.getPointer(this),
-                secondaryPath.cstr.getPointer(this),
+                path.checkedNativePath().cstr.getPointer(this),
+                secondaryPath.checkedNativePath().cstr.getPointer(this),
                 columnFamilyDescriptors.size,
                 namesArray,
                 nameLengths,
@@ -176,7 +176,7 @@ actual fun openReadOnlyRocksDB(path: String): RocksDB =
 actual fun openReadOnlyRocksDB(options: Options, path: String): RocksDB = Unit.wrapWithNullErrorThrower { error ->
     options.checkOwningHandle()
     val retainedReferences = options.retainedNativeReferences()
-    rocksdb_open_for_read_only(options.native, path, 0u, error)?.let { native ->
+    rocksdb_open_for_read_only(options.native, path.checkedNativePath(), 0u, error)?.let { native ->
         wrapOpenedDb(
             closeNativeDb = { rocksdb_close(native) },
             releaseComparator = { options.releaseOwnedComparator() },
@@ -222,7 +222,7 @@ actual fun openReadOnlyRocksDB(
             val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(columnFamilyDescriptors.size)
             val native = rocksdb_open_for_read_only_column_families_with_lengths(
                 options.native,
-                path.cstr.getPointer(this),
+                path.checkedNativePath().cstr.getPointer(this),
                 columnFamilyDescriptors.size,
                 namesArray,
                 nameLengths,

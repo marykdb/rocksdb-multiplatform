@@ -47,7 +47,7 @@ private inline fun withDatabasePaths(
     try {
         val handles = allocArray<CPointerVar<rocksdb_dbpath_t>>(maxOf(1, paths.size))
         paths.forEachIndexed { index, path ->
-            val handle = requireNotNull(rocksdb_dbpath_create(path.path, path.targetSize.asUInt64())) {
+            val handle = requireNotNull(rocksdb_dbpath_create(path.path.checkedNativePath(), path.targetSize.asUInt64())) {
                 "Unable to allocate database path"
             }
             owned += handle

@@ -87,7 +87,7 @@ actual fun openTtlDB(options: Options, dbPath: String, ttl: Int, readOnly: Boole
     Unit.wrapWithNullErrorThrower { error ->
         options.checkOwningHandle()
         val retainedReferences = options.retainedNativeReferences()
-        rocksdb_ttl_open(options.native, dbPath, ttl, readOnly.toUByte(), error)?.let { native ->
+        rocksdb_ttl_open(options.native, dbPath.checkedNativePath(), ttl, readOnly.toUByte(), error)?.let { native ->
             wrapOpenedDb(
                 closeNativeDb = { rocksdb_ttl_close(native) },
                 releaseComparator = { options.releaseOwnedComparator() },
@@ -129,7 +129,7 @@ actual fun openTtlDB(
         val handles = allocArray<CPointerVar<rocksdb_column_family_handle_t>>(count)
         val native = rocksdb_ttl_open_column_families(
             options.native,
-            dbPath.cstr.getPointer(this),
+            dbPath.checkedNativePath().cstr.getPointer(this),
             count,
             namesArray,
             nameLengths,

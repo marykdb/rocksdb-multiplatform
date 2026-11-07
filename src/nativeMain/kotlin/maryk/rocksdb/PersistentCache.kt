@@ -41,7 +41,7 @@ private fun createPersistentCache(
     return Unit.wrapWithNullErrorThrower { error ->
         rocksdb_persistent_cache_create(
             env.native,
-            path,
+            path.checkedNativePath(),
             size.asUInt64(),
             logger.native,
             optimizedForNvm.toUByte(),

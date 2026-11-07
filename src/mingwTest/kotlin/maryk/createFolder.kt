@@ -1,9 +1,5 @@
 package maryk
 
-import platform.posix.mkdir
+import platform.windows.CreateDirectoryW
 
-actual fun createFolder(path: String) =
-    when (mkdir(path)) {
-        0 -> true
-        else -> false
-    }
+actual fun createFolder(path: String): Boolean = CreateDirectoryW(path, null) != 0

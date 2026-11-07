@@ -49,7 +49,7 @@ repositories {
 }
 
 group = "io.maryk.rocksdb"
-version = "11.8.1"
+version = "11.8.1.1"
 
 val rocksDBJVMVersion = "11.8.1"
 val rocksDBAndroidVersion = "11.8.1"
@@ -82,7 +82,7 @@ object RocksdbArtifacts {
     )
 }
 
-val nativeSourceSetNames = setOf("nativeMain", "nativeTest", "appleMain", "appleTest")
+val nativeSourceSetNames = setOf("nativeMain", "nativeTest", "appleMain", "appleTest", "posixMain", "posixTest")
 val nativeSourceSetPrefixes = listOf("androidNative", "ios", "linux", "macos", "mingw", "tvos", "watchos")
 
 @CacheableTask
@@ -454,6 +454,18 @@ extensions.configure<KotlinMultiplatformExtension> {
             compileTaskProvider.configure {
                 compilerOptions {
                     freeCompilerArgs.add("-Xexpect-actual-classes")
+                }
+            }
+        }
+    }
+
+    applyDefaultHierarchyTemplate {
+        common {
+            group("native") {
+                group("posix") {
+                    withApple()
+                    withLinux()
+                    withAndroidNative()
                 }
             }
         }

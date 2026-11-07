@@ -64,7 +64,7 @@ actual class SstFileWriter actual constructor(
         checkOwningHandle()
         memScoped {
             wrapWithErrorThrower { error ->
-                rocksdb_sstfilewriter_open(native, filePath, error)
+                rocksdb_sstfilewriter_open(native, filePath.checkedNativePath(), error)
             }
         }
     }

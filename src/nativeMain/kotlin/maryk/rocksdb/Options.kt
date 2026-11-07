@@ -906,7 +906,7 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
     actual fun setDbLogDir(value: String): Options {
         checkOwningHandle()
         require('\u0000' !in value) { "Option strings must not contain NUL" }
-        rocksdb_options_set_db_log_dir(native, value)
+        rocksdb_options_set_db_log_dir(native, value.checkedNativePath())
         return this
     }
 
@@ -918,7 +918,7 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
     actual fun setWalDir(value: String): Options {
         checkOwningHandle()
         require('\u0000' !in value) { "Option strings must not contain NUL" }
-        rocksdb_options_set_wal_dir(native, value)
+        rocksdb_options_set_wal_dir(native, value.checkedNativePath())
         return this
     }
 

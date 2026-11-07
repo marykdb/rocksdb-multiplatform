@@ -48,7 +48,7 @@ actual fun openOptimisticTransactionDB(
 
             val native = openOptimisticTransactionColumnFamiliesWithLengths(
                 dbOptions.native,
-                path.cstr.getPointer(this),
+                path.checkedNativePath().cstr.getPointer(this),
                 columnFamilyDescriptors.size,
                 namesArray,
                 nameLengths,
@@ -78,7 +78,7 @@ actual fun openOptimisticTransactionDB(
     Unit.wrapWithNullErrorThrower { error ->
         options.checkOwningHandle()
         val retainedReferences = options.retainedNativeReferences()
-        rocksdb.rocksdb_optimistictransactiondb_open(options.native, path, error)?.let { native ->
+        rocksdb.rocksdb_optimistictransactiondb_open(options.native, path.checkedNativePath(), error)?.let { native ->
             wrapOpenedDb(
                 closeNativeDb = { rocksdb.rocksdb_optimistictransactiondb_close(native) },
                 releaseComparator = { options.releaseOwnedComparator() },

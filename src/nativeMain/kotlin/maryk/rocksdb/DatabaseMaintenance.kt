@@ -96,7 +96,7 @@ actual fun RocksDB.compactFiles(options: CompactionOptions, columnFamilyHandle: 
         rocksdb_compaction_options_set_output_file_size_limit(config, options.outputFileSizeLimit().let { if (it == -1L) ULong.MAX_VALUE else it.toULong() })
         rocksdb_compaction_options_set_max_subcompactions(config, options.maxSubcompactions().toUInt())
         val inputs = allocArray<CPointerVar<ByteVar>>(maxOf(1, inputFileNames.size))
-        inputFileNames.forEachIndexed { i, name -> inputs[i] = name.cstr.getPointer(this) }
+        inputFileNames.forEachIndexed { i, name -> inputs[i] = name.checkedNativePath().cstr.getPointer(this) }
         val outputs = alloc<CPointerVar<CPointerVar<ByteVar>>>().apply { value = null }
         val count = alloc<size_tVar>().apply { value = 0.convert() }
         try {

@@ -38,7 +38,7 @@ actual class SstFileReader actual constructor(
     actual fun open(filePath: String) {
         checkOwningHandle()
         wrapWithErrorThrower { error ->
-            rocksdb_sstfilereader_open(native, filePath, error)
+            rocksdb_sstfilereader_open(native, filePath.checkedNativePath(), error)
         }
     }
 

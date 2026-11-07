@@ -413,7 +413,7 @@ actual class DBOptions internal constructor(
     actual fun setDbLogDir(value: String): DBOptions {
         checkOwningHandle()
         require('\u0000' !in value) { "Option strings must not contain NUL" }
-        rocksdb_options_set_db_log_dir(native, value)
+        rocksdb_options_set_db_log_dir(native, value.checkedNativePath())
         return this
     }
 
@@ -425,7 +425,7 @@ actual class DBOptions internal constructor(
     actual fun setWalDir(value: String): DBOptions {
         checkOwningHandle()
         require('\u0000' !in value) { "Option strings must not contain NUL" }
-        rocksdb_options_set_wal_dir(native, value)
+        rocksdb_options_set_wal_dir(native, value.checkedNativePath())
         return this
     }
 

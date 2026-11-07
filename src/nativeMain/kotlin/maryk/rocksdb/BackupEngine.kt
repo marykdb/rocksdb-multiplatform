@@ -162,8 +162,8 @@ internal constructor(
         wrapWithErrorThrower { error ->
             rocksdb_backup_engine_restore_db_from_backup(
                 native,
-                dbDir,
-                walDir,
+                dbDir.checkedNativePath(),
+                walDir.checkedNativePath(),
                 restoreOptions.native,
                 backupId.asUInt32(),
                 error,
@@ -181,8 +181,8 @@ internal constructor(
         wrapWithErrorThrower { error ->
             rocksdb_backup_engine_restore_db_from_latest_backup(
                 native,
-                dbDir,
-                walDir,
+                dbDir.checkedNativePath(),
+                walDir.checkedNativePath(),
                 restoreOptions.native,
                 error,
             )

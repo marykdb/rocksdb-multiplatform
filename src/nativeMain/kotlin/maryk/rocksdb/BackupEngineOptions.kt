@@ -5,8 +5,9 @@ import kotlinx.cinterop.CPointer
 import maryk.asUInt64
 import maryk.toCheckedLong
 import maryk.toUByte
-import platform.posix.access
-import platform.posix.W_OK
+import platform.posix.EACCES
+import platform.posix.ENOENT
+import platform.posix.errno
 import rocksdb.rocksdb_backup_engine_options_create
 import rocksdb.rocksdb_backup_engine_options_destroy
 import rocksdb.rocksdb_backup_engine_options_get_backup_log_files
@@ -41,11 +42,21 @@ actual constructor(path: String)
     private var restoreRateLimiterRef: RateLimiter? = null
 
     init {
-        val normalizedPath = if (path.endsWith('/')) path.dropLast(1) else path
+        path.checkedNativePath()
+        // Retain the previous trailing-slash normalization, but never turn a
+        // filesystem root into an empty path or a drive-relative Windows path.
+        val isRoot = path == "/" || (path.length == 3 && path[1] == ':' && path[2] == '/')
+        val normalizedPath = if (!isRoot && path.endsWith('/')) path.dropLast(1) else path
         backupDirectory = normalizedPath
-        val pathToCheck = "$normalizedPath/"
-        // Use POSIX access function to check write permission
-        require(access(pathToCheck, W_OK) == 0) { "Path $normalizedPath is not writable" }
+        val pathToCheck = if (normalizedPath.endsWith('/')) normalizedPath else "$normalizedPath/"
+        if (backupDirectoryAccess(pathToCheck) != 0) {
+            val error = errno
+            throw IllegalArgumentException(when (error) {
+                ENOENT -> "Backup directory does not exist: $normalizedPath"
+                EACCES -> "Backup directory is not writable: $normalizedPath"
+                else -> "Cannot access backup directory: $normalizedPath (errno=$error)"
+            })
+        }
         native = requireNotNull(rocksdb_backup_engine_options_create(normalizedPath)) {
             "Unable to allocate backup engine options"
         }

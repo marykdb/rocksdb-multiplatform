@@ -19,7 +19,7 @@ internal constructor(
         checkOwningHandle()
         owner.checkOwningHandle()
         wrapWithErrorThrower { error ->
-            rocksdb_checkpoint_create(native, checkpointPath, 1024u, error)
+            rocksdb_checkpoint_create(native, checkpointPath.checkedNativePath(), 1024u, error)
         }
     }
 
@@ -31,7 +31,7 @@ internal constructor(
         owner.checkOwningHandle()
         columnFamilyHandle.checkOwningHandle()
         val metadata = Unit.wrapWithNullErrorThrower { error ->
-            rocksdb_checkpoint_export_column_family(native, columnFamilyHandle.native, exportPath, error)
+            rocksdb_checkpoint_export_column_family(native, columnFamilyHandle.native, exportPath.checkedNativePath(), error)
         } ?: throw RocksDBException("Unable to export column family to $exportPath")
         return ExportImportFilesMetaData(metadata)
     }

@@ -33,7 +33,7 @@ actual fun RocksDB.startTrace(traceOptions: TraceOptions, tracePath: String): Tr
     try {
         rocksdb_trace_options_set_max_trace_file_size(options, limit)
         wrapWithErrorThrower { error ->
-            rocksdb_start_trace(native, null, null, options, tracePath, error)
+            rocksdb_start_trace(native, null, null, options, tracePath.checkedNativePath(), error)
         }
     } finally {
         rocksdb_trace_options_destroy(options)
