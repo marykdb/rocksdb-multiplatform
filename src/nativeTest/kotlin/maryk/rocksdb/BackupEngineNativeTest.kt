@@ -16,7 +16,7 @@ class BackupEngineNativeTest {
         val dbPath = createTestDBFolder("BackupEngineNativeTest_metadata_db")
         val backupPath = createTestDBFolder("BackupEngineNativeTest_metadata_backup")
         createFolder(backupPath)
-        val metadata = "native-backup-metadata"
+        val metadata = "native\u0000backup-\u00e9-\uD83D\uDE00-metadata"
 
         Options().setCreateIfMissing(true).use { options ->
             openRocksDB(options, dbPath).use { db ->

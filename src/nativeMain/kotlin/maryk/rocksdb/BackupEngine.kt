@@ -8,14 +8,16 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
-import kotlinx.cinterop.toKString
+import kotlinx.cinterop.readBytes
 import kotlinx.cinterop.value
 import maryk.asUInt32
+import maryk.asSizeT
 import maryk.sizeTToInt
 import maryk.toUByte
 import maryk.toCheckedInt
 import maryk.toCheckedLong
 import maryk.wrapWithErrorThrower
+import maryk.usePointer
 import platform.posix.size_tVar
 import rocksdb.rocksdb_backup_engine_close
 import rocksdb.rocksdb_backup_engine_create_new_backup
@@ -71,7 +73,12 @@ internal constructor(
                 rocksdb.rocksdb_create_backup_options_set_flush_before_backup(options, flushBeforeBackup)
                 memScoped {
                     val backupId = alloc<UIntVar>()
-                    rocksdb.rocksdb_backup_engine_create_new_backup_with_options_with_metadata(native, db.native, options, metadata, backupId.ptr, error)
+                    val bytes = metadata.encodeToByteArray()
+                    bytes.usePointer { pointer ->
+                        rocksdb.rocksdb_backup_engine_create_new_backup_with_metadata(
+                            native, db.native, options, pointer, bytes.size.asSizeT(), backupId.ptr, error
+                        )
+                    }
                 }
             } finally {
                 rocksdb.rocksdb_create_backup_options_destroy(options)
@@ -89,17 +96,16 @@ internal constructor(
                 val count = rocksdb_backup_engine_info_count(info)
 
                 for (i in 0 until count) {
-                    val appMetaData = rocksdb.rocksdb_backup_engine_info_app_metadata(info, i)
-                    try {
-                        this += BackupInfo(
+                    memScoped {
+                        val length = alloc<size_tVar>()
+                        val appMetaData = rocksdb.rocksdb_backup_engine_info_app_metadata_with_length(info, i, length.ptr)
+                        this@buildList += BackupInfo(
                             backupId = rocksdb_backup_engine_info_backup_id(info, i).toCheckedInt("backup id"),
                             timestamp = rocksdb_backup_engine_info_timestamp(info, i),
                             size = rocksdb_backup_engine_info_size(info, i).toCheckedLong("backup size"),
                             numberFiles = rocksdb_backup_engine_info_number_files(info, i).toCheckedInt("backup file count"),
-                            appMetadata = appMetaData?.toKString(),
+                            appMetadata = appMetaData?.readBytes(sizeTToInt(length.value, "backup metadata size"))?.decodeToString(),
                         )
-                    } finally {
-                        rocksdb.rocksdb_free(appMetaData)
                     }
                 }
             }
