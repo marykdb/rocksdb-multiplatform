@@ -286,7 +286,14 @@ fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String
     val capitalizedName = targetName.replaceFirstChar { character ->
         if (character.isLowerCase()) character.titlecase(Locale.ROOT) else character.toString()
     }
-    val prebuiltDirProvider = project.layout.buildDirectory.dir("rocksdb/$targetName")
+    // Explicit development override for matching source changes in build-rocksdb.
+    // Production builds continue to use the versioned, checksummed downloads.
+    val localPrebuiltRoot = project.providers.gradleProperty("rocksdbLocalPrebuiltRoot").orNull
+    val prebuiltDirProvider = if (localPrebuiltRoot != null) {
+        project.layout.dir(project.provider { project.file(localPrebuiltRoot).resolve(targetName) })
+    } else {
+        project.layout.buildDirectory.dir("rocksdb/$targetName")
+    }
     val prebuiltDir = prebuiltDirProvider.get().asFile
     val includeDir = prebuiltDir.resolve("include")
     val includeRocksdbDir = includeDir.resolve("rocksdb")
@@ -301,6 +308,7 @@ fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String
         this.version.set(version)
         this.baseUrl.set(baseUrl)
         destinationDir.set(prebuiltDirProvider)
+        enabled = localPrebuiltRoot == null
         if (sha != null) {
             sha256.set(sha)
         }
@@ -324,7 +332,10 @@ fun KotlinNativeTarget.configureRocksdbPrebuilt(version: String, baseUrl: String
         inputs.dir(libDir)
             .withPropertyName("rocksdbStaticLibraries")
             .withPathSensitivity(PathSensitivity.RELATIVE)
-        inputs.property("rocksdbBundleIdentity", "version=$version sha256=$sha")
+        inputs.property(
+            "rocksdbBundleIdentity",
+            if (localPrebuiltRoot == null) "version=$version sha256=$sha" else "local=${prebuiltDir.absolutePath}"
+        )
     }
 
     binaries.withType<TestExecutable>().configureEach {
