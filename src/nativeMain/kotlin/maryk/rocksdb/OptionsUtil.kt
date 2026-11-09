@@ -92,6 +92,7 @@ actual object OptionsUtil {
         }
         descriptorSet?.let { bundle ->
             try {
+                dbOptions.onNativeOptionsReplaced()
                 populateDescriptors(bundle, columnFamilyDescriptors)
             } finally {
                 rocksdb_optionsutil_descriptors_destroy(bundle)

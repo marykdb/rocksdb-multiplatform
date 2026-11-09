@@ -185,6 +185,15 @@ actual class DBOptions internal constructor(
 
     actual constructor() : this(requireNotNull(rocksdb_options_create()) { "Unable to allocate RocksDB DB options" })
 
+    internal fun onNativeOptionsReplaced() {
+        // These runtime resources are not restored from an engine OPTIONS file.
+        // Their old Kotlin references must not describe the replacement options.
+        statistics?.disconnectFromNative(native)
+        statistics = null
+        writeBufferManager = null
+        env = null
+    }
+
     actual fun setRowCache(rowCache: Cache): DBOptions {
         checkOwningHandle()
         rowCache.checkOwningHandle()
