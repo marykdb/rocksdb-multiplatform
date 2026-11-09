@@ -31,10 +31,10 @@ internal constructor(
 
     private fun closeLocked() {
         val owner = dbOwner
-        dbOwner = null
         if (tryClose()) {
-            owner?.unregisterColumnFamilyHandle(this)
             rocksdb_column_family_handle_destroy(native)
+            owner?.unregisterColumnFamilyHandle(this)
+            dbOwner = null
             super.close()
         }
     }
@@ -45,11 +45,7 @@ internal constructor(
     }
 
     internal fun invalidateFromOwner() {
-        dbOwner = null
-        if (tryClose()) {
-            rocksdb_column_family_handle_destroy(native)
-            super.close()
-        }
+        close()
     }
 
     @OptIn(UnsafeNumber::class)

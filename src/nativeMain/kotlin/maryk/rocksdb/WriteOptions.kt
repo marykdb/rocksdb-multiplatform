@@ -22,16 +22,20 @@ import rocksdb.rocksdb_writeoptions_set_sync
 actual class WriteOptions internal constructor(
     internal val native: CPointer<rocksdb_writeoptions_t>,
     private val ownsNative: Boolean = true,
+    private var transactionOwner: Transaction? = null,
 ) : RocksObject() {
     init {
         if (!ownsNative) {
             borrowHandle()
         }
+        transactionOwner?.registerBorrowedWriteOptions(this)
     }
 
     actual constructor() : this(requireNotNull(rocksdb_writeoptions_create()) { "Unable to allocate RocksDB write options" })
 
     override fun close() {
+        transactionOwner?.unregisterBorrowedWriteOptions(this)
+        transactionOwner = null
         if (ownsNative && tryClose()) {
             rocksdb_writeoptions_destroy(native)
             super.close()
@@ -39,6 +43,8 @@ actual class WriteOptions internal constructor(
             super.close()
         }
     }
+
+    internal fun invalidateFromOwner() = close()
 
     actual fun setSync(flag: Boolean): WriteOptions {
         checkOpenHandle()

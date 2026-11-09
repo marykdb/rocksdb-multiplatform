@@ -88,7 +88,7 @@ actual fun openTransactionDB(
         rocksdb.rocksdb_transactiondb_open(options.native, transactionDbOptions.native, path.checkedNativePath(), error)?.let { native ->
             wrapOpenedDb(
                 closeNativeDb = { rocksdb.rocksdb_transactiondb_close(native) },
-                releaseComparator = { options.releaseOwnedComparator() },
+                retainComparator = { options.retainComparator() },
             ) { ownedComparators ->
                 TransactionDB(native, ownedComparators, retainedReferences)
             }

@@ -15,18 +15,19 @@ import maryk.usePointer
 import platform.posix.size_tVar
 import kotlin.experimental.ExperimentalNativeApi
 
-private fun transactionBaseDb(native: CPointer<rocksdb_transactiondb_t>) =
-    requireNotNull(rocksdb.rocksdb_transactiondb_get_base_db(native)) {
-        "RocksDB returned null base DB for transaction DB"
+private fun transactionDbView(native: CPointer<rocksdb_transactiondb_t>) =
+    requireNotNull(rocksdb.rocksdb_transactiondb_get_db(native)) {
+        "RocksDB returned null transaction DB view"
     }
 actual open class TransactionDB
 internal constructor(
     internal val tnative: CPointer<rocksdb_transactiondb_t>,
     ownedComparators: List<AbstractComparator> = emptyList(),
     retainedReferences: List<Any> = emptyList(),
-) : RocksDB(transactionBaseDb(tnative), ownedComparators, retainedReferences), TransactionOwner {
+) : RocksDB(transactionDbView(tnative), ownedComparators, retainedReferences), TransactionOwner {
     val defaultTransactionOptions: TransactionOptions = TransactionOptions()
     private val borrowedTransactions = mutableSetOf<Transaction>()
+    private val transactionLifetimes = mutableMapOf<Long, Transaction>()
 
     override fun nativeCreateColumnFamily(
         options: ColumnFamilyOptions, name: ByteArray, error: CValuesRef<CPointerVar<ByteVar>>
@@ -117,7 +118,7 @@ internal constructor(
                 invalidateColumnFamilyHandles()
                 defaultTransactionOptions.close()
                 closeDefaultReferences()
-                rocksdb.rocksdb_transactiondb_close_base_db(native)
+                rocksdb.rocksdb_close(native)
                 rocksdb.rocksdb_transactiondb_close(tnative)
                 closeOwnedComparators()
                 clearRetainedReferences()
@@ -127,7 +128,12 @@ internal constructor(
     }
 
     override fun registerBorrowedTransaction(transaction: Transaction) {
-        withLifecycleLock { borrowedTransactions += transaction }
+        withLifecycleLock {
+            val id = transaction.getID()
+            transactionLifetimes[id]?.let { transaction.shareLifetimeWith(it) }
+                ?: run { transactionLifetimes[id] = transaction }
+            borrowedTransactions += transaction
+        }
     }
 
     override fun unregisterBorrowedTransaction(transaction: Transaction) {
@@ -135,10 +141,31 @@ internal constructor(
     }
 
     override fun closeBorrowedTransaction(transaction: Transaction) {
-        withLifecycleLock { transaction.closeFromOwner(this) }
+        withLifecycleLock {
+            if (transaction.isOwningHandle() && transaction.ownsNativeTransaction) {
+                invalidateTransactionAliases(transaction)
+            }
+            transaction.closeFromOwner(this)
+        }
+    }
+
+    override fun invalidateTransactionAliases(transaction: Transaction) {
+        withLifecycleLock {
+            val id = transaction.getID()
+            transactionLifetimes.remove(id)
+            val aliases = borrowedTransactions.filter {
+                it !== transaction && !it.ownsNativeTransaction && it.getID() == id
+            }
+            aliases.forEach {
+                borrowedTransactions.remove(it)
+                it.invalidateFromOwner()
+            }
+        }
     }
 
     private fun invalidateBorrowedTransactions() {
+        transactionLifetimes.values.forEach { it.disposeSharedLifetime() }
+        transactionLifetimes.clear()
         if (borrowedTransactions.isEmpty()) return
         val transactions = borrowedTransactions.toList()
         borrowedTransactions.clear()
@@ -197,7 +224,7 @@ internal constructor(
         return withLifecycleLock {
             checkOwningHandle()
             writeOptions.checkOwningHandle()
-            oldTransaction.prepareForReuse()
+            oldTransaction.prepareForReuse(this)
             rocksdb.rocksdb_transaction_begin(tnative, writeOptions.native, defaultTransactionOptions.native, oldTransaction.native)
             oldTransaction.attachTo(this)
         }
@@ -212,7 +239,7 @@ internal constructor(
             checkOwningHandle()
             writeOptions.checkOwningHandle()
             transactionOptions.checkOwningHandle()
-            oldTransaction.prepareForReuse()
+            oldTransaction.prepareForReuse(this)
             rocksdb.rocksdb_transaction_begin(tnative, writeOptions.native, transactionOptions.native, oldTransaction.native)
             oldTransaction.attachTo(this)
         }

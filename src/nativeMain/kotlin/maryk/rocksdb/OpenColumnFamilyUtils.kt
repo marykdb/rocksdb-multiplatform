@@ -12,13 +12,13 @@ import rocksdb.rocksdb_column_family_handle_destroy
 
 internal inline fun <T : RocksDB> wrapOpenedDb(
     closeNativeDb: () -> Unit,
-    releaseComparator: () -> AbstractComparator?,
+    retainComparator: () -> AbstractComparator?,
     createDb: (List<AbstractComparator>) -> T,
 ): T {
     var comparator: AbstractComparator? = null
     var db: T? = null
     try {
-        comparator = releaseComparator()
+        comparator = retainComparator()
         db = createDb(listOfNotNull(comparator))
         comparator = null
         return db
@@ -47,7 +47,7 @@ internal inline fun <T : RocksDB> wrapOpenedColumnFamilies(
 
     try {
         for (descriptor in columnFamilyDescriptors) {
-            val comparator = descriptor.getOptions().releaseOwnedComparator()
+            val comparator = descriptor.getOptions().retainComparator()
             if (comparator != null) {
                 pendingComparator = comparator
                 ownedComparators += comparator

@@ -149,15 +149,9 @@ actual class ColumnFamilyOptions private constructor(
         }
     }
 
-    internal fun releaseOwnedComparator(): AbstractComparator? {
+    internal fun retainComparator(): AbstractComparator? {
         checkOwningHandle()
-        val comparator = ownedComparator
-        if (comparator != null) {
-            rocksdb_options_set_comparator(native, null)
-        }
-        return comparator.also {
-            ownedComparator = null
-        }
+        return ownedComparator?.also { it.retainNativeOwner() }
     }
 
     internal fun retainedNativeReferences(): List<Any> =

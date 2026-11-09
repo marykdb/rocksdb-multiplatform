@@ -35,6 +35,7 @@ open until all those databases and their options have closed.
 | Block/row caches, Bloom filters, loggers | Keep open until the databases and options using them have closed. |
 | Rate limiters, compaction limiters, SST partitioner factories | Caller-owned resources; keep them outside the options and database `use` blocks. |
 | Persistent caches | Factories retain shared ownership of the cache. Its environment and logger must outlive all using databases, options, and caches, even if the caller's cache handle has already closed. |
+| Comparators on Native | Options and database/SST/index owners retain separate references. Reusing options preserves the comparator; the native callback is freed after the final owner closes. |
 | Merge operators on Native | Attaching an operator transfers ownership to RocksDB. Use a fresh operator instance for each options instance; do not reattach it to other options. |
 
 `BlockBasedTableConfig` is a configuration wrapper and does not need a `use` block. Its filters and

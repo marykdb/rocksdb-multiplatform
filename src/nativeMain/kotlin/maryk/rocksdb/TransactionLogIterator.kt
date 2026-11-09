@@ -66,20 +66,16 @@ actual class TransactionLogIterator internal constructor(
 
     private fun closeLocked() {
         val db = owner
-        owner = null
-        db?.unregisterBorrowedTransactionLogIterator(this)
         if (tryClose()) {
             rocksdb_wal_iter_destroy(native)
+            db?.unregisterBorrowedTransactionLogIterator(this)
+            owner = null
             super.close()
         }
     }
 
     internal fun invalidateFromOwner() {
-        owner = null
-        if (tryClose()) {
-            rocksdb_wal_iter_destroy(native)
-            super.close()
-        }
+        close()
     }
 }
 

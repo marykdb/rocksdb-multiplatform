@@ -36,7 +36,7 @@ actual fun openRocksDB(options: Options, path: String): RocksDB {
         rocksdb_open(options.native, path.checkedNativePath(), error)?.let { native ->
             wrapOpenedDb(
                 closeNativeDb = { rocksdb_close(native) },
-                releaseComparator = { options.releaseOwnedComparator() },
+                retainComparator = { options.retainComparator() },
             ) { ownedComparators ->
                 RocksDB(native, ownedComparators, retainedReferences)
             }
@@ -111,7 +111,7 @@ actual fun openAsSecondaryRocksDB(
     rocksdb_open_as_secondary(options.native, path.checkedNativePath(), secondaryPath.checkedNativePath(), error)?.let { native ->
         wrapOpenedDb(
             closeNativeDb = { rocksdb_close(native) },
-            releaseComparator = { options.releaseOwnedComparator() },
+            retainComparator = { options.retainComparator() },
         ) { ownedComparators ->
             RocksDB(native, ownedComparators, retainedReferences)
         }
@@ -179,7 +179,7 @@ actual fun openReadOnlyRocksDB(options: Options, path: String): RocksDB = Unit.w
     rocksdb_open_for_read_only(options.native, path.checkedNativePath(), 0u, error)?.let { native ->
         wrapOpenedDb(
             closeNativeDb = { rocksdb_close(native) },
-            releaseComparator = { options.releaseOwnedComparator() },
+            retainComparator = { options.retainComparator() },
         ) { ownedComparators ->
             RocksDB(native, ownedComparators, retainedReferences)
         }

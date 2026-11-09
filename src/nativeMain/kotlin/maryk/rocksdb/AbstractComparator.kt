@@ -22,6 +22,7 @@ import platform.posix.memcpy
 import rocksdb.rocksdb_comparator_destroy
 import rocksdb.rocksdb_comparator_get_comparator_type
 import kotlin.concurrent.AtomicReference
+import kotlin.concurrent.AtomicInt
 
 private val fallbackComparatorName: CPointer<ByteVar> = run {
     val nameBytes = "KotlinComparator\u0000".encodeToByteArray()
@@ -38,6 +39,7 @@ actual abstract class AbstractComparator
     protected actual constructor() : this(null)
 
     private val pinnedName = AtomicReference<CPointer<ByteVar>?>(null)
+    private val nativeOwners = AtomicInt(0)
 
     private fun pinnedName(): CPointer<ByteVar> {
         pinnedName.value?.let { return it }
@@ -137,13 +139,33 @@ actual abstract class AbstractComparator
     }
 
     internal fun transferOwnershipToOptions(): CPointer<rocksdb_comparator_t> {
+        while (true) {
+            val owners = nativeOwners.value
+            if (owners == 0) break
+            check(owners < Int.MAX_VALUE) { "Too many comparator owners" }
+            if (nativeOwners.compareAndSet(owners, owners + 1)) return native
+        }
         checkOwningHandle()
         val nativeHandle = native
         check(disownHandle()) { "Comparator is already closed or registered." }
+        nativeOwners.value = 1
         return nativeHandle
     }
 
+    internal fun retainNativeOwner() {
+        check(nativeOwners.value > 0) { "Comparator is no longer retained by an options object" }
+        transferOwnershipToOptions()
+    }
+
     internal fun closeFromOptions() {
+        while (true) {
+            val owners = nativeOwners.value
+            if (owners == 0) return
+            if (nativeOwners.compareAndSet(owners, owners - 1)) {
+                if (owners > 1) return
+                break
+            }
+        }
         if (tryCloseTransferred()) {
             if (nativeRef.isInitialized()) {
                 rocksdb_comparator_destroy(native)

@@ -46,7 +46,11 @@ actual abstract class AbstractSlice<T> protected constructor() : RocksMutableObj
     }
 
     actual override fun hashCode(): Int {
-        return toString().hashCode()
+        // Equality compares every byte, while DirectSlice.toString() stops at
+        // a NUL byte. Hash the same bytes as compare(), regardless of storage.
+        var hash = 1
+        for (index in 0 until size()) hash = 31 * hash + this[index]
+        return hash
     }
 
     actual override fun equals(other: Any?) = when (other) {

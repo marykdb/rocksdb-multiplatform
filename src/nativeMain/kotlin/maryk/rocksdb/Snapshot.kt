@@ -37,19 +37,15 @@ actual class Snapshot internal constructor(
     }
 
     internal fun releaseFromOwner(db: RocksDB) {
-        owner = null
         if (tryClose()) {
             rocksdb.rocksdb_release_snapshot(db.native, native)
+            owner = null
             super.close()
         }
     }
 
     internal fun invalidateFromOwner(db: RocksDB) {
-        owner = null
-        if (tryClose()) {
-            rocksdb.rocksdb_release_snapshot(db.native, native)
-            super.close()
-        }
+        releaseFromOwner(db)
     }
 
     private fun closeTransactionSnapshot() {

@@ -42,7 +42,7 @@ actual class SstFileWriter actual constructor(
             "Unable to allocate RocksDB SST file writer"
         }
         try {
-            ownedComparator = options.releaseOwnedComparator()
+            ownedComparator = options.retainComparator()
             native = created
         } catch (throwable: Throwable) {
             rocksdb_sstfilewriter_destroy(created)

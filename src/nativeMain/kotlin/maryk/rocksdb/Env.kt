@@ -20,7 +20,7 @@ protected constructor(internal val native: CPointer<rocksdb_env_t>?)
 
     actual fun getThreadPoolQueueLen(priority: Priority): Int {
         checkOwningHandle()
-        return rocksdb.rocksdb_env_get_thread_pool_queue_length(native)
+        return rocksdb.rocksdb_env_get_thread_pool_queue_length_with_priority(native, priority.value.toInt())
     }
 
     actual fun incBackgroundThreadsIfNeeded(number: Int, priority: Priority): Env {
@@ -49,8 +49,10 @@ protected constructor(internal val native: CPointer<rocksdb_env_t>?)
     }
 }
 
-actual fun getDefaultEnv(): Env = RocksEnv(
-    requireNotNull(rocksdb_create_default_env()) {
+private val defaultEnvironment: Env by lazy {
+    RocksEnv(requireNotNull(rocksdb_create_default_env()) {
         "Unable to allocate RocksDB default environment"
-    }
-)
+    })
+}
+
+actual fun getDefaultEnv(): Env = defaultEnvironment

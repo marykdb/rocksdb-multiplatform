@@ -28,7 +28,7 @@ actual class SstFileReader actual constructor(
         }
         native = created
         ownedComparator = try {
-            options.releaseOwnedComparator()
+            options.retainComparator()
         } catch (throwable: Throwable) {
             rocksdb_sstfilereader_destroy(created)
             throw throwable
@@ -37,6 +37,9 @@ actual class SstFileReader actual constructor(
 
     actual fun open(filePath: String) {
         checkOwningHandle()
+        // Opening another file replaces the native table reader that the old
+        // iterators borrow. Destroy them before that replacement can happen.
+        invalidateBorrowedIterators()
         wrapWithErrorThrower { error ->
             rocksdb_sstfilereader_open(native, filePath.checkedNativePath(), error)
         }
@@ -48,7 +51,7 @@ actual class SstFileReader actual constructor(
         val iterator = requireNotNull(rocksdb_sstfilereader_new_iterator(native, readOptions.native)) {
             "Unable to create SST file reader iterator"
         }
-        return SstFileReaderIterator(iterator, this)
+        return SstFileReaderIterator(iterator, this).also { it.dependOnReadOptions(readOptions) }
     }
 
     actual fun getTableProperties(): TableProperties {

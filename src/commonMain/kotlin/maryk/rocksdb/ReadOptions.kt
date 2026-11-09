@@ -147,6 +147,8 @@ expect class ReadOptions() : RocksObject {
 
     /**
      * Restrict iteration to keys strictly smaller than the supplied bound.
+     * On Native, keep these options open while bounded iterators are in use.
+     * Closing the options or changing a bound invalidates dependent iterators.
      */
     fun setIterateUpperBound(iterateUpperBound: AbstractSlice<*>): ReadOptions
 
@@ -157,6 +159,8 @@ expect class ReadOptions() : RocksObject {
 
     /**
      * Restrict iteration to keys greater or equal to the supplied bound.
+     * On Native, keep these options open while bounded iterators are in use.
+     * Closing the options or changing a bound invalidates dependent iterators.
      */
     fun setIterateLowerBound(iterateLowerBound: AbstractSlice<*>): ReadOptions
 
@@ -182,4 +186,8 @@ expect class ReadOptions() : RocksObject {
 
 }
 
+/**
+ * On Native, keep these options open while iterators use this filter.
+ * Closing the options or replacing the filter invalidates dependent iterators.
+ */
 expect fun ReadOptions.setTableFilter(tableFilter: AbstractTableFilter): ReadOptions

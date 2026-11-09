@@ -37,11 +37,15 @@ import rocksdb.rocksdb_writebatch_set_save_point
 actual class WriteBatch(
     internal val native: CPointer<rocksdb_writebatch_t>,
     private val ownsNative: Boolean = true,
+    private var transactionOwner: Transaction? = null,
+    private var indexOwner: WriteBatchWithIndex? = null,
 ) : AbstractWriteBatch() {
     init {
         if (!ownsNative) {
             borrowHandle()
         }
+        transactionOwner?.registerBorrowedWriteBatch(this)
+        indexOwner?.registerBorrowedWriteBatch(this)
     }
 
     actual constructor() : this(requireNotNull(rocksdb_writebatch_create()) { "Unable to allocate RocksDB write batch" })
@@ -82,6 +86,10 @@ actual class WriteBatch(
     }
 
     override fun close() {
+        transactionOwner?.unregisterBorrowedWriteBatch(this)
+        indexOwner?.unregisterBorrowedWriteBatch(this)
+        transactionOwner = null
+        indexOwner = null
         if (ownsNative && tryClose()) {
             rocksdb_writebatch_destroy(native)
             super.close()
@@ -89,6 +97,8 @@ actual class WriteBatch(
             super.close()
         }
     }
+
+    internal fun invalidateFromOwner() = close()
 
     override fun singleDelete(key: ByteArray) {
         checkOpenHandle()

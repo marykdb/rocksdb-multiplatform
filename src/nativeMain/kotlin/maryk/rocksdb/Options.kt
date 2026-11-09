@@ -315,15 +315,9 @@ actual class Options private constructor(val native: CPointer<rocksdb_options_t>
         }
     }
 
-    internal fun releaseOwnedComparator(): AbstractComparator? {
+    internal fun retainComparator(): AbstractComparator? {
         checkOwningHandle()
-        val comparator = ownedComparator
-        if (comparator != null) {
-            rocksdb_options_set_comparator(native, null)
-        }
-        return comparator.also {
-            ownedComparator = null
-        }
+        return ownedComparator?.also { it.retainNativeOwner() }
     }
 
     actual fun setTableFormatConfig(tableFormatConfig: TableFormatConfig): Options {

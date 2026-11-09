@@ -357,7 +357,6 @@ internal constructor(
         rocksdb.rocksdb_resume_all_compactions(native)
     }
 
-    private var perfLevel: PerfLevel = PerfLevel.UNINITIALIZED
     internal var fileTraceSession: TraceSession? = null
 
     private fun checkOpenForRead(readOptions: ReadOptions = defaultReadOptions) {
@@ -600,7 +599,7 @@ internal constructor(
                 nativeCreateColumnFamily(columnFamilyDescriptor.getOptions(), columnFamilyDescriptor.getName(), error)
             }
             try {
-                columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
+                columnFamilyDescriptor.getOptions().retainComparator()?.let {
                     retainOwnedComparator(it)
                 }
                 retainNativeReferences(columnFamilyDescriptor.getOptions().retainedNativeReferences())
@@ -627,7 +626,7 @@ internal constructor(
                 )
             }
             try {
-                columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
+                columnFamilyDescriptor.getOptions().retainComparator()?.let {
                     retainOwnedComparator(it)
                 }
                 retainNativeReferences(columnFamilyDescriptor.getOptions().retainedNativeReferences())
@@ -656,7 +655,7 @@ internal constructor(
                 )
             }
             try {
-                columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
+                columnFamilyDescriptor.getOptions().retainComparator()?.let {
                     retainOwnedComparator(it)
                 }
                 retainNativeReferences(columnFamilyDescriptor.getOptions().retainedNativeReferences())
@@ -682,14 +681,14 @@ internal constructor(
                         nativeCreateColumnFamily(columnFamilyOptions, name, error)
                     })
                 }
-                columnFamilyOptions.releaseOwnedComparator()?.let {
+                columnFamilyOptions.retainComparator()?.let {
                     retainOwnedComparator(it)
                 }
                 retainNativeReferences(columnFamilyOptions.retainedNativeReferences())
                 createdHandles.toList()
             } catch (throwable: Throwable) {
                 if (createdHandles.isNotEmpty()) {
-                    columnFamilyOptions.releaseOwnedComparator()?.let {
+                    columnFamilyOptions.retainComparator()?.let {
                         retainOwnedComparator(it)
                     }
                 }
@@ -711,7 +710,7 @@ internal constructor(
                     })
                 }
                 for (descriptor in columnFamilyDescriptors) {
-                    descriptor.getOptions().releaseOwnedComparator()?.let {
+                    descriptor.getOptions().retainComparator()?.let {
                         retainOwnedComparator(it)
                     }
                     retainNativeReferences(descriptor.getOptions().retainedNativeReferences())
@@ -719,7 +718,7 @@ internal constructor(
                 createdHandles.toList()
             } catch (throwable: Throwable) {
                 for (index in createdHandles.indices) {
-                    columnFamilyDescriptors[index].getOptions().releaseOwnedComparator()?.let {
+                    columnFamilyDescriptors[index].getOptions().retainComparator()?.let {
                         retainOwnedComparator(it)
                     }
                 }
@@ -1353,7 +1352,7 @@ internal constructor(
 
                 try {
                     List(keys.size) { index ->
-                        valueList[index]?.toByteArray(valueListSizes[index]) ?: get(opt, keys[index])
+                        valueList[index]?.toByteArray(valueListSizes[index])
                     }
                 } finally {
                     for (index in keys.indices) {
@@ -1412,7 +1411,6 @@ internal constructor(
                 try {
                     List(keys.size) { index ->
                         valueList[index]?.toByteArray(valueListSizes[index])
-                            ?: get(columnFamilyHandleList[index], opt, keys[index])
                     }
                 } finally {
                     for (index in keys.indices) {
@@ -1598,6 +1596,7 @@ internal constructor(
                     "RocksDB returned null iterator"
                 },
                 dbOwner = this,
+                readOptionsDependencies = setOf(readOptions),
             ))
         }
 
@@ -1615,6 +1614,7 @@ internal constructor(
                 "RocksDB returned null column-family iterator"
             },
             dbOwner = this,
+            readOptionsDependencies = setOf(readOptions),
         ))
     }
 
@@ -1665,7 +1665,7 @@ internal constructor(
             try {
                 for (nativeIterator in nativePointers) {
                     nextToWrap++
-                    wrappedIterators += borrowIterator(RocksIterator(nativeIterator, dbOwner = this@RocksDB))
+                    wrappedIterators += borrowIterator(RocksIterator(nativeIterator, dbOwner = this@RocksDB, readOptionsDependencies = setOf(readOptions)))
                 }
                 wrappedIterators
             } catch (throwable: Throwable) {
@@ -2024,15 +2024,15 @@ internal constructor(
     }
 
     actual fun getEnv(): Env {
-        return getDefaultEnv()
+        checkOwningHandle()
+        return retainedReferences.filterIsInstance<Env>().firstOrNull() ?: getDefaultEnv()
     }
 
     actual fun setPerfLevel(perfLevel: PerfLevel) {
         rocksdb_set_perf_level(perfLevel.value.toInt())
-        this.perfLevel = perfLevel
     }
 
-    actual fun getPerfLevel(): PerfLevel = perfLevel
+    actual fun getPerfLevel(): PerfLevel = perfLevelFromValue(rocksdb.rocksdb_get_perf_level().toByte())
 
     actual fun getPerfContext(): PerfContext = PerfContext()
 

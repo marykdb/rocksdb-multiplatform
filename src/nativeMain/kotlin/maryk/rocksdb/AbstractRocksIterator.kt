@@ -26,6 +26,18 @@ protected constructor(
     internal val native: CPointer<rocksdb_iterator_t>
 )
     : RocksObject(), RocksIteratorInterface {
+    private val readOptionsOwners = mutableSetOf<ReadOptions>()
+
+    internal fun dependOnReadOptions(options: ReadOptions) {
+        if (options.registerBorrowedIterator(this)) readOptionsOwners += options
+    }
+
+    internal fun detachReadOptionsOwners(): Set<ReadOptions> =
+        readOptionsOwners.toSet().also {
+            readOptionsOwners.forEach { options -> options.unregisterBorrowedIterator(this) }
+            readOptionsOwners.clear()
+        }
+
     /**
      * An iterator is either positioned at an entry, or
      * not valid.  This method returns true if the iterator is valid.
@@ -148,6 +160,7 @@ protected constructor(
     open override fun close() {
         if (tryClose()) {
             rocksdb_iter_destroy(native)
+            detachReadOptionsOwners()
             super.close()
         }
     }

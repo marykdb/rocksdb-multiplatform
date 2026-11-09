@@ -22,13 +22,7 @@ class RocksEnv
  */
 internal constructor(native: CPointer<rocksdb_env_t>?) : Env(native) {
 
-    override fun equals(other: Any?): Boolean {
-        if (other !is RocksEnv) return false
-        if (this.native === other.native) return true
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return this.native.hashCode()
-    }
+    // This facade is shared for the lifetime of the process, just like the
+    // underlying default environment. A caller must not invalidate it.
+    override fun close() = Unit
 }

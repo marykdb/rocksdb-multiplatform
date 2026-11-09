@@ -88,13 +88,14 @@ private val snapshotCreatedCallback = staticCFunction<COpaquePointer?, CPointer<
     try {
         notifierState = state?.asStableRef<SnapshotNotifierState>()?.get()
             ?: return@staticCFunction
+        // The C callback's rocksdb_snapshot_t lives on its stack. Obtain our
+        // own heap wrapper instead of retaining that temporary address.
         snapshotPtr
-            ?.let { notifierState.transaction.borrowSnapshot(it, freeWrapperOnClose = false) }
+            ?.let { notifierState.transaction.getSnapshotForNotification() }
             ?.let(notifierState.notifier::snapshotCreated)
     } catch (_: Throwable) {
     } finally {
         notifierState?.transaction?.clearPendingSnapshotNotifier(notifierState)
-        notifierState?.disposeOnce()
     }
 }
 
@@ -152,6 +153,19 @@ internal interface TransactionOwner {
     fun registerBorrowedTransaction(transaction: Transaction)
     fun unregisterBorrowedTransaction(transaction: Transaction)
     fun closeBorrowedTransaction(transaction: Transaction)
+    fun invalidateTransactionAliases(transaction: Transaction) {}
+}
+
+private class TransactionLifetime {
+    val wrappers = mutableSetOf<Transaction>()
+    val pendingSnapshotNotifier = AtomicReference<SnapshotNotifierState?>(null)
+    val savedSnapshotNotifiers = mutableListOf<SnapshotNotifierState?>()
+    val snapshotNotifierStates = mutableSetOf<SnapshotNotifierState>()
+    val borrowedSnapshots = mutableSetOf<Snapshot>()
+    val borrowedIterators = mutableSetOf<RocksIterator>()
+    val borrowedWriteBatches = mutableSetOf<WriteBatch>()
+    val borrowedIndexedBatches = mutableSetOf<WriteBatchWithIndex>()
+    val borrowedWriteOptions = mutableSetOf<WriteOptions>()
 }
 
 actual class Transaction(
@@ -161,9 +175,33 @@ actual class Transaction(
 ): RocksObject() {
     private var owner: TransactionOwner? = null
     private val defaultReadOptions = ReadOptions()
-    private val pendingSnapshotNotifier = AtomicReference<SnapshotNotifierState?>(null)
-    private val borrowedSnapshots = mutableSetOf<Snapshot>()
-    private val borrowedIterators = mutableSetOf<RocksIterator>()
+    private var lifetime = TransactionLifetime().also { it.wrappers += this }
+    private val pendingSnapshotNotifier get() = lifetime.pendingSnapshotNotifier
+    private val savedSnapshotNotifiers get() = lifetime.savedSnapshotNotifiers
+    private val snapshotNotifierStates get() = lifetime.snapshotNotifierStates
+    private val borrowedSnapshots get() = lifetime.borrowedSnapshots
+    private val borrowedIterators get() = lifetime.borrowedIterators
+    private val borrowedWriteBatches get() = lifetime.borrowedWriteBatches
+    private val borrowedIndexedBatches get() = lifetime.borrowedIndexedBatches
+    private val borrowedWriteOptions get() = lifetime.borrowedWriteOptions
+
+    internal val ownsNativeTransaction: Boolean get() = ownsNative
+
+    internal fun shareLifetimeWith(transaction: Transaction) {
+        lifetime.wrappers -= this
+        lifetime = transaction.lifetime
+        lifetime.wrappers += this
+    }
+
+    internal fun getSnapshotForNotification(): Snapshot? =
+        lifetime.wrappers.firstOrNull { it.isOwningHandle() }?.getSnapshot()
+
+    internal fun disposeSharedLifetime() {
+        disposeAllSnapshotNotifiers()
+        invalidateBorrowedSnapshots()
+        invalidateBorrowedIterators()
+        invalidateBorrowedNativeViews()
+    }
 
     internal fun attachTo(owner: TransactionOwner): Transaction {
         checkOwningHandle()
@@ -192,25 +230,22 @@ actual class Transaction(
     }
 
     internal fun closeFromOwner(owner: TransactionOwner) {
+        closeLocked()
         if (this.owner === owner) {
             this.owner = null
             owner.unregisterBorrowedTransaction(this)
         }
-        closeLocked()
     }
 
     private fun closeLocked() {
         if (ownsNative && tryClose()) {
-            disposePendingSnapshotNotifier()
-            invalidateBorrowedSnapshots()
-            invalidateBorrowedIterators()
+            disposeSharedLifetime()
+            lifetime.wrappers -= this
             rocksdb.rocksdb_transaction_destroy(native)
             defaultReadOptions.close()
             super.close()
         } else if (!ownsNative && tryClose()) {
-            disposePendingSnapshotNotifier()
-            invalidateBorrowedSnapshots()
-            invalidateBorrowedIterators()
+            lifetime.wrappers -= this
             if (freeBorrowedWrapper) {
                 rocksdb.rocksdb_transaction_destroy_wrapper(native)
             }
@@ -220,28 +255,13 @@ actual class Transaction(
     }
 
     internal fun invalidateFromOwner() {
+        closeLocked()
         owner = null
-        if (ownsNative && tryClose()) {
-            disposePendingSnapshotNotifier()
-            invalidateBorrowedSnapshots()
-            invalidateBorrowedIterators()
-            rocksdb.rocksdb_transaction_destroy(native)
-            defaultReadOptions.close()
-            super.close()
-        } else if (!ownsNative && tryClose()) {
-            disposePendingSnapshotNotifier()
-            invalidateBorrowedSnapshots()
-            invalidateBorrowedIterators()
-            if (freeBorrowedWrapper) {
-                rocksdb.rocksdb_transaction_destroy_wrapper(native)
-            }
-            defaultReadOptions.close()
-            super.close()
-        }
     }
 
     actual fun setSnapshot() {
         checkOwningHandle()
+        disposePendingSnapshotNotifier()
         invalidateBorrowedSnapshots()
         rocksdb.rocksdb_transaction_set_snapshot(native)
     }
@@ -258,6 +278,7 @@ actual class Transaction(
         disposePendingSnapshotNotifier()
         invalidateBorrowedSnapshots()
         val notifierState = SnapshotNotifierState(this, transactionNotifier)
+        snapshotNotifierStates += notifierState
         pendingSnapshotNotifier.value = notifierState
         rocksdb.rocksdb_transaction_set_snapshot_on_next_operation(
             native,
@@ -269,23 +290,47 @@ actual class Transaction(
     internal fun clearPendingSnapshotNotifier(notifierState: Any) {
         val state = notifierState as? SnapshotNotifierState ?: return
         pendingSnapshotNotifier.compareAndSet(state, null)
+        disposeUnusedSnapshotNotifier(state)
     }
 
-    internal fun prepareForReuse() {
+    internal fun prepareForReuse(expectedOwner: TransactionOwner) {
         checkOwningHandle()
-        disposePendingSnapshotNotifier()
+        check(ownsNative) { "A borrowed transaction wrapper cannot be reused" }
+        require(owner === expectedOwner) { "A transaction can only be reused by its original database" }
+        owner?.invalidateTransactionAliases(this)
+        disposeAllSnapshotNotifiers()
         invalidateBorrowedSnapshots()
         invalidateBorrowedIterators()
+        invalidateBorrowedNativeViews()
     }
 
     private fun disposePendingSnapshotNotifier() {
         while (true) {
             val notifierState = pendingSnapshotNotifier.value ?: return
             if (pendingSnapshotNotifier.compareAndSet(notifierState, null)) {
-                notifierState.disposeOnce()
+                disposeUnusedSnapshotNotifier(notifierState)
                 return
             }
         }
+    }
+
+    private fun disposeUnusedSnapshotNotifier(state: SnapshotNotifierState) {
+        if (pendingSnapshotNotifier.value !== state && state !in savedSnapshotNotifiers) {
+            snapshotNotifierStates.remove(state)
+            state.disposeOnce()
+        }
+    }
+
+    private fun clearSavedSnapshotNotifiers() {
+        savedSnapshotNotifiers.clear()
+        snapshotNotifierStates.toList().forEach(::disposeUnusedSnapshotNotifier)
+    }
+
+    private fun disposeAllSnapshotNotifiers() {
+        pendingSnapshotNotifier.value = null
+        savedSnapshotNotifiers.clear()
+        snapshotNotifierStates.forEach { it.disposeOnce() }
+        snapshotNotifierStates.clear()
     }
 
     actual fun getSnapshot(): Snapshot? {
@@ -298,6 +343,7 @@ actual class Transaction(
 
     actual fun clearSnapshot() {
         checkOwningHandle()
+        disposePendingSnapshotNotifier()
         invalidateBorrowedSnapshots()
         rocksdb.rocksdb_transaction_clear_snapshot(native)
     }
@@ -328,10 +374,30 @@ actual class Transaction(
         borrowedIterators.add(iterator)
     }
 
+    internal fun registerBorrowedWriteBatch(batch: WriteBatch) { borrowedWriteBatches += batch }
+    internal fun unregisterBorrowedWriteBatch(batch: WriteBatch) { borrowedWriteBatches -= batch }
+    internal fun registerBorrowedWriteBatchWithIndex(batch: WriteBatchWithIndex) { borrowedIndexedBatches += batch }
+    internal fun unregisterBorrowedWriteBatchWithIndex(batch: WriteBatchWithIndex) { borrowedIndexedBatches -= batch }
+    internal fun registerBorrowedWriteOptions(options: WriteOptions) { borrowedWriteOptions += options }
+    internal fun unregisterBorrowedWriteOptions(options: WriteOptions) { borrowedWriteOptions -= options }
+
+    private fun invalidateBorrowedNativeViews() {
+        val batches = borrowedWriteBatches.toList()
+        val indexed = borrowedIndexedBatches.toList()
+        val options = borrowedWriteOptions.toList()
+        borrowedWriteBatches.clear()
+        borrowedIndexedBatches.clear()
+        borrowedWriteOptions.clear()
+        batches.forEach { it.invalidateFromOwner() }
+        indexed.forEach { it.invalidateFromOwner() }
+        options.forEach { it.invalidateFromOwner() }
+    }
+
     private fun borrowIterator(iterator: RocksIterator): RocksIterator =
         iterator.also(borrowedIterators::add)
 
     private fun invalidateBorrowedIterators() {
+        borrowedIndexedBatches.forEach { it.invalidateIteratorsFromTransaction() }
         if (borrowedIterators.isEmpty()) return
         val iterators = borrowedIterators.toList()
         borrowedIterators.clear()
@@ -352,6 +418,7 @@ actual class Transaction(
         wrapWithErrorThrower { error ->
             rocksdb.rocksdb_transaction_commit(native, error)
         }
+        clearSavedSnapshotNotifiers()
     }
 
     @Throws(RocksDBException::class)
@@ -361,12 +428,14 @@ actual class Transaction(
         wrapWithErrorThrower { error ->
             rocksdb.rocksdb_transaction_rollback(native, error)
         }
+        clearSavedSnapshotNotifiers()
     }
 
     @Throws(RocksDBException::class)
     actual fun setSavePoint() {
         checkOwningHandle()
         rocksdb.rocksdb_transaction_set_savepoint(native)
+        savedSnapshotNotifiers += pendingSnapshotNotifier.value
     }
 
     @Throws(RocksDBException::class)
@@ -376,6 +445,10 @@ actual class Transaction(
         wrapWithErrorThrower { error ->
             rocksdb.rocksdb_transaction_rollback_to_savepoint(native, error)
         }
+        invalidateBorrowedSnapshots()
+        val previousNotifier = pendingSnapshotNotifier.value
+        pendingSnapshotNotifier.value = savedSnapshotNotifiers.removeLastOrNull()
+        previousNotifier?.let(::disposeUnusedSnapshotNotifier)
     }
 
     actual fun get(readOptions: ReadOptions, columnFamilyHandle: ColumnFamilyHandle, key: ByteArray): ByteArray? =
@@ -534,7 +607,6 @@ actual class Transaction(
             try {
                 List(keys.size) { index ->
                     valueList[index]?.toByteArray(valueListSizes[index])
-                        ?: get(readOptions, columnFamilyHandles[index], keys[index])
                 }
             } finally {
                 for (index in keys.indices) {
@@ -575,7 +647,7 @@ actual class Transaction(
 
                 try {
                     List(keys.size) { index ->
-                        valueList[index]?.toByteArray(valueListSizes[index]) ?: get(readOptions, keys[index])
+                        valueList[index]?.toByteArray(valueListSizes[index])
                     }
                 } finally {
                     for (index in keys.indices) {
@@ -797,7 +869,6 @@ actual class Transaction(
             try {
                 List(keys.size) { index ->
                     valueList[index]?.toByteArray(valueListSizes[index])
-                        ?: getForUpdate(readOptions, columnFamilyHandles[index], keys[index], exclusive = false)
                 }
             } finally {
                 for (index in keys.indices) {
@@ -839,7 +910,6 @@ actual class Transaction(
                 try {
                     List(keys.size) { index ->
                         valueList[index]?.toByteArray(valueListSizes[index])
-                            ?: getForUpdate(readOptions, keys[index], exclusive = false)
                     }
                 } finally {
                     for (index in keys.indices) {
@@ -856,6 +926,7 @@ actual class Transaction(
                 "RocksDB returned null transaction iterator"
             },
             transactionOwner = this,
+            readOptionsDependencies = setOf(defaultReadOptions),
         ))
     }
 
@@ -866,6 +937,7 @@ actual class Transaction(
                 "RocksDB returned null transaction iterator"
             },
             transactionOwner = this,
+            readOptionsDependencies = setOf(readOptions),
         ))
     }
 
@@ -877,6 +949,7 @@ actual class Transaction(
                 "RocksDB returned null transaction column-family iterator"
             },
             transactionOwner = this,
+            readOptionsDependencies = setOf(readOptions),
         ))
     }
 
@@ -888,6 +961,7 @@ actual class Transaction(
                 "RocksDB returned null transaction column-family iterator"
             },
             transactionOwner = this,
+            readOptionsDependencies = setOf(defaultReadOptions),
         ))
     }
 
@@ -1329,6 +1403,7 @@ actual class Transaction(
             ownsNative = false,
             freeBorrowedWrapper = true,
             supportsBorrowedWriteBatch = false,
+            transactionOwner = this,
         )
     }
 
@@ -1339,8 +1414,8 @@ actual class Transaction(
 
     actual fun getWriteOptions(): WriteOptions? {
         checkOwningHandle()
-        val optionsPtr = rocksdb.rocksdb_transaction_get_write_options(native) ?: return null
-        return WriteOptions(optionsPtr)
+        val optionsPtr = rocksdb.rocksdb_transaction_get_write_options_view(native) ?: return null
+        return WriteOptions(optionsPtr, transactionOwner = this)
     }
 
     actual fun setWriteOptions(writeOptions: WriteOptions) {
@@ -1383,8 +1458,8 @@ actual class Transaction(
 
     actual fun getCommitTimeWriteBatch(): WriteBatch? {
         checkOwningHandle()
-        val wbPtr = rocksdb.rocksdb_transaction_get_commit_time_writebatch(native) ?: return null
-        return WriteBatch(wbPtr)
+        val wbPtr = rocksdb.rocksdb_transaction_get_commit_time_writebatch_view(native) ?: return null
+        return WriteBatch(wbPtr, transactionOwner = this)
     }
 
     actual fun setLogNumber(logNumber: Long) {
@@ -1444,53 +1519,28 @@ actual class Transaction(
 
     actual fun getWaitingTxns(): WaitingTransactions = memScoped {
         checkOwningHandle()
-        val cfIdVar = alloc<UIntVar>()
-
-        val maxKeyLen = 256
-        val keyBuffer = allocArray<ByteVar>(maxKeyLen)
-        for (i in 0 until maxKeyLen) {
-            keyBuffer[i] = 0
-        }
-
-        val numTxnsVar = alloc<size_tVar>()
-        numTxnsVar.value = 0.asSizeT()
-
-        val txnIdsPtr = rocksdb.rocksdb_transaction_get_waiting_txns(
-            native,
-            cfIdVar.ptr,
-            keyBuffer,
-            maxKeyLen.asSizeT(),
-            numTxnsVar.ptr
+        val cfId = alloc<UIntVar>()
+        val key = alloc<CPointerVar<ByteVar>>()
+        val keyLength = alloc<size_tVar>()
+        val count = alloc<size_tVar>()
+        val ids = rocksdb.rocksdb_transaction_get_waiting_txns_with_key(
+            native, cfId.ptr, key.ptr, keyLength.ptr, count.ptr
         )
-
-        val columnFamilyId = cfIdVar.value.toLong()
-        val keyBytes = keyBuffer.readBytes(maxKeyLen)
-        val keyLength = keyBytes.indexOf(0).takeIf { it >= 0 } ?: keyBytes.size
-        val keyString = keyBytes.decodeToString(endIndex = keyLength)
-        val count = sizeTToInt(numTxnsVar.value, "waiting transaction count")
-
-        val txnIdsArray = try {
-            if (count > 0) {
-                val txnIds = requireNotNull(txnIdsPtr) {
-                    "RocksDB returned null waiting transaction ids for $count transactions"
-                }
-                LongArray(count) { index ->
-                    txnIds[index].toCheckedLong("waiting transaction id")
-                }
-            } else {
-                LongArray(0)
+        try {
+            val size = sizeTToInt(count.value, "waiting transaction count")
+            val transactionIds = if (size == 0) LongArray(0) else {
+                val pointer = requireNotNull(ids) { "RocksDB returned null waiting transaction IDs" }
+                LongArray(size) { pointer[it].toCheckedLong("waiting transaction ID") }
             }
+            WaitingTransactions(
+                columnFamilyId = cfId.value.toLong(),
+                key = key.value?.toByteArray(keyLength.value)?.decodeToString().orEmpty(),
+                transactionIds = transactionIds,
+            )
         } finally {
-            if (txnIdsPtr != null) {
-                rocksdb.rocksdb_transaction_waiting_txns_destroy(txnIdsPtr)
-            }
+            key.value?.let { rocksdb.rocksdb_free(it) }
+            ids?.let { rocksdb.rocksdb_transaction_waiting_txns_destroy(it) }
         }
-
-        WaitingTransactions(
-            columnFamilyId = columnFamilyId,
-            key = keyString,
-            transactionIds = txnIdsArray
-        )
     }
 
     actual fun getState(): TransactionState {

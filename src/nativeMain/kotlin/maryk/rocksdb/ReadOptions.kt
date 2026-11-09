@@ -64,6 +64,26 @@ actual class ReadOptions private constructor(val native: CPointer<rocksdb_readop
     private var upperBound: BoundBuffer? = null
     private var lowerBound: BoundBuffer? = null
     internal var tableFilterRef: AbstractTableFilter? = null
+    private val borrowedIterators = mutableSetOf<AbstractRocksIterator<*>>()
+    private val iteratorRegistryGuard = NativeLifecycleGuard()
+
+    internal fun registerBorrowedIterator(iterator: AbstractRocksIterator<*>): Boolean {
+        // Primitive options are copied by the engine. These resources are borrowed.
+        if (upperBound == null && lowerBound == null && tableFilterRef == null) return false
+        iteratorRegistryGuard.withLock { borrowedIterators += iterator }
+        return true
+    }
+
+    internal fun unregisterBorrowedIterator(iterator: AbstractRocksIterator<*>) {
+        iteratorRegistryGuard.withLock { borrowedIterators -= iterator }
+    }
+
+    internal fun invalidateBorrowedIterators() {
+        val iterators = iteratorRegistryGuard.withLock {
+            borrowedIterators.toList().also { borrowedIterators.clear() }
+        }
+        iterators.forEach { it.close() }
+    }
 
     actual constructor() : this(
         requireNotNull(rocksdb_readoptions_create()) {
@@ -73,6 +93,7 @@ actual class ReadOptions private constructor(val native: CPointer<rocksdb_readop
 
     override fun close() {
         if (tryClose()) {
+            invalidateBorrowedIterators()
             upperBound?.free()
             upperBound = null
             lowerBound?.free()
@@ -260,6 +281,7 @@ actual class ReadOptions private constructor(val native: CPointer<rocksdb_readop
 
     actual fun setIterateUpperBound(iterateUpperBound: AbstractSlice<*>): ReadOptions {
         checkOwningHandle()
+        invalidateBorrowedIterators()
         upperBound = updateBound(upperBound, iterateUpperBound) { pointer, length ->
             rocksdb_readoptions_set_iterate_upper_bound(native, pointer, length)
         }
@@ -270,6 +292,7 @@ actual class ReadOptions private constructor(val native: CPointer<rocksdb_readop
 
     actual fun setIterateLowerBound(iterateLowerBound: AbstractSlice<*>): ReadOptions {
         checkOwningHandle()
+        invalidateBorrowedIterators()
         lowerBound = updateBound(lowerBound, iterateLowerBound) { pointer, length ->
             rocksdb_readoptions_set_iterate_lower_bound(native, pointer, length)
         }
@@ -366,6 +389,7 @@ actual fun ReadOptions.setTableFilter(tableFilter: AbstractTableFilter): ReadOpt
     }
     val previous = tableFilterRef
     tableFilter.transferOwnershipToReadOptions()
+    invalidateBorrowedIterators()
     this.tableFilterRef = tableFilter
     rocksdb_readoptions_set_table_filter(native, tableFilter.native)
     previous?.closeFromReadOptions()

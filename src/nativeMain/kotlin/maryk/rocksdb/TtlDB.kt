@@ -20,7 +20,7 @@ import platform.posix.size_tVar
 import rocksdb.rocksdb_transactiondb_close_base_db
 import rocksdb.rocksdb_ttl_close
 import rocksdb.rocksdb_ttl_create_column_family
-import rocksdb.rocksdb_ttl_get_base_db
+import rocksdb.rocksdb_ttl_get_db
 import rocksdb.rocksdb_ttl_open
 import rocksdb.rocksdb_ttl_open_column_families
 
@@ -28,8 +28,8 @@ actual class TtlDB internal constructor(
     internal val nativeTtl: CPointer<rocksdb_ttl_t>,
     ownedComparators: List<AbstractComparator> = emptyList(),
     retainedReferences: List<Any> = emptyList(),
-) : RocksDB(requireNotNull(rocksdb_ttl_get_base_db(nativeTtl)) {
-    "Unable to obtain base DB from TTL handle"
+) : RocksDB(requireNotNull(rocksdb_ttl_get_db(nativeTtl)) {
+    "Unable to obtain DBWithTTL view from TTL handle"
 }, ownedComparators, retainedReferences) {
     actual fun createColumnFamilyWithTtl(
         columnFamilyDescriptor: ColumnFamilyDescriptor,
@@ -50,7 +50,7 @@ actual class TtlDB internal constructor(
                     )
                 }
                 try {
-                    columnFamilyDescriptor.getOptions().releaseOwnedComparator()?.let {
+                    columnFamilyDescriptor.getOptions().retainComparator()?.let {
                         retainOwnedComparator(it)
                     }
                 } catch (throwable: Throwable) {
@@ -90,7 +90,7 @@ actual fun openTtlDB(options: Options, dbPath: String, ttl: Int, readOnly: Boole
         rocksdb_ttl_open(options.native, dbPath.checkedNativePath(), ttl, readOnly.toUByte(), error)?.let { native ->
             wrapOpenedDb(
                 closeNativeDb = { rocksdb_ttl_close(native) },
-                releaseComparator = { options.releaseOwnedComparator() },
+                retainComparator = { options.retainComparator() },
             ) { ownedComparators ->
                 TtlDB(native, ownedComparators, retainedReferences)
             }

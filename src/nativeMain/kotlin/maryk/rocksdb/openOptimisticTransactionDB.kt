@@ -81,7 +81,7 @@ actual fun openOptimisticTransactionDB(
         rocksdb.rocksdb_optimistictransactiondb_open(options.native, path.checkedNativePath(), error)?.let { native ->
             wrapOpenedDb(
                 closeNativeDb = { rocksdb.rocksdb_optimistictransactiondb_close(native) },
-                releaseComparator = { options.releaseOwnedComparator() },
+                retainComparator = { options.retainComparator() },
             ) { ownedComparators ->
                 OptimisticTransactionDB(native, ownedComparators, retainedReferences)
             }

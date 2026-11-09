@@ -16,7 +16,39 @@ class DatabaseLifecycleNativeTest {
             val db = openRocksDB(options, createTestDBFolder("DatabaseLifecycleNativeTest_iterator"))
             val iterators = List(1_024) { db.newIterator() }
 
-            race(iterators.first()::close, db::close)
+            race({ iterators.forEach { it.close() } }, db::close)
+        }
+    }
+
+    @Test
+    fun indexedBatchCloseCanRaceWithDatabaseClose() = runBlocking {
+        Options().setCreateIfMissing(true).use { options ->
+            val db = openRocksDB(options, createTestDBFolder("DatabaseLifecycleNativeTest_indexed_batch"))
+            WriteBatchWithIndex().use { batch ->
+                repeat(1_024) { batch.newIteratorWithBase(db.newIterator()) }
+                race(batch::close, db::close)
+            }
+        }
+    }
+
+    @Test
+    fun boundedReadOptionsCloseCanRaceWithDatabaseClose() = runBlocking {
+        Options().setCreateIfMissing(true).use { options ->
+            val db = openRocksDB(options, createTestDBFolder("DatabaseLifecycleNativeTest_read_options"))
+            ReadOptions().use { readOptions ->
+                Slice("z").use { readOptions.setIterateUpperBound(it) }
+                repeat(1_024) { db.newIterator(readOptions) }
+                race(readOptions::close, db::close)
+            }
+        }
+    }
+
+    @Test
+    fun snapshotCloseCanRaceWithDatabaseClose() = runBlocking {
+        Options().setCreateIfMissing(true).use { options ->
+            val db = openRocksDB(options, createTestDBFolder("DatabaseLifecycleNativeTest_snapshots"))
+            val snapshots = List(1_024) { requireNotNull(db.getSnapshot()) }
+            race({ snapshots.forEach { it.close() } }, db::close)
         }
     }
 
@@ -27,7 +59,7 @@ class DatabaseLifecycleNativeTest {
             db.put("key".encodeToByteArray(), "value".encodeToByteArray())
             val iterators = List(1_024) { db.getUpdatesSince(0) }
 
-            race(iterators.first()::close, db::close)
+            race({ iterators.forEach { it.close() } }, db::close)
         }
     }
 
@@ -42,7 +74,7 @@ class DatabaseLifecycleNativeTest {
                 )
             }
 
-            race(handles.first()::close, db::close)
+            race({ handles.forEach { it.close() } }, db::close)
         }
     }
 
@@ -58,7 +90,7 @@ class DatabaseLifecycleNativeTest {
                     )
                     val transactions = List(1_024) { db.beginTransaction(writeOptions) }
 
-                    race(transactions.first()::close, db::close)
+                    race({ transactions.forEach { it.close() } }, db::close)
                 }
             }
         }
@@ -74,7 +106,7 @@ class DatabaseLifecycleNativeTest {
                 )
                 val transactions = List(1_024) { db.beginTransaction(writeOptions) }
 
-                race(transactions.first()::close, db::close)
+                race({ transactions.forEach { it.close() } }, db::close)
             }
         }
     }

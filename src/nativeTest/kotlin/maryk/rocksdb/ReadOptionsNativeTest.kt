@@ -7,10 +7,131 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.test.assertFalse
 
 class ReadOptionsNativeTest {
     init {
         loadRocksDBLibrary()
+    }
+
+    @Test
+    fun boundedIteratorRejectsClosedReadOptions() {
+        val path = createTestDBFolder("ReadOptionsNativeTest_closed_bound_owner")
+        Options().setCreateIfMissing(true).use { options ->
+            openRocksDB(options, path).use { db ->
+                ReadOptions().use { readOptions ->
+                    Slice("z").use { readOptions.setIterateUpperBound(it) }
+                    db.newIterator(readOptions).use { iterator ->
+                        readOptions.close()
+                        assertFalse(iterator.isOwningHandle(), "Iterator still borrows the freed C read-options bound")
+                        assertFailsWith<IllegalStateException> { iterator.seekToFirst() }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun boundedIteratorsTrackEveryFactoryAndTransferPath() {
+        val path = createTestDBFolder("ReadOptionsNativeTest_bound_factories")
+        Options().setCreateIfMissing(true).use { options ->
+            TransactionDBOptions().use { transactionOptions ->
+                openTransactionDB(options, transactionOptions, path).use { db ->
+                    db.put("a".encodeToByteArray(), "value".encodeToByteArray())
+                    db.getDefaultColumnFamily().use { cf ->
+                        WriteOptions().use { writeOptions ->
+                            db.beginTransaction(writeOptions).use { transaction ->
+                                WriteBatchWithIndex().use { batch ->
+                                    val factories: List<(ReadOptions) -> RocksIterator> = listOf(
+                                        { db.newIterator(it) },
+                                        { db.newIterator(cf, it) },
+                                        { db.newIterators(listOf(cf), it).single() },
+                                        { transaction.getIterator(it) },
+                                        { transaction.getIterator(it, cf) },
+                                        { batch.newIteratorWithBase(db.newIterator(it)) },
+                                        { batch.newIteratorWithBase(db.newIterator(), it) },
+                                        { batch.newIteratorWithBase(cf, db.newIterator(), it) },
+                                    )
+                                    for (factory in factories) {
+                                        ReadOptions().use { readOptions ->
+                                            Slice("z").use { readOptions.setIterateUpperBound(it) }
+                                            factory(readOptions).use { iterator ->
+                                                iterator.seekToFirst()
+                                                assertTrue(iterator.isValid())
+                                                Slice("b").use { readOptions.setIterateLowerBound(it) }
+                                                assertFailsWith<IllegalStateException> { iterator.seekToFirst() }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun tableFilterCannotBeDestroyedWhileIteratorsBorrowIt() {
+        val path = createTestDBFolder("ReadOptionsNativeTest_filter_owner")
+        Options().setCreateIfMissing(true).use { options ->
+            openRocksDB(options, path).use { db ->
+                db.put("a".encodeToByteArray(), "value".encodeToByteArray())
+                db.compactRange()
+                for (replace in listOf(false, true)) {
+                    ReadOptions().use { readOptions ->
+                        readOptions.setTableFilter(acceptAllTables())
+                        WriteBatchWithIndex().use { batch ->
+                            batch.newIteratorWithBase(db.newIterator(readOptions)).use { iterator ->
+                                iterator.seekToFirst()
+                                assertTrue(iterator.isValid())
+                                if (replace) readOptions.setTableFilter(acceptAllTables()) else readOptions.close()
+                                assertFailsWith<IllegalStateException> { iterator.seekToFirst() }
+                            }
+                        }
+                    }
+                }
+                // With only copied primitive settings, options can still close independently.
+                ReadOptions().use { readOptions ->
+                    db.newIterator(readOptions).use { iterator ->
+                        readOptions.close()
+                        iterator.seekToFirst()
+                        assertTrue(iterator.isValid())
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun sstIteratorRejectsClosedBoundOwner() {
+        val path = createTestDBFolder("ReadOptionsNativeTest_sst_bound_owner") + ".sst"
+        Options().use { options ->
+            EnvOptions().use { envOptions ->
+                SstFileWriter(envOptions, options).use { writer ->
+                    writer.open(path)
+                    writer.put("a".encodeToByteArray(), "value".encodeToByteArray())
+                    writer.finish()
+                }
+            }
+            SstFileReader(options).use { reader ->
+                reader.open(path)
+                ReadOptions().use { readOptions ->
+                    Slice("z").use { readOptions.setIterateUpperBound(it) }
+                    reader.newIterator(readOptions).use { iterator ->
+                        iterator.seekToFirst()
+                        assertTrue(iterator.isValid())
+                        readOptions.close()
+                        assertFailsWith<IllegalStateException> { iterator.seekToFirst() }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun acceptAllTables() = object : AbstractTableFilter() {
+        override fun filter(tableProperties: TableProperties): Boolean = true
     }
 
     @Test

@@ -48,7 +48,9 @@ fun getStatusCode(identifier: Byte): StatusCode {
         }
     }
 
-    throw IllegalArgumentException("Illegal value provided for StatusCode.")
+    // Newer RocksDB codes must not replace the original database error with a
+    // Kotlin decoding exception when the common API has no matching enum.
+    return StatusCode.Undefined
 }
 
 actual enum class StatusSubCode(
@@ -64,7 +66,7 @@ actual enum class StatusSubCode(
     MemoryLimit(0x7),
     SpaceLimit(0x8),
     PathNotFound(0x9),
-    MaxSubCode(0x10),
+    MaxSubCode(0x14),
     Undefined(0x7F)
 }
 

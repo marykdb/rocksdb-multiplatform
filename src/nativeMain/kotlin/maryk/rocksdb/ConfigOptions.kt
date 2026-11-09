@@ -66,7 +66,7 @@ actual class ConfigOptions internal constructor(
 }
 
 private fun SanityLevel.toNativeValue(): UByte = when (this) {
-    SanityLevel.NONE -> 0u
-    SanityLevel.LOOSELY_COMPATIBLE -> 1u
-    SanityLevel.EXACT_MATCH -> 2u
+    SanityLevel.NONE -> 0x01u
+    SanityLevel.LOOSELY_COMPATIBLE -> 0x02u
+    SanityLevel.EXACT_MATCH -> 0xFFu
 }

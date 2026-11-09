@@ -13,18 +13,26 @@ import rocksdb.rocksdb_iter_value
 internal data class IteratorOwnerTransfer(
     val dbOwner: RocksDB?,
     val transactionOwner: Transaction?,
+    val writeBatchWithIndexOwners: Set<WriteBatchWithIndex>,
+    val readOptionsOwners: Set<ReadOptions>,
 )
 
 actual class RocksIterator internal constructor(
     native: CPointer<rocksdb_iterator_t>,
     private var dbOwner: RocksDB? = null,
     private var transactionOwner: Transaction? = null,
-    private var writeBatchWithIndexOwner: WriteBatchWithIndex? = null,
+    writeBatchWithIndexOwner: WriteBatchWithIndex? = null,
+    inheritedWriteBatchWithIndexOwners: Set<WriteBatchWithIndex> = emptySet(),
+    readOptionsDependencies: Set<ReadOptions> = emptySet(),
 ) : AbstractRocksIterator<RocksDB>(native) {
+    private val writeBatchWithIndexOwners = inheritedWriteBatchWithIndexOwners.toMutableSet().apply {
+        writeBatchWithIndexOwner?.let(::add)
+    }
     init {
         dbOwner?.registerBorrowedIterator(this)
         transactionOwner?.registerBorrowedIterator(this)
-        writeBatchWithIndexOwner?.registerBorrowedIterator(this)
+        writeBatchWithIndexOwners.forEach { it.registerBorrowedIterator(this) }
+        readOptionsDependencies.forEach(::dependOnReadOptions)
     }
 
     actual fun key(): ByteArray = memScoped {
@@ -63,23 +71,24 @@ actual class RocksIterator internal constructor(
     }
 
     private fun closeLocked() {
+        if (!isOwningHandle()) return
         val db = dbOwner
         val owner = transactionOwner
-        val writeBatchWithIndex = writeBatchWithIndexOwner
+        val batches = writeBatchWithIndexOwners.toList()
+        // Mark closed and destroy the iterator before detaching its DB lock.
+        // A concurrent ownership transfer must still acquire that lock until
+        // the wrapper can no longer pass its open-handle check.
+        super.close()
         dbOwner = null
         transactionOwner = null
-        writeBatchWithIndexOwner = null
+        writeBatchWithIndexOwners.clear()
         db?.unregisterBorrowedIterator(this)
         owner?.unregisterBorrowedIterator(this)
-        writeBatchWithIndex?.unregisterBorrowedIterator(this)
-        super.close()
+        batches.forEach { it.unregisterBorrowedIterator(this) }
     }
 
     internal fun invalidateFromOwner() {
-        dbOwner = null
-        transactionOwner = null
-        writeBatchWithIndexOwner = null
-        super.close()
+        close()
     }
 
     internal fun transferWrapperOwnershipToNativeAndDetachOwners(): IteratorOwnerTransfer {
@@ -98,13 +107,18 @@ actual class RocksIterator internal constructor(
 
     private fun transferWrapperOwnershipLocked(): IteratorOwnerTransfer {
         check(disownHandle()) { "Iterator is already closed or transferred." }
-        return IteratorOwnerTransfer(dbOwner, transactionOwner).also {
+        return IteratorOwnerTransfer(
+            dbOwner,
+            transactionOwner,
+            writeBatchWithIndexOwners.toSet(),
+            detachReadOptionsOwners(),
+        ).also {
             dbOwner?.unregisterBorrowedIterator(this)
             transactionOwner?.unregisterBorrowedIterator(this)
-            writeBatchWithIndexOwner?.unregisterBorrowedIterator(this)
+            writeBatchWithIndexOwners.forEach { it.unregisterBorrowedIterator(this) }
             dbOwner = null
             transactionOwner = null
-            writeBatchWithIndexOwner = null
+            writeBatchWithIndexOwners.clear()
         }
     }
 }

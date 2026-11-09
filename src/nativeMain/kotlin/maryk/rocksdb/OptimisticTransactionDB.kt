@@ -6,9 +6,9 @@ import cnames.structs.rocksdb_optimistictransactiondb_t
 import kotlinx.cinterop.*
 import kotlin.experimental.ExperimentalNativeApi
 
-private fun optimisticTransactionBaseDb(native: CPointer<rocksdb_optimistictransactiondb_t>) =
-    requireNotNull(rocksdb.rocksdb_optimistictransactiondb_get_base_db(native)) {
-        "RocksDB returned null base DB for optimistic transaction DB"
+private fun optimisticTransactionDbView(native: CPointer<rocksdb_optimistictransactiondb_t>) =
+    requireNotNull(rocksdb.rocksdb_optimistictransactiondb_get_db(native)) {
+        "RocksDB returned null optimistic transaction DB view"
     }
 
 actual open class OptimisticTransactionDB
@@ -16,7 +16,7 @@ internal constructor(
     internal val tnative: CPointer<rocksdb_optimistictransactiondb_t>,
     ownedComparators: List<AbstractComparator> = emptyList(),
     retainedReferences: List<Any> = emptyList(),
-) : RocksDB(optimisticTransactionBaseDb(tnative), ownedComparators, retainedReferences), TransactionOwner {
+) : RocksDB(optimisticTransactionDbView(tnative), ownedComparators, retainedReferences), TransactionOwner {
     val defaultTransactionOptions: OptimisticTransactionOptions = OptimisticTransactionOptions()
     private val borrowedTransactions = mutableSetOf<Transaction>()
     private val borrowedBaseDbs = mutableSetOf<BorrowedOptimisticBaseDB>()
@@ -32,7 +32,7 @@ internal constructor(
                 invalidateColumnFamilyHandles()
                 defaultTransactionOptions.close()
                 closeDefaultReferences()
-                rocksdb.rocksdb_optimistictransactiondb_close_base_db(native)
+                rocksdb.rocksdb_close(native)
                 rocksdb.rocksdb_optimistictransactiondb_close(tnative)
                 closeOwnedComparators()
                 clearRetainedReferences()
@@ -115,7 +115,7 @@ internal constructor(
         return withLifecycleLock {
             checkOwningHandle()
             writeOptions.checkOwningHandle()
-            oldTransaction.prepareForReuse()
+            oldTransaction.prepareForReuse(this)
             rocksdb.rocksdb_optimistictransaction_begin(tnative, writeOptions.native, defaultTransactionOptions.native, oldTransaction.native)
             oldTransaction.attachTo(this)
         }
@@ -130,7 +130,7 @@ internal constructor(
             checkOwningHandle()
             writeOptions.checkOwningHandle()
             transactionOptions.checkOwningHandle()
-            oldTransaction.prepareForReuse()
+            oldTransaction.prepareForReuse(this)
             rocksdb.rocksdb_optimistictransaction_begin(tnative, writeOptions.native, transactionOptions.native, oldTransaction.native)
             oldTransaction.attachTo(this)
         }
