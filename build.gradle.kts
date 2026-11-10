@@ -39,7 +39,7 @@ import org.jetbrains.kotlin.konan.target.Family
 
 plugins {
     id("org.jetbrains.kotlin.multiplatform") version "2.4.21"
-    id("com.android.kotlin.multiplatform.library") version "9.5.0"
+    id("com.android.kotlin.multiplatform.library") version "9.5.1"
     id("com.vanniktech.maven.publish") version "0.37.0"
 }
 
