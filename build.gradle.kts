@@ -52,7 +52,7 @@ group = "io.maryk.rocksdb"
 version = "11.8.1.2-SNAPSHOT"
 
 val rocksDBJVMVersion = "11.8.1"
-val rocksDBAndroidVersion = "11.8.1"
+val rocksDBAndroidVersion = "11.8.1.1"
 
 val kotlinVersion = "2.4.21"
 val kotlinXAtomicfuVersion = "0.33.0"
